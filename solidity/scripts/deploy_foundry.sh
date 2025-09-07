@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Football Boxes Foundry Deployment Script
-# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK]
+# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK] [--skip-estimation]
 
 set -e
 
@@ -45,6 +45,17 @@ fi
 
 PRIVATE_KEY=$1
 NETWORK=${2:-"base-sepolia"}
+SKIP_ESTIMATION=false
+
+# Check for --skip-estimation flag
+for arg in "$@"; do
+    case $arg in
+        --skip-estimation)
+            SKIP_ESTIMATION=true
+            shift
+            ;;
+    esac
+done
 
 # Validate private key format
 if [[ ! $PRIVATE_KEY =~ ^0x[0-9a-fA-F]{64}$ ]]; then
@@ -107,14 +118,42 @@ fi
 
 print_success "Build completed"
 
-# Run deployment
-print_info "Deploying contracts..."
-print_warning "This will broadcast transactions to $NETWORK"
-
-# Set environment variable for the script
 export PRIVATE_KEY=$PRIVATE_KEY
 
-# Run the deployment script
+if [ "$SKIP_ESTIMATION" = false ]; then
+    # Run gas estimation first
+    print_info "Estimating deployment costs..."
+    export ESTIMATE_GAS_ONLY=true
+
+    forge script script/Deploy.s.sol:Deploy \
+        --rpc-url $RPC_URL \
+        --ffi \
+        -v
+
+    # Reset the estimation flag
+    unset ESTIMATE_GAS_ONLY
+
+    echo ""
+    print_warning "This will broadcast transactions to $NETWORK"
+    echo -n "Do you want to proceed with the deployment? [y/N]: "
+    read -r response
+
+    case $response in
+        [yY][eE][sS]|[yY])
+            print_info "Proceeding with deployment..."
+            ;;
+        *)
+            print_info "Deployment cancelled by user"
+            exit 0
+            ;;
+    esac
+else
+    print_info "Skipping gas estimation (--skip-estimation flag provided)"
+    print_warning "This will broadcast transactions to $NETWORK"
+fi
+
+# Run the actual deployment
+print_info "Deploying contracts..."
 forge script script/Deploy.s.sol:Deploy \
     --rpc-url $RPC_URL \
     --broadcast \

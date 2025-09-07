@@ -57,6 +57,13 @@ contract Deploy is Script {
             "Unsupported network - no Functions Router configured"
         );
 
+        // Check if we should estimate gas first
+        bool estimateOnly = vm.envOr("ESTIMATE_GAS_ONLY", false);
+        if (estimateOnly) {
+            _estimateDeploymentCost(deployer, chainId);
+            return;
+        }
+
         vm.startBroadcast(deployerPrivateKey);
 
         // 1. Deploy Boxes contract
@@ -297,5 +304,123 @@ contract Deploy is Script {
                 ))
             );
         }
+    }
+
+    function _estimateDeploymentCost(address deployer, uint256 chainId) internal {
+        console.log("=== Gas Estimation Mode ===");
+        console.log("Estimating deployment costs...");
+        console.log("");
+
+        uint256 totalGasEstimate = 0;
+        uint256 gasPrice = tx.gasprice;
+        if (gasPrice == 0) {
+            gasPrice = 1 gwei; // fallback gas price for testnets (Base Sepolia typically uses ~1 gwei)
+            console.log("Gas price (fallback):   ", gasPrice / 1e9, "gwei");
+        } else {
+            console.log("Current gas price:      ", gasPrice / 1e9, "gwei");
+        }
+        console.log("");
+
+        // Estimate each contract deployment
+        uint256 boxesGas = _estimateContractGas("Boxes", type(Boxes).creationCode, "");
+        totalGasEstimate += boxesGas;
+
+        uint256 oracleGas = _estimateContractGas(
+            "GameScoreOracle",
+            type(GameScoreOracle).creationCode,
+            abi.encode(functionsRouter[chainId])
+        );
+        totalGasEstimate += oracleGas;
+
+        uint256 readerGas = _estimateContractGas("ContestsReader", type(ContestsReader).creationCode, "");
+        totalGasEstimate += readerGas;
+
+        uint256 randomGas = _estimateContractGas(
+            "RandomNumbers",
+            type(RandomNumbers).creationCode,
+            abi.encode(vrfWrapper[chainId])
+        );
+        totalGasEstimate += randomGas;
+
+        uint256 contestsGas = _estimateContractGas("Contests", type(Contests).creationCode, "");
+        totalGasEstimate += contestsGas;
+
+        // Estimate setup transactions (approximate)
+        uint256 setupGas = 300000; // Approximate gas for all setup calls
+        totalGasEstimate += setupGas;
+        console.log("Setup transactions: ~", setupGas, "gas");
+
+        console.log("");
+        console.log("=== Cost Summary ===");
+        console.log("Total estimated gas:    ", totalGasEstimate);
+        console.log("Gas price:              ", gasPrice / 1e9, "gwei");
+
+        uint256 totalCostWei = totalGasEstimate * gasPrice;
+
+        // Format and display costs in ETH with 6 decimal places
+        _displayEthAmount("Total estimated cost:   ", totalCostWei);
+        _displayEthAmount("Your current balance:   ", deployer.balance);
+
+        if (deployer.balance < totalCostWei) {
+            console.log("");
+            console.log("WARNING: Insufficient balance for deployment!");
+            _displayEthAmount("You need at least:      ", totalCostWei);
+        } else {
+            uint256 remaining = deployer.balance - totalCostWei;
+            _displayEthAmount("Remaining balance:      ", remaining);
+        }
+
+        console.log("");
+        console.log("Note: These are estimates and actual costs may vary due to network conditions.");
+    }
+
+    function _estimateContractGas(
+        string memory contractName,
+        bytes memory creationCode,
+        bytes memory constructorArgs
+    ) internal pure returns (uint256) {
+        bytes memory deployCode = bytes.concat(creationCode, constructorArgs);
+
+        // Estimate gas using a rough calculation
+        // Base deployment cost + code size cost
+        uint256 baseGas = 21000; // Base transaction cost
+        uint256 codeGas = deployCode.length * 200; // Approximate cost per byte
+        uint256 estimatedGas = baseGas + codeGas + 500000; // Add buffer for constructor execution
+
+        console.log(string(abi.encodePacked(contractName, ": ~")), estimatedGas, "gas");
+
+        return estimatedGas;
+    }
+
+    function _displayEthAmount(string memory label, uint256 amountWei) internal pure {
+        // Convert wei to ETH with 6 decimal places
+        uint256 ethWhole = amountWei / 1e18;
+        uint256 ethDecimals = (amountWei % 1e18) / 1e12; // 6 decimal places
+
+        // Pad decimals to always show 6 digits
+        string memory decimalsStr;
+        if (ethDecimals < 100000) {
+            if (ethDecimals < 10000) {
+                if (ethDecimals < 1000) {
+                    if (ethDecimals < 100) {
+                        if (ethDecimals < 10) {
+                            decimalsStr = string(abi.encodePacked("00000", vm.toString(ethDecimals)));
+                        } else {
+                            decimalsStr = string(abi.encodePacked("0000", vm.toString(ethDecimals)));
+                        }
+                    } else {
+                        decimalsStr = string(abi.encodePacked("000", vm.toString(ethDecimals)));
+                    }
+                } else {
+                    decimalsStr = string(abi.encodePacked("00", vm.toString(ethDecimals)));
+                }
+            } else {
+                decimalsStr = string(abi.encodePacked("0", vm.toString(ethDecimals)));
+            }
+        } else {
+            decimalsStr = vm.toString(ethDecimals);
+        }
+
+        console.log(string(abi.encodePacked(label, vm.toString(ethWhole), ".", decimalsStr, " ETH")));
     }
 }
