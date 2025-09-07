@@ -1,9 +1,16 @@
 "use client";
 
+import { appName, chain, usdc } from "@/constants";
+import { client } from "@/providers/Thirdweb";
+import { useTheme } from "next-themes";
 import Link from "next/link";
+import { base, baseSepolia } from "thirdweb/chains";
+import { ConnectButton } from "thirdweb/react";
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
+  const { theme } = useTheme();
+
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -39,7 +46,27 @@ export function Navigation() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 gap-2">
+          <ConnectButton
+            client={client}
+            chain={chain}
+            theme={theme === "dark" ? "dark" : "light"}
+            connectButton={{
+              label: "Login",
+              className: "!size-9",
+            }}
+            connectModal={{
+              title: `Login to ${appName}`,
+              showThirdwebBranding: false,
+            }}
+            detailsButton={{
+              className: "!size-9 !border-none",
+              displayBalanceToken: {
+                [baseSepolia.id]: usdc[baseSepolia.id],
+                [base.id]: usdc[base.id],
+              },
+            }}
+          />
           <ModeToggle />
         </div>
       </div>

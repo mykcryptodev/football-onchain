@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Lexend_Deca } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import ThirdwebProvider from "@/providers/Thirdweb";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({
@@ -38,7 +39,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ThirdwebProvider>{children}</ThirdwebProvider>
         </ThemeProvider>
       </body>
     </html>
