@@ -13,9 +13,10 @@ contract DummyRandomNumbers is DummyVRF, RandomNumbers {
     {}
 
     function requestRandomNumbers(uint256 contestId) external payable override onlyContests {
-        if (msg.value < vrfFee) revert InsufficientPayment();
+        // For testing, use a minimal fee check (0.001 ether)
+        if (msg.value < 0.001 ether) revert InsufficientPayment();
         
-        emit RandomNumberRequested(contestId, block.timestamp);
+        emit RandomNumberRequested(contestId, block.timestamp, msg.value);
         
         // Immediately fulfill the request with deterministic values for testing
         // _fulfillRandomness(contestId);

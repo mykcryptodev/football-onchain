@@ -90,6 +90,10 @@ contract ContestsTest is Test {
         contests.createContest(gameId, boxCost, boxCurrency);
         uint256 contestId = 0; // First contest created
 
+        // Set up event expectation BEFORE the action that should emit it
+        vm.expectEmit(true, true, false, false);
+        emit RandomNumbers.RandomNumberRequested(contestId, block.timestamp, VRF_FEE);
+        
         // Try to fetch random values
         vm.deal(address(this), VRF_FEE);
         contests.fetchRandomValues{value: VRF_FEE}(contestId);
@@ -98,10 +102,6 @@ contract ContestsTest is Test {
         uint256[] memory randomWords = new uint256[](2);
         randomWords[0] = 12345;
         randomWords[1] = 67890;
-        
-        // Get the requestId from the emitted event
-        vm.expectEmit(true, true, false, false);
-        emit RandomNumbers.RandomNumberRequested(contestId, block.timestamp);
 
         // // Verify that the contest is no longer accepting box claims
         // (,,,,bool boxesCanBeClaimed,,,,) = contests.contests(contestId);

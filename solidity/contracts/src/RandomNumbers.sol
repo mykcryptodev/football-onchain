@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.22;
+pragma solidity ^0.8.24;
 
 import {VRFV2PlusWrapperConsumerBase} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFV2PlusWrapperConsumerBase.sol";
 import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
@@ -9,16 +9,25 @@ interface IContests {
     function fulfillRandomNumbers(uint256 contestId, uint8[] memory rows, uint8[] memory cols) external;
 }
 
+interface IGasOracle {
+    function gasPrice() external view returns (uint256);
+    function baseFee() external view returns (uint256);
+}
+
 contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
     // Default scores array
     uint8[] private defaultScores = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
     // VRF configuration
-    uint256 public vrfFee = 0.001 ether;
-    uint32 public vrfGas = 250_000;
+    uint32 public constant CALLBACK_GAS_LIMIT = 250_000;
+    uint16 public constant REQUEST_CONFIRMATIONS = 3;
+    uint32 public constant NUM_WORDS = 2; // We need 2 random numbers for rows and cols
 
     // Contests contract reference
     IContests public contests;
+    
+    // Base network gas oracle
+    IGasOracle public constant GAS_ORACLE = IGasOracle(0x420000000000000000000000000000000000000F);
 
     // Mapping to track VRF requests
     mapping(uint256 requestId => uint256 contestId) private vrfRequests;
@@ -26,7 +35,8 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
     error InsufficientPayment();
     error OnlyContests();
     error FailedToSendETH();
-    event RandomNumberRequested(uint256 indexed contestId, uint256 indexed requestId);
+    error RefundFailed();
+    event RandomNumberRequested(uint256 indexed contestId, uint256 indexed requestId, uint256 requestPrice);
 
     modifier onlyContests() {
         if (msg.sender != address(contests)) revert OnlyContests();
@@ -42,28 +52,34 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
         contests = IContests(_contests);
     }
 
-    function setVrfConfig(uint256 _fee, uint32 _gas) external onlyOwner {
-        vrfFee = _fee;
-        vrfGas = _gas;
-    }
-
     function requestRandomNumbers(uint256 contestId) external payable virtual onlyContests {
-        if (msg.value < vrfFee) revert InsufficientPayment();
-
-        uint256 requestId;
-        uint256 reqPrice;
+        // Calculate the request price dynamically
+        uint256 requestPrice = i_vrfV2PlusWrapper.calculateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS);
         
-        (requestId, reqPrice) = requestRandomnessPayInNative(
-            vrfGas,
-            3, // requestConfirmations
-            2, // numWords
-            VRFV2PlusClient._argsToBytes(
-              VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
-            )
+        // Ensure enough native token was sent
+        if (msg.value < requestPrice) revert InsufficientPayment();
+        
+        // Create extraArgs for VRF v2.5 - specify native payment
+        bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
+            VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
         );
+        
+        // Request randomness paying with native token
+        (uint256 requestId, ) = requestRandomnessPayInNative(
+            CALLBACK_GAS_LIMIT,
+            REQUEST_CONFIRMATIONS,
+            NUM_WORDS,
+            extraArgs
+        );
+        
+        // Refund excess payment
+        if (msg.value > requestPrice) {
+            (bool success, ) = payable(msg.sender).call{value: msg.value - requestPrice}("");
+            if (!success) revert RefundFailed();
+        }
 
         vrfRequests[requestId] = contestId;
-        emit RandomNumberRequested(contestId, requestId);
+        emit RandomNumberRequested(contestId, requestId, requestPrice);
     }
 
     function fulfillRandomWords(
@@ -92,6 +108,38 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
             unchecked{ ++i; }
         }
         return shuffledScores;
+    }
+
+    // Function to estimate the cost of requesting randomness using current network gas price
+    function estimateRequestPrice() external view returns (uint256) {
+        uint256 currentGasPrice = GAS_ORACLE.gasPrice();
+        return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, currentGasPrice);
+    }
+    
+    // Function to estimate the cost of requesting randomness with custom gas price
+    function estimateRequestPrice(uint256 gasPriceWei) external view returns (uint256) {
+        return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, gasPriceWei);
+    }
+    
+    // Convenience function that uses a default gas price (fallback if oracle fails)
+    function estimateRequestPriceWithDefaultGas() external view returns (uint256) {
+        // Default to 1 gwei (adjust based on your target network's typical gas price)
+        return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, 1 gwei);
+    }
+    
+    // Get the current request price (this will work during transactions but return 0 in view calls)
+    function getCurrentRequestPrice() external view returns (uint256) {
+        return i_vrfV2PlusWrapper.calculateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS);
+    }
+    
+    // Debug function to check VRF wrapper address
+    function getVRFWrapperAddress() external view returns (address) {
+        return address(i_vrfV2PlusWrapper);
+    }
+    
+    // Debug function to get callback gas limit
+    function getCallbackGasLimit() external pure returns (uint32) {
+        return CALLBACK_GAS_LIMIT;
     }
 
     // allow the owner to withdraw funds
