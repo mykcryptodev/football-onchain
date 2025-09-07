@@ -92,13 +92,15 @@ if [ -f .env ]; then
     set +a  # stop automatically exporting
 fi
 
-# Check for Basescan API key (after loading .env)
-if [ -z "$BASESCAN_API_KEY" ]; then
-    print_warning "BASESCAN_API_KEY environment variable not set"
+# Check for Etherscan API key (after loading .env)
+if [ -z "$ETHERSCAN_API_KEY" ]; then
+    print_warning "ETHERSCAN_API_KEY environment variable not set"
     print_info "Contracts will be deployed but not automatically verified"
-    print_info "You can set the API key with: export BASESCAN_API_KEY=your_api_key"
+    print_info "You need an Etherscan API key for V2 API verification"
+    print_info "1. Go to https://etherscan.io/ and create an account"
+    print_info "2. Generate an API key and set: export ETHERSCAN_API_KEY=your_api_key"
 else
-    print_info "BASESCAN_API_KEY found - contracts will be automatically verified"
+    print_info "ETHERSCAN_API_KEY found - contracts will be automatically verified"
 fi
 
 # Check if foundry is installed

@@ -5,16 +5,18 @@ This guide explains how to deploy the Football Boxes contracts using Foundry ins
 ## Prerequisites
 
 1. **Install Foundry**: Follow the [official installation guide](https://book.getfoundry.sh/getting-started/installation)
-2. **Set up API Keys**: You'll need a Basescan API key for contract verification
+2. **Set up API Keys**: You'll need an Etherscan API key for contract verification (get one at [etherscan.io](https://etherscan.io/))
 3. **Private Key**: Have your deployer private key ready (64 hex characters with 0x prefix)
 
 ## Environment Setup
 
-Set your Basescan API key as an environment variable for automatic contract verification:
+Set your Etherscan API key as an environment variable for automatic contract verification:
 
 ```bash
-export BASESCAN_API_KEY="your_api_key_here"
+export ETHERSCAN_API_KEY="your_api_key_here"
 ```
+
+**Important**: You need an **Etherscan API key** (not Basescan) for the V2 API. Get one at [etherscan.io](https://etherscan.io/).
 
 **Note**: The API key is optional. If not provided, contracts will be deployed successfully but not automatically verified. Manual verification commands will be displayed instead.
 
@@ -25,33 +27,35 @@ export BASESCAN_API_KEY="your_api_key_here"
 The shell script provides the easiest way to deploy with comprehensive error checking, gas estimation, and colored output.
 
 ```bash
-# Deploy to Base Sepolia (testnet) - includes gas estimation and approval prompt
+# Deploy to Base Sepolia (testnet) - fast deployment without verification
 ./scripts/deploy_foundry.sh 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base-sepolia
 
-# Deploy to Base Mainnet - includes gas estimation and approval prompt
+# Deploy to Base Mainnet - fast deployment without verification
 ./scripts/deploy_foundry.sh 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base
 
-# Skip gas estimation for faster deployment
+# Skip gas estimation for fastest deployment
 ./scripts/deploy_foundry.sh 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base-sepolia --skip-estimation
 ```
 
 ### Method 2: Using Make Commands
 
 ```bash
-# Deploy to Base Sepolia (with gas estimation)
+# Fast deployment (with gas estimation, no verification)
 make deploy-base-sepolia PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-
-# Deploy to Base Mainnet (with gas estimation)
 make deploy-base PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
 
-# Fast deployment (skip gas estimation)
+# Fastest deployment (skip gas estimation and verification)
 make deploy-base-sepolia-fast PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+
+# Slower deployment (with verification during deployment)
+make deploy-base-sepolia-verify PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
+
+# Verify contracts after deployment
+make verify-contracts-sepolia
+make verify-contracts-base
 
 # Gas estimation only (no deployment)
 make estimate-gas PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef RPC_URL=https://sepolia.base.org
-
-# Generic deployment (specify network)
-make deploy-foundry PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef NETWORK=base-sepolia
 ```
 
 ### Method 3: Direct Forge Command
@@ -59,7 +63,7 @@ make deploy-foundry PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcd
 ```bash
 # Set environment variables
 export PRIVATE_KEY=0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef
-export BASESCAN_API_KEY="your_api_key_here"  # Optional for auto-verification
+export ETHERSCAN_API_KEY="your_api_key_here"  # Optional for auto-verification
 
 # Deploy to Base Sepolia
 forge script script/Deploy.s.sol:Deploy \
@@ -130,6 +134,39 @@ If you want to deploy immediately without estimation:
 make deploy-base-sepolia-fast PRIVATE_KEY=0x1234...
 ```
 
+## Contract Verification
+
+### Automatic Verification (Recommended)
+
+```bash
+# Deploy with automatic verification after deployment
+SKIP_VERIFICATION=false make deploy-base-sepolia-verify PRIVATE_KEY=0x...
+```
+
+### Manual Verification (Default)
+
+```bash
+# 1. Deploy (fast)
+make deploy-base-sepolia PRIVATE_KEY=0x...
+
+# 2. Verify separately (owner address auto-detected)
+make verify-contracts-sepolia
+```
+
+### Custom Verification
+
+```bash
+# Verify with specific owner address
+./scripts/verify_contracts.sh base-sepolia 0x9036464e4ecD2d40d21EE38a0398AEdD6805a09B
+```
+
+**Verification Features:**
+- ✅ **Auto-detects owner address** from deployment data
+- ✅ **Configurable delays** (10 seconds between contracts by default)
+- ✅ **Enhanced retry logic** (15 retries with 10-second delays)
+- ✅ **Rate limit protection** with delays between contracts
+- ✅ **Etherscan V2 API** for better reliability
+
 ## Deployment Process
 
 The script performs these steps in order:
@@ -141,7 +178,7 @@ The script performs these steps in order:
 5. **Add GameScoreOracle to Functions Subscription** - Register oracle with Chainlink
 6. **Deploy Contests Contract** - Main contest management contract
 7. **Configure Contract Relationships** - Set up inter-contract dependencies
-8. **Auto-Verify Contracts** - Automatically verify all contracts on block explorer (if BASESCAN_API_KEY is set)
+8. **Auto-Verify Contracts** - Call external verification script (if SKIP_VERIFICATION=false and ETHERSCAN_API_KEY is set)
 
 **Gas Estimation Process** (runs before deployment by default):
 1. **Estimate Contract Sizes** - Calculate deployment gas for each contract
@@ -152,10 +189,10 @@ The script performs these steps in order:
 
 ## Supported Networks
 
-| Network | Chain ID | RPC URL | Block Explorer |
-|---------|----------|---------|----------------|
-| Base Sepolia | 84532 | https://sepolia.base.org | https://sepolia.basescan.org |
-| Base Mainnet | 8453 | https://mainnet.base.org | https://basescan.org |
+| Network | Chain ID | RPC URL | Block Explorer | Verification API |
+|---------|----------|---------|----------------|------------------|
+| Base Sepolia | 84532 | https://sepolia.base.org | https://sepolia.basescan.org | Etherscan V2 API |
+| Base Mainnet | 8453 | https://mainnet.base.org | https://basescan.org | Etherscan V2 API |
 
 ## Advantages over Hardhat Deployment
 
@@ -196,6 +233,7 @@ Upon successful deployment, you'll see:
 3. **Network Issues**: Check RPC endpoint availability
 4. **Private Key Format**: Must be 64 hex characters with 0x prefix
 5. **FFI Permission**: Ensure `--ffi` flag is used for automatic verification
+6. **API Rate Limits**: Uses Etherscan V2 API to avoid rate limiting issues
 
 ### Verification Failures
 
@@ -204,8 +242,11 @@ If automatic verification fails:
 2. Manual verification commands will be displayed
 3. You can run verification separately using the provided commands
 
+**API V2 Migration**: The scripts now use [Etherscan's V2 API](https://docs.etherscan.io/etherscan-v2/v2-quickstart) which provides better rate limits and unified access across all chains.
+
 ```bash
-forge verify-contract <CONTRACT_ADDRESS> contracts/src/<CONTRACT_NAME>.sol:<CONTRACT_NAME> --constructor-args <ARGS> --etherscan-api-key $BASESCAN_API_KEY --verifier-url <VERIFIER_URL> --watch
+# V2 API format with chainId parameter
+forge verify-contract <CONTRACT_ADDRESS> contracts/src/<CONTRACT_NAME>.sol:<CONTRACT_NAME> --constructor-args <ARGS> --chain 84532 --etherscan-api-key $ETHERSCAN_API_KEY --verifier-url "https://api.etherscan.io/v2/api" --watch
 ```
 
 ## Security Notes

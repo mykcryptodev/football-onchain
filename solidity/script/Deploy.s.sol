@@ -140,16 +140,30 @@ contract Deploy is Script {
         console.log("Contests:       ", address(contests));
         console.log("");
 
-        // Auto-verify contracts if API key is available
-        string memory apiKey = vm.envOr("BASESCAN_API_KEY", string(""));
-        if (bytes(apiKey).length > 0) {
-            console.log("=== Auto-Verifying Contracts ===");
-            _verifyContracts(chainId, deployer, apiKey);
-        } else {
-            console.log("=== Manual Verification Commands ===");
-            console.log("BASESCAN_API_KEY not set. Run these commands to verify contracts manually:");
+        // Check if we should skip verification during deployment
+        bool skipVerification = vm.envOr("SKIP_VERIFICATION", true); // Default to true for faster deployments
+
+        if (skipVerification) {
+            console.log("=== Verification Skipped During Deployment ===");
+            console.log("For faster deployment, verification is skipped by default.");
+            console.log("To verify contracts, run:");
+            console.log("  ./scripts/verify_contracts.sh", _getNetworkName(chainId), vm.toString(deployer));
             console.log("");
-            _printVerificationCommands(chainId, deployer);
+            console.log("Or set SKIP_VERIFICATION=false to verify during deployment.");
+        } else {
+            // Auto-verify contracts using external script
+            string memory apiKey = vm.envOr("ETHERSCAN_API_KEY", string(""));
+            if (bytes(apiKey).length > 0) {
+                console.log("=== Auto-Verifying Contracts ===");
+                console.log("Calling verification script...");
+                console.log("");
+                _callVerificationScript(chainId, deployer);
+            } else {
+                console.log("=== Manual Verification Commands ===");
+                console.log("ETHERSCAN_API_KEY not set. Run this command to verify contracts manually:");
+                console.log("  ./scripts/verify_contracts.sh", _getNetworkName(chainId), vm.toString(deployer));
+                console.log("");
+            }
         }
     }
 
@@ -200,26 +214,46 @@ contract Deploy is Script {
         string memory apiKey,
         string memory verifierUrl
     ) internal {
-        string[] memory verifyCommand = new string[](12);
-        verifyCommand[0] = "forge";
-        verifyCommand[1] = "verify-contract";
-        verifyCommand[2] = vm.toString(contractAddress);
-        verifyCommand[3] = string(abi.encodePacked("contracts/src/", contractName, ".sol:", contractName));
-        verifyCommand[4] = "--etherscan-api-key";
-        verifyCommand[5] = apiKey;
-        verifyCommand[6] = "--verifier-url";
-        verifyCommand[7] = verifierUrl;
+        string[] memory verifyCommand;
 
         if (bytes(constructorArgs).length > 0) {
-            verifyCommand[8] = "--constructor-args";
-            verifyCommand[9] = constructorArgs;
-            verifyCommand[10] = "--watch";
-            verifyCommand[11] = "";
+            // Command with constructor args
+            verifyCommand = new string[](17);
+            verifyCommand[0] = "forge";
+            verifyCommand[1] = "verify-contract";
+            verifyCommand[2] = vm.toString(contractAddress);
+            verifyCommand[3] = string(abi.encodePacked("contracts/src/", contractName, ".sol:", contractName));
+            verifyCommand[4] = "--chain";
+            verifyCommand[5] = vm.toString(block.chainid);
+            verifyCommand[6] = "--etherscan-api-key";
+            verifyCommand[7] = apiKey;
+            verifyCommand[8] = "--verifier-url";
+            verifyCommand[9] = verifierUrl;
+            verifyCommand[10] = "--constructor-args";
+            verifyCommand[11] = constructorArgs;
+            verifyCommand[12] = "--watch";
+            verifyCommand[13] = "--retries";
+            verifyCommand[14] = "15";
+            verifyCommand[15] = "--delay";
+            verifyCommand[16] = "10";
         } else {
-            verifyCommand[8] = "--watch";
-            verifyCommand[9] = "";
-            verifyCommand[10] = "";
-            verifyCommand[11] = "";
+            // Command without constructor args
+            verifyCommand = new string[](15);
+            verifyCommand[0] = "forge";
+            verifyCommand[1] = "verify-contract";
+            verifyCommand[2] = vm.toString(contractAddress);
+            verifyCommand[3] = string(abi.encodePacked("contracts/src/", contractName, ".sol:", contractName));
+            verifyCommand[4] = "--chain";
+            verifyCommand[5] = vm.toString(block.chainid);
+            verifyCommand[6] = "--etherscan-api-key";
+            verifyCommand[7] = apiKey;
+            verifyCommand[8] = "--verifier-url";
+            verifyCommand[9] = verifierUrl;
+            verifyCommand[10] = "--watch";
+            verifyCommand[11] = "--retries";
+            verifyCommand[12] = "15";
+            verifyCommand[13] = "--delay";
+            verifyCommand[14] = "10";
         }
 
         try vm.ffi(verifyCommand) {
@@ -230,10 +264,8 @@ contract Deploy is Script {
     }
 
     function _getVerifierUrl(uint256 chainId) internal pure returns (string memory) {
-        if (chainId == 84532) {
-            return "https://api-sepolia.basescan.org/api";
-        } else if (chainId == 8453) {
-            return "https://api.basescan.org/api";
+        if (chainId == 84532 || chainId == 8453) {
+            return "https://api.etherscan.io/v2/api";
         } else {
             revert("Unsupported chain for verification");
         }
@@ -422,5 +454,29 @@ contract Deploy is Script {
         }
 
         console.log(string(abi.encodePacked(label, vm.toString(ethWhole), ".", decimalsStr, " ETH")));
+    }
+
+    function _callVerificationScript(uint256 chainId, address deployer) internal {
+        string[] memory verifyScriptCommand = new string[](3);
+        verifyScriptCommand[0] = "./scripts/verify_contracts.sh";
+        verifyScriptCommand[1] = _getNetworkName(chainId);
+        verifyScriptCommand[2] = vm.toString(deployer);
+
+        try vm.ffi(verifyScriptCommand) {
+            console.log("Contract verification completed successfully!");
+        } catch {
+            console.log("Verification script failed. You can run it manually:");
+            console.log("  ./scripts/verify_contracts.sh", _getNetworkName(chainId), vm.toString(deployer));
+        }
+    }
+
+    function _getNetworkName(uint256 chainId) internal pure returns (string memory) {
+        if (chainId == 84532) {
+            return "base-sepolia";
+        } else if (chainId == 8453) {
+            return "base";
+        } else {
+            return "unknown";
+        }
     }
 }
