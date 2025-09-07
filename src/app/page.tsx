@@ -1,103 +1,134 @@
-import Image from "next/image";
+import { Navigation } from "@/components/navigation";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          priority
-          alt="Next.js logo"
-          className="dark:invert"
-          height={38}
-          src="/next.svg"
-          width={180}
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-background">
+      <Navigation />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <Image
-              alt="Vercel logomark"
-              className="dark:invert"
-              height={20}
-              src="/vercel.svg"
-              width={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Read our docs
-          </a>
+      <main className="container mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center py-16">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Football Boxes
+          </h1>
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+            Join the ultimate football squares experience. Create contests,
+            invite friends, and win big!
+          </p>
+          <div className="flex gap-4 justify-center flex-col sm:flex-row">
+            <Button size="lg" className="text-lg px-8">
+              Create Contest
+            </Button>
+            <Button variant="outline" size="lg" className="text-lg px-8">
+              Join Contest
+            </Button>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="grid md:grid-cols-3 gap-8 py-16">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🏈 Easy Setup
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Create football squares contests in seconds. Set your game,
+                entry fee, and invite participants.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🎯 Fair & Transparent
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Powered by blockchain technology for provably fair number
+                generation and transparent payouts.
+              </CardDescription>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                💰 Instant Payouts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>
+                Winners receive their prizes automatically through smart
+                contracts. No delays, no disputes.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* How It Works Section */}
+        <div className="py-16">
+          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary-foreground font-bold text-xl">
+                  1
+                </span>
+              </div>
+              <h3 className="font-semibold mb-2">Create Contest</h3>
+              <p className="text-muted-foreground text-sm">
+                Set up your football squares game with custom settings
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary-foreground font-bold text-xl">
+                  2
+                </span>
+              </div>
+              <h3 className="font-semibold mb-2">Invite Players</h3>
+              <p className="text-muted-foreground text-sm">
+                Share your contest code and let participants join
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary-foreground font-bold text-xl">
+                  3
+                </span>
+              </div>
+              <h3 className="font-semibold mb-2">Watch & Win</h3>
+              <p className="text-muted-foreground text-sm">
+                Follow the game and see if your squares hit the winning numbers
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-primary-foreground font-bold text-xl">
+                  4
+                </span>
+              </div>
+              <h3 className="font-semibold mb-2">Get Paid</h3>
+              <p className="text-muted-foreground text-sm">
+                Automatic payouts to winners via smart contracts
+              </p>
+            </div>
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            aria-hidden
-            alt="File icon"
-            height={16}
-            src="/file.svg"
-            width={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            aria-hidden
-            alt="Window icon"
-            height={16}
-            src="/window.svg"
-            width={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Image
-            aria-hidden
-            alt="Globe icon"
-            height={16}
-            src="/globe.svg"
-            width={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
