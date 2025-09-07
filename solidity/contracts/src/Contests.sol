@@ -40,9 +40,12 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     // Box NFT
     Boxes public boxes;
 
+    // RandomNumbers contract
+    RandomNumbers public randomNumbers;
+
     // default row and columns
     uint8[] private defaultScores = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    
+
     // payouts
     uint256 public constant Q1_PAYOUT = 150; // q1 wins 15% of the pot
     uint256 public constant Q2_PAYOUT = 300; // q2 wins 30% of the pot
@@ -82,17 +85,6 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     error CallerNotContestCreator();
     error CallerNotRandomNumbers();
 
-    ////////////////////////////////////////////////
-    ///////////   CHAINLINK VARIABLES    ///////////
-    ////////////////////////////////////////////////
-    uint256 public vrfFee = 0.001 ether;
-
-    // Gas For VRF Trigger
-    uint32 public vrfGas = 250_000;
-
-    // RandomNumbers contract reference
-    RandomNumbers public randomNumbers;
-
     // modifier for only random numbers contract
     modifier onlyRandomNumbers() {
         if (msg.sender != address(randomNumbers)) revert CallerNotRandomNumbers();
@@ -124,7 +116,10 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         Calling this prevents future boxes from being claimed.
      */
     function fetchRandomValues(uint256 _contestId) external payable {
-        if (msg.value < vrfFee) revert InsufficientPayment();
+        // Get the current VRF request price from RandomNumbers contract
+        uint256 requiredFee = randomNumbers.getCurrentRequestPrice();
+        if (msg.value < requiredFee) revert InsufficientPayment();
+
         // fetch the contest
         IContestTypes.Contest memory contest = contests[_contestId];
         if (contest.randomValuesSet) revert RandomValuesAlreadyFetched();
@@ -134,11 +129,11 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
 
         // Forward the call to RandomNumbers contract
         randomNumbers.requestRandomNumbers{value: msg.value}(_contestId);
-        
+
         // Update contest state
         contest.boxesCanBeClaimed = false;
         contests[_contestId] = contest;
-        
+
         emit ScoresRequested(_contestId);
     }
 
@@ -413,7 +408,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         if (quarter == 4) return FINAL_PAYOUT;
         return 0;
     }
-    
+
     /**
         Read the scores of the cols of a contest
      */
@@ -497,13 +492,13 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         uint256 contestId,
         uint8[] memory rows,
         uint8[] memory cols
-    ) external onlyRandomNumbers {        
+    ) external onlyRandomNumbers {
         IContestTypes.Contest memory contest = contests[contestId];
         contest.randomValuesSet = true;
         contest.rows = rows;
         contest.cols = cols;
         contests[contestId] = contest;
-        
+
         emit ScoresAssigned(contestId);
     }
 }
