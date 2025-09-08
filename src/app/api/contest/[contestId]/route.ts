@@ -1,5 +1,6 @@
 import { chain, contests } from "@/constants";
 import { abi } from "@/constants/abis/contests";
+import { CACHE_TTL, getContestCacheKey, redis } from "@/lib/redis";
 import { NextRequest, NextResponse } from "next/server";
 import { createThirdwebClient, getContract, readContract } from "thirdweb";
 import { baseSepolia } from "thirdweb/chains";
@@ -28,6 +29,26 @@ export async function GET(
       return NextResponse.json(
         { error: "Contract address not configured" },
         { status: 500 },
+      );
+    }
+
+    // Check Redis cache first (if configured)
+    let cachedContest = null;
+    if (redis) {
+      const cacheKey = getContestCacheKey(contestId, chain.id);
+      cachedContest = await redis.get(cacheKey);
+
+      if (cachedContest) {
+        console.log(`Cache hit for contest ${contestId} on chain ${chain.id}`);
+        return NextResponse.json(cachedContest);
+      }
+
+      console.log(
+        `Cache miss for contest ${contestId} on chain ${chain.id}, fetching from blockchain`,
+      );
+    } else {
+      console.log(
+        `Redis not configured, fetching contest ${contestId} from blockchain`,
       );
     }
 
@@ -61,8 +82,8 @@ export async function GET(
       description,
     ] = contestData;
 
-    // Return the contest data
-    return NextResponse.json({
+    // Format the contest data
+    const formattedContestData = {
       id: id.toString(),
       gameId: gameId.toString(),
       creator,
@@ -82,7 +103,18 @@ export async function GET(
       randomValuesSet,
       title,
       description,
-    });
+    };
+
+    // Cache the contest data with 1 hour TTL (if Redis is configured)
+    if (redis) {
+      const cacheKey = getContestCacheKey(contestId, chain.id);
+      await redis.setex(cacheKey, CACHE_TTL.CONTEST, formattedContestData);
+      console.log(
+        `Cached contest ${contestId} on chain ${chain.id} for ${CACHE_TTL.CONTEST} seconds`,
+      );
+    }
+
+    return NextResponse.json(formattedContestData);
   } catch (error) {
     console.error("Error fetching contest data:", error);
     return NextResponse.json(
