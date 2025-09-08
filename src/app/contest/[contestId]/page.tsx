@@ -24,66 +24,79 @@ export default function ContestPage() {
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock data - in a real app, this would fetch from blockchain
+  // Fetch contest data from API
   useEffect(() => {
     const fetchContestData = async () => {
       setLoading(true);
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        // Fetch contest data from API
+        const response = await fetch(`/api/contest/${contestId}`);
 
-      // Mock contest data
-      const mockContest: Contest = {
-        id: parseInt(contestId),
-        gameId: 12345,
-        creator: "0x1234567890abcdef1234567890abcdef12345678",
-        rows: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        cols: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-        boxCost: {
-          currency: "0x0000000000000000000000000000000000000000", // ETH
-          amount: 0.01 * 1e18, // 0.01 ETH in wei
-        },
-        boxesCanBeClaimed: true,
-        rewardsPaid: {
-          q1Paid: false,
-          q2Paid: false,
-          q3Paid: false,
-          finalPaid: false,
-        },
-        totalRewards: 0.5 * 1e18, // 0.5 ETH in wei
-        boxesClaimed: 45,
-        randomValuesSet: false,
-      };
+        if (!response.ok) {
+          throw new Error("Failed to fetch contest data");
+        }
 
-      const mockGameScore: GameScore = {
-        id: 12345,
-        homeQ1LastDigit: 7,
-        homeQ2LastDigit: 4,
-        homeQ3LastDigit: 1,
-        homeFLastDigit: 8,
-        awayQ1LastDigit: 3,
-        awayQ2LastDigit: 0,
-        awayQ3LastDigit: 7,
-        awayFLastDigit: 4,
-        qComplete: 2, // Q1 and Q2 complete
-        requestInProgress: false,
-      };
+        const contestData = await response.json();
 
-      // Mock box owners
-      const mockBoxOwners: BoxOwner[] = Array.from({ length: 100 }, (_, i) => ({
-        tokenId: i,
-        owner:
-          i < 45
-            ? `0x${Math.random().toString(16).substr(2, 40)}`
-            : "0x0000000000000000000000000000000000000000",
-        row: Math.floor(i / 10),
-        col: i % 10,
-      }));
+        // Convert the API response to our Contest type
+        const contest: Contest = {
+          id: parseInt(contestData.id),
+          gameId: parseInt(contestData.gameId),
+          creator: contestData.creator,
+          rows: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // TODO: Fetch from contract
+          cols: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // TODO: Fetch from contract
+          boxCost: {
+            currency: contestData.boxCost.currency,
+            amount: parseInt(contestData.boxCost.amount),
+          },
+          boxesCanBeClaimed: contestData.boxesCanBeClaimed,
+          rewardsPaid: contestData.rewardsPaid,
+          totalRewards: parseInt(contestData.totalRewards),
+          boxesClaimed: parseInt(contestData.boxesClaimed),
+          randomValuesSet: contestData.randomValuesSet,
+          title: contestData.title,
+          description: contestData.description,
+        };
 
-      setContest(mockContest);
-      setGameScore(mockGameScore);
-      setBoxOwners(mockBoxOwners);
-      setLoading(false);
+        // TODO: Fetch game score and box owners from separate API endpoints
+        const mockGameScore: GameScore = {
+          id: parseInt(contestData.gameId),
+          homeQ1LastDigit: 7,
+          homeQ2LastDigit: 4,
+          homeQ3LastDigit: 1,
+          homeFLastDigit: 8,
+          awayQ1LastDigit: 3,
+          awayQ2LastDigit: 0,
+          awayQ3LastDigit: 7,
+          awayFLastDigit: 4,
+          qComplete: 2, // Q1 and Q2 complete
+          requestInProgress: false,
+        };
+
+        // Mock box owners for now
+        const mockBoxOwners: BoxOwner[] = Array.from(
+          { length: 100 },
+          (_, i) => ({
+            tokenId: i,
+            owner:
+              i < parseInt(contestData.boxesClaimed)
+                ? `0x${Math.random().toString(16).substr(2, 40)}`
+                : "0x0000000000000000000000000000000000000000",
+            row: Math.floor(i / 10),
+            col: i % 10,
+          }),
+        );
+
+        setContest(contest);
+        setGameScore(mockGameScore);
+        setBoxOwners(mockBoxOwners);
+      } catch (error) {
+        console.error("Error fetching contest data:", error);
+        // Keep contest as null to show error state
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchContestData();

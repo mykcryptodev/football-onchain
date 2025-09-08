@@ -19,6 +19,8 @@ export interface Contest {
   totalRewards: number;
   boxesClaimed: number;
   randomValuesSet: boolean;
+  title: string;
+  description: string;
 }
 
 export interface GameScore {

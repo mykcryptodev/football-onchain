@@ -10,7 +10,10 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-bold">Contest #{contest.id}</h1>
+        <div>
+          <h1 className="text-3xl font-bold">{contest.title}</h1>
+          <p className="text-muted-foreground mt-1">Contest #{contest.id}</p>
+        </div>
         <div className="flex gap-2">
           <Badge variant={contest.boxesCanBeClaimed ? "default" : "secondary"}>
             {contest.boxesCanBeClaimed ? "Active" : "Closed"}
@@ -20,6 +23,11 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           </Badge>
         </div>
       </div>
+      {contest.description && (
+        <div className="mb-4">
+          <p className="text-lg text-muted-foreground">{contest.description}</p>
+        </div>
+      )}
     </div>
   );
 }
