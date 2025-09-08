@@ -29,6 +29,8 @@ interface IContestTypes {
         uint256 boxesClaimed;
         uint256[] randomValues;
         bool randomValuesSet;
+        string title;
+        string description;
     }
 
     struct Cost {

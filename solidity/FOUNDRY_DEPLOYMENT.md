@@ -104,7 +104,7 @@ Current gas price: 0.02 gwei
 
 Boxes: ~ 1250000 gas
 GameScoreOracle: ~ 2100000 gas
-ContestsReader: ~ 980000 gas
+ContestsManager: ~ 980000 gas
 RandomNumbers: ~ 1800000 gas
 Contests: ~ 3200000 gas
 Setup transactions: ~ 300000 gas
@@ -173,7 +173,7 @@ The script performs these steps in order:
 
 1. **Deploy Boxes Contract** - NFT contract for box ownership
 2. **Deploy GameScoreOracle Contract** - Chainlink Functions oracle for game scores
-3. **Deploy ContestsReader Contract** - Read-only contract for contest data
+3. **Deploy ContestsManager Contract** - Read-only contract for contest data
 4. **Deploy RandomNumbers Contract** - Chainlink VRF for random number generation
 5. **Add GameScoreOracle to Functions Subscription** - Register oracle with Chainlink
 6. **Deploy Contests Contract** - Main contest management contract

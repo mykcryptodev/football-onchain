@@ -25,7 +25,7 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
 
     // Contests contract reference
     IContests public contests;
-    
+
     // Base network gas oracle
     IGasOracle public constant GAS_ORACLE = IGasOracle(0x420000000000000000000000000000000000000F);
 
@@ -43,9 +43,9 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
         _;
     }
 
-    constructor(address _vrfWrapper) 
+    constructor(address _vrfWrapper)
         VRFV2PlusWrapperConsumerBase(_vrfWrapper)
-        ConfirmedOwner(msg.sender) 
+        ConfirmedOwner(msg.sender)
     {}
 
     function setContests(address _contests) external onlyOwner {
@@ -55,15 +55,15 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
     function requestRandomNumbers(uint256 contestId) external payable virtual onlyContests {
         // Calculate the request price dynamically
         uint256 requestPrice = i_vrfV2PlusWrapper.calculateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS);
-        
+
         // Ensure enough native token was sent
         if (msg.value < requestPrice) revert InsufficientPayment();
-        
+
         // Create extraArgs for VRF v2.5 - specify native payment
         bytes memory extraArgs = VRFV2PlusClient._argsToBytes(
             VRFV2PlusClient.ExtraArgsV1({nativePayment: true})
         );
-        
+
         // Request randomness paying with native token
         (uint256 requestId, ) = requestRandomnessPayInNative(
             CALLBACK_GAS_LIMIT,
@@ -71,7 +71,7 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
             NUM_WORDS,
             extraArgs
         );
-        
+
         // Refund excess payment
         if (msg.value > requestPrice) {
             (bool success, ) = payable(msg.sender).call{value: msg.value - requestPrice}("");
@@ -87,7 +87,7 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
         uint256[] memory randomWords
     ) internal override {
         uint256 contestId = vrfRequests[requestId];
-        
+
         // Generate shuffled scores using the random words
         uint8[] memory rows = _shuffleScores(randomWords[0]);
         uint8[] memory cols = _shuffleScores(randomWords[1]);
@@ -115,28 +115,28 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
         uint256 currentGasPrice = GAS_ORACLE.gasPrice();
         return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, currentGasPrice);
     }
-    
+
     // Function to estimate the cost of requesting randomness with custom gas price
     function estimateRequestPrice(uint256 gasPriceWei) external view returns (uint256) {
         return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, gasPriceWei);
     }
-    
+
     // Convenience function that uses a default gas price (fallback if oracle fails)
     function estimateRequestPriceWithDefaultGas() external view returns (uint256) {
         // Default to 1 gwei (adjust based on your target network's typical gas price)
         return i_vrfV2PlusWrapper.estimateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS, 1 gwei);
     }
-    
+
     // Get the current request price (this will work during transactions but return 0 in view calls)
-    function getCurrentRequestPrice() external view returns (uint256) {
+    function getCurrentRequestPrice() external view virtual returns (uint256) {
         return i_vrfV2PlusWrapper.calculateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS);
     }
-    
+
     // Debug function to check VRF wrapper address
     function getVRFWrapperAddress() external view returns (address) {
         return address(i_vrfV2PlusWrapper);
     }
-    
+
     // Debug function to get callback gas limit
     function getCallbackGasLimit() external pure returns (uint32) {
         return CALLBACK_GAS_LIMIT;

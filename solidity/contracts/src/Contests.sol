@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {GameScoreOracle} from "./GameScoreOracle.sol";
 import {Boxes} from "./Boxes.sol";
-import {ContestsReader} from "./ContestsReader.sol";
+import {ContestsManager} from "./ContestsManager.sol";
 import {IContestTypes} from "./IContestTypes.sol";
 import {RandomNumbers} from "./RandomNumbers.sol";
 
@@ -34,8 +34,8 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     // Game Score Oracle
     GameScoreOracle public gameScoreOracle;
 
-    // Contest Reader
-    ContestsReader public contestsReader;
+    // Contest Manager
+    ContestsManager public contestsManager;
 
     // Box NFT
     Boxes public boxes;
@@ -84,6 +84,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     error BoxesCannotBeClaimed();
     error CallerNotContestCreator();
     error CallerNotRandomNumbers();
+    error CallerNotContestsManager();
 
     // modifier for only random numbers contract
     modifier onlyRandomNumbers() {
@@ -91,11 +92,17 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         _;
     }
 
+    // modifier for only contests manager contract
+    modifier onlyContestsManager() {
+        if (msg.sender != address(contestsManager)) revert CallerNotContestsManager();
+        _;
+    }
+
     constructor(
         address treasury_,
         Boxes boxes_,
         GameScoreOracle gameScoreOracle_,
-        ContestsReader contestsReader_,
+        ContestsManager contestsManager_,
         RandomNumbers randomNumbers_
     )
     ConfirmedOwner(msg.sender) {
@@ -103,7 +110,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         treasury = treasury_;
         boxes = boxes_;
         gameScoreOracle = gameScoreOracle_;
-        contestsReader = contestsReader_;
+        contestsManager = contestsManager_;
         randomNumbers = randomNumbers_;
     }
 
@@ -137,6 +144,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         emit ScoresRequested(_contestId);
     }
 
+
     ////////////////////////////////////////////////
     ///////////    PUBLIC FUNCTIONS      ///////////
     ////////////////////////////////////////////////
@@ -144,9 +152,10 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     /**
         Create a new contest
      */
-    function createContest(uint256 gameId, uint256 boxCost, address boxCurrency) external {
+    function createContest(uint256 gameId, uint256 boxCost, address boxCurrency, string memory title, string memory description) external {
         if (gameId == 0) revert GameIdNotSet();
         if (boxCost == 0) revert BoxCostNotSet();
+        // Note: Title and description validation is handled in ContestsManager.updateContestInfo()
         // create the contest struct
         IContestTypes.Contest memory contest = IContestTypes.Contest({
             id: contestIdCounter, // the id of the contest
@@ -160,7 +169,9 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
             totalRewards: 0, // total amount collected for the contest
             boxesClaimed: 0, // no boxes have been claimed yet
             randomValues: new uint [](2), // holds random values to be used when assigning values to rows and cols
-            randomValuesSet: false // chainlink has not yet given us random values for row and col values
+            randomValuesSet: false, // chainlink has not yet given us random values for row and col values
+            title: title, // the title of the contest
+            description: description // the description of the contest
         });
         // save this to the list of contests
         contests[contestIdCounter] = contest;
@@ -409,64 +420,27 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         return 0;
     }
 
-    /**
-        Read the scores of the cols of a contest
-     */
-    function fetchContestCols(uint256 contestId) external view returns (uint8[] memory) {
-        // fetch the contest object from the id
-        IContestTypes.Contest memory contest = contests[contestId];
-        return (contest.cols);
+    function getTokenIdContestNumber(uint256 tokenId) public pure returns (uint256) {
+        return tokenId / 100;
     }
 
-    /**
-        Read the scores of the rows of a contest
-     */
+    // Essential getter functions (optimized)
+    function fetchContestCols(uint256 contestId) external view returns (uint8[] memory) {
+        return contests[contestId].cols;
+    }
+
     function fetchContestRows(uint256 contestId) external view returns (uint8[] memory) {
-        // fetch the contest object from the id
-        IContestTypes.Contest memory contest = contests[contestId];
-        return (contest.rows);
+        return contests[contestId].rows;
     }
 
     function getWinningQuarters(uint256 contestId, uint256 rowScore, uint256 colScore, IContestTypes.GameScore memory gameScores) public view returns (uint8[] memory) {
-        IContestTypes.Contest memory contest = contests[contestId];
-        if (!contest.randomValuesSet) {
-            return new uint8[](0);
-        }
-
-        return contestsReader.calculateWinningQuarters(rowScore, colScore, gameScores);
+        if (!contests[contestId].randomValuesSet) return new uint8[](0);
+        return contestsManager.calculateWinningQuarters(rowScore, colScore, gameScores);
     }
 
     function getGameScores(uint256 gameId) public view returns (IContestTypes.GameScore memory) {
-        (
-            uint8 homeQ1LastDigit,
-            uint8 homeQ2LastDigit,
-            uint8 homeQ3LastDigit,
-            uint8 homeFLastDigit,
-            uint8 awayQ1LastDigit,
-            uint8 awayQ2LastDigit,
-            uint8 awayQ3LastDigit,
-            uint8 awayFLastDigit,
-            uint8 qComplete,
-            bool requestInProgress
-        ) = gameScoreOracle.getGameScores(gameId);
-        return IContestTypes.GameScore({
-            id: gameId,
-            homeQ1LastDigit: homeQ1LastDigit,
-            homeQ2LastDigit: homeQ2LastDigit,
-            homeQ3LastDigit: homeQ3LastDigit,
-            homeFLastDigit: homeFLastDigit,
-            awayQ1LastDigit: awayQ1LastDigit,
-            awayQ2LastDigit: awayQ2LastDigit,
-            awayQ3LastDigit: awayQ3LastDigit,
-            awayFLastDigit: awayFLastDigit,
-            qComplete: qComplete,
-            requestInProgress: requestInProgress
-        });
-    }
-
-
-    function getTokenIdContestNumber(uint256 tokenId) public pure returns (uint256) {
-        return tokenId / 100;
+        (uint8 homeQ1, uint8 homeQ2, uint8 homeQ3, uint8 homeF, uint8 awayQ1, uint8 awayQ2, uint8 awayQ3, uint8 awayF, uint8 qComplete, bool requestInProgress) = gameScoreOracle.getGameScores(gameId);
+        return IContestTypes.GameScore(gameId, homeQ1, homeQ2, homeQ3, homeF, awayQ1, awayQ2, awayQ3, awayF, qComplete, requestInProgress);
     }
 
     /**
@@ -500,5 +474,14 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         contests[contestId] = contest;
 
         emit ScoresAssigned(contestId);
+    }
+
+    /**
+        Update contest title and/or description - only callable by ContestsReader
+     */
+    function updateContestInfoInternal(uint256 _contestId, string memory _newTitle, string memory _newDescription) external onlyContestsManager {
+        IContestTypes.Contest storage contest = contests[_contestId];
+        contest.title = _newTitle;
+        contest.description = _newDescription;
     }
 }

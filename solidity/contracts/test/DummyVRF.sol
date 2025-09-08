@@ -30,9 +30,9 @@ contract DummyVRF {
     function calculateRequestPriceNative(
         uint32, /* callbackGasLimit */
         uint16 /* requestConfirmations */
-    ) external view returns (uint256, uint256) {
-        return (0, 0); // For testing, we return 0 cost
-    } 
+    ) external pure returns (uint256) {
+        return 0.001 ether; // For testing, we return a fixed cost
+    }
 
     // solhint-disable-next-line no-unused-vars
     function requestRandomWords(

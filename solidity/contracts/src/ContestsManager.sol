@@ -179,4 +179,12 @@ contract ContestsManager is Ownable {
             }
         }
     }
+
+    /**
+        Get both title and description of a contest
+     */
+    function getContestInfo(uint256 contestId) external view returns (string memory title, string memory description) {
+        (,,,,,,,,, string memory contestTitle, string memory contestDescription) = contestStorage.contests(contestId);
+        return (contestTitle, contestDescription);
+    }
 }

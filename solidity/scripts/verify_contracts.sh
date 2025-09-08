@@ -107,7 +107,7 @@ if command -v jq &> /dev/null; then
     # Use jq if available for robust JSON parsing
     BOXES_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "Boxes") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     ORACLE_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "GameScoreOracle") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
-    READER_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ContestsReader") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
+    MANAGER_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ContestsManager") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     RANDOM_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "RandomNumbers") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     CONTESTS_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "Contests") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
 else
@@ -122,8 +122,8 @@ if [ -z "$BOXES_ADDRESS" ] || [ "$BOXES_ADDRESS" = "null" ]; then
     read BOXES_ADDRESS
     echo -n "GameScoreOracle address: "
     read ORACLE_ADDRESS
-    echo -n "ContestsReader address: "
-    read READER_ADDRESS
+    echo -n "ContestsManager address: "
+    read MANAGER_ADDRESS
     echo -n "RandomNumbers address: "
     read RANDOM_ADDRESS
     echo -n "Contests address: "
@@ -132,7 +132,7 @@ else
     print_success "Found contract addresses:"
     echo "  Boxes: $BOXES_ADDRESS"
     echo "  GameScoreOracle: $ORACLE_ADDRESS"
-    echo "  ContestsReader: $READER_ADDRESS"
+    echo "  ContestsManager: $MANAGER_ADDRESS"
     echo "  RandomNumbers: $RANDOM_ADDRESS"
     echo "  Contests: $CONTESTS_ADDRESS"
 fi
@@ -178,9 +178,9 @@ print_info "Waiting $VERIFICATION_DELAY seconds to avoid rate limits..."
 sleep $VERIFICATION_DELAY
 
 echo ""
-print_info "Verifying ContestsReader..."
-forge verify-contract "$READER_ADDRESS" \
-    contracts/src/ContestsReader.sol:ContestsReader \
+print_info "Verifying ContestsManager..."
+forge verify-contract "$MANAGER_ADDRESS" \
+    contracts/src/ContestsManager.sol:ContestsManager \
     --chain "$CHAIN_ID" \
     --etherscan-api-key "$ETHERSCAN_API_KEY" \
     --verifier-url "$VERIFIER_URL" \
@@ -235,7 +235,7 @@ CONTESTS_ARGS=$(cast abi-encode "constructor(address,address,address,address,add
     "$OWNER_ADDRESS" \
     "$BOXES_ADDRESS" \
     "$ORACLE_ADDRESS" \
-    "$READER_ADDRESS" \
+    "$MANAGER_ADDRESS" \
     "$RANDOM_ADDRESS")
 
 forge verify-contract "$CONTESTS_ADDRESS" \

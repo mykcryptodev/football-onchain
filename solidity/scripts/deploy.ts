@@ -1,5 +1,5 @@
 import hre from "hardhat";
-import { Boxes, Contests, ContestsReader, GameScoreOracle, RandomNumbers } from "../typechain-types";
+import { Boxes, Contests, GameScoreOracle, RandomNumbers } from "../typechain-types";
 // Colour codes for terminal prints
 const RESET = "\x1b[0m";
 const GREEN = "\x1b[32m";
@@ -86,21 +86,21 @@ async function main() {
   });
   console.log("gameScoreOracle deployed to: " + `${GREEN}${gameScoreOracleAddress}${RESET}\n`);
 
-  let contestsReader: ContestsReader;
+  let contestsManager: ContestsManager;
   try {
-    contestsReader = await hre.ethers.deployContract("ContestsReader");
-    await contestsReader.waitForDeployment();
+    contestsManager = await hre.ethers.deployContract("ContestsManager");
+    await contestsManager.waitForDeployment();
   } catch (e) {
-    console.log("Error deploying ContestsReader contract, waiting 10 seconds before retrying...\n", e);
+    console.log("Error deploying ContestsManager contract, waiting 10 seconds before retrying...\n", e);
     await delay(10000); // wait 10 seconds
-    contestsReader = await hre.ethers.deployContract("ContestsReader");
-    await contestsReader.waitForDeployment();
+    contestsManager = await hre.ethers.deployContract("ContestsManager");
+    await contestsManager.waitForDeployment();
   }
-  const contestsReaderAddress = await contestsReader.getAddress();
-  console.log("ContestsReader deployed to: " + `${GREEN}${contestsReaderAddress}${RESET}\n`);
+  const contestsManagerAddress = await contestsManager.getAddress();
+  console.log("ContestsManager deployed to: " + `${GREEN}${contestsManagerAddress}${RESET}\n`);
   contractsToVerify.push({
-    name: "ContestsReader",
-    address: contestsReaderAddress,
+    name: "ContestsManager",
+    address: contestsManagerAddress,
     constructorArguments: [],
   });
 
@@ -142,7 +142,7 @@ async function main() {
     await deployer.getAddress(),
     boxesAddress,
     gameScoreOracleAddress,
-    contestsReaderAddress,
+    contestsManagerAddress,
     randomNumbersAddress,
   ];
   let contests: Contests;
@@ -166,9 +166,9 @@ async function main() {
   // set the contests in the boxes contract
   await boxes.setContests(contestsAddress);
   console.log("Contests set in the Boxes contract\n");
-  // set the contests in the contestsReader contract
-  await contestsReader.setContestStorage(contestsAddress);
-  console.log("Contests set in the ContestsReader contract\n");
+  // set the contests in the contestsManager contract
+  await contestsManager.setContestStorage(contestsAddress);
+  console.log("Contests set in the ContestsManager contract\n");
   // set contests in the randomNumbers contract
   await randomNumbers.setContests(contestsAddress);
   console.log("Contests set in the RandomNumbers contract\n");
@@ -189,7 +189,7 @@ async function main() {
     }
     try {
       await hre.run("verify:verify", {
-        address, 
+        address,
         constructorArguments
       });
       console.log(`Successfully verified ${contract.name} at address: ${GREEN}${contract.address}${RESET}\n`);
@@ -198,7 +198,7 @@ async function main() {
       await delay(10000); // wait 10 seconds
       try {
         await hre.run("verify:verify", {
-          address, 
+          address,
           constructorArguments
         });
         console.log(`Successfully verified ${contract.name} at address: ${GREEN}${contract.address}${RESET}\n`);

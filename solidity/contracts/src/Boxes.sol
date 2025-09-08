@@ -7,27 +7,27 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import {Contests} from "./Contests.sol";
-import {ContestsReader} from "./ContestsReader.sol";
+import {ContestsManager} from "./ContestsManager.sol";
 import {IContestTypes} from "./IContestTypes.sol";
 
 contract Boxes is ERC721, ERC721Enumerable, Ownable {
     using Strings for uint256;
-    
+
     Contests public contests;
-    
+
     // Add storage for box attributes
     mapping(uint256 => BoxAttributes) private boxAttributes;
-    
+
     struct BoxAttributes {
         uint256 contestId; // Contest number this box belongs to
     }
-    
+
     modifier onlyContestContract {
         require(msg.sender == address(contests), "Contests: caller is not the contest contract");
         _;
     }
 
-    constructor() 
+    constructor()
         ERC721("Boxes", "BOXES")
         Ownable(msg.sender){}
 
@@ -37,7 +37,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
 
     function mint(uint256 tokenId) public onlyContestContract {
         _safeMint(address(contests), tokenId);
-        
+
         // Initialize box attributes
         boxAttributes[tokenId] = BoxAttributes({
             contestId: getTokenIdContestNumber(tokenId)
@@ -47,13 +47,13 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
     // Generate the on-chain metadata
     function generateTokenURI(uint256 tokenId) internal view returns (string memory) {
         BoxAttributes memory attrs = boxAttributes[tokenId];
-        
+
         // Get the basic JSON structure
         string memory baseJSON = _generateBaseJSON(tokenId, attrs);
-        
+
         // Get winning status separately
         (bool isWinner, bool hasUnclaimedRewards) = _checkWinningStatus(attrs.contestId, tokenId);
-        
+
         // Combine everything
         return string(
             abi.encodePacked(
@@ -70,7 +70,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
 
     function _generateBaseJSON(uint256 tokenId, BoxAttributes memory attrs) private view returns (string memory) {
         (uint256 rowScore, uint256 colScore) = contests.fetchBoxScores(attrs.contestId, tokenId);
-        (,,,,,,,,bool randomValuesSet) = contests.contests(attrs.contestId);
+        (,,,,,,,,bool randomValuesSet,,) = contests.contests(attrs.contestId);
         return string(
             abi.encodePacked(
                 '{',
@@ -85,10 +85,10 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
     }
 
     function _checkWinningStatus(uint256 contestId, uint256 tokenId) private view returns (bool isWinner, bool hasUnclaimedRewards) {
-        ContestsReader contestsReader = contests.contestsReader();
-        IContestTypes.GameScore memory scores = contests.getGameScores(contestsReader.getGameIdForContest(contestId));
+        ContestsManager contestsManager = contests.contestsManager();
+        IContestTypes.GameScore memory scores = contests.getGameScores(contestsManager.getGameIdForContest(contestId));
         (uint256 rowScore, uint256 colScore) = contests.fetchBoxScores(contestId, tokenId);
-        
+
         uint8[] memory winningQuarters = contests.getWinningQuarters(
             contestId,
             rowScore,
@@ -97,7 +97,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
         );
 
         isWinner = winningQuarters.length > 0;
-        
+
         if (isWinner) {
             for (uint256 i = 0; i < winningQuarters.length; i++) {
                 if (!contests.isRewardPaidForQuarter(contestId, winningQuarters[i])) {
@@ -127,7 +127,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
     function update(address to, uint256 tokenId, address auth) public onlyContestContract {
         _update(to, tokenId, auth);
     }
-    
+
     function _update(address to, uint256 tokenId, address auth)
         internal
         override(ERC721, ERC721Enumerable)

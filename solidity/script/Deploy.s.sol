@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import {Script, console} from "forge-std/Script.sol";
 import {Boxes} from "../contracts/src/Boxes.sol";
 import {Contests} from "../contracts/src/Contests.sol";
-import {ContestsReader} from "../contracts/src/ContestsReader.sol";
+import {ContestsManager} from "../contracts/src/ContestsManager.sol";
 import {GameScoreOracle} from "../contracts/src/GameScoreOracle.sol";
 import {RandomNumbers} from "../contracts/src/RandomNumbers.sol";
 
@@ -22,7 +22,7 @@ contract Deploy is Script {
     // Contract instances
     Boxes public boxes;
     GameScoreOracle public gameScoreOracle;
-    ContestsReader public contestsReader;
+    ContestsManager public contestsReader;
     RandomNumbers public randomNumbers;
     Contests public contests;
 
@@ -78,10 +78,10 @@ contract Deploy is Script {
         console.log("GameScoreOracle deployed at:", address(gameScoreOracle));
         console.log("");
 
-        // 3. Deploy ContestsReader contract
-        console.log("Deploying ContestsReader contract...");
-        contestsReader = new ContestsReader();
-        console.log("ContestsReader deployed at:", address(contestsReader));
+        // 3. Deploy ContestsManager contract
+        console.log("Deploying ContestsManager contract...");
+        contestsReader = new ContestsManager();
+        console.log("ContestsManager deployed at:", address(contestsReader));
         console.log("");
 
         // 4. Deploy RandomNumbers contract
@@ -123,7 +123,7 @@ contract Deploy is Script {
 
         // Set contest storage in contestsReader contract
         contestsReader.setContestStorage(address(contests));
-        console.log("Contest storage set in ContestsReader contract");
+        console.log("Contest storage set in ContestsManager contract");
 
         // Set contests in randomNumbers contract
         randomNumbers.setContests(address(contests));
@@ -135,7 +135,7 @@ contract Deploy is Script {
         console.log("=== Deployment Summary ===");
         console.log("Boxes:          ", address(boxes));
         console.log("GameScoreOracle:", address(gameScoreOracle));
-        console.log("ContestsReader: ", address(contestsReader));
+        console.log("ContestsManager: ", address(contestsReader));
         console.log("RandomNumbers:  ", address(randomNumbers));
         console.log("Contests:       ", address(contests));
         console.log("");
@@ -182,8 +182,8 @@ contract Deploy is Script {
             verifierUrl
         );
 
-        console.log("Verifying ContestsReader...");
-        _verifyContract("ContestsReader", address(contestsReader), "", apiKey, verifierUrl);
+        console.log("Verifying ContestsManager...");
+        _verifyContract("ContestsManager", address(contestsReader), "", apiKey, verifierUrl);
 
         console.log("Verifying RandomNumbers...");
         _verifyContract(
@@ -281,7 +281,7 @@ contract Deploy is Script {
             vm.toString(abi.encode(functionsRouter[chainId])),
             verifierUrl
         );
-        _printVerificationCommand("ContestsReader", address(contestsReader), "", verifierUrl);
+        _printVerificationCommand("ContestsManager", address(contestsReader), "", verifierUrl);
         _printVerificationCommand(
             "RandomNumbers",
             address(randomNumbers),
@@ -364,7 +364,7 @@ contract Deploy is Script {
         );
         totalGasEstimate += oracleGas;
 
-        uint256 readerGas = _estimateContractGas("ContestsReader", type(ContestsReader).creationCode, "");
+        uint256 readerGas = _estimateContractGas("ContestsManager", type(ContestsManager).creationCode, "");
         totalGasEstimate += readerGas;
 
         uint256 randomGas = _estimateContractGas(
