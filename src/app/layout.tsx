@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Lexend_Deca } from "next/font/google";
 
+import { Navigation } from "@/components/navigation";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import ThirdwebProvider from "@/providers/Thirdweb";
 import "./globals.css";
 
@@ -39,7 +41,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ThirdwebProvider>{children}</ThirdwebProvider>
+          <ThirdwebProvider>
+            <Navigation />
+            {children}
+          </ThirdwebProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

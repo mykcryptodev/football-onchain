@@ -13,7 +13,6 @@ import {
   GameScores,
   PayoutsCard,
 } from "@/components/contest";
-import { Navigation } from "@/components/navigation";
 import { useParams } from "next/navigation";
 
 export default function ContestPage() {
@@ -128,7 +127,6 @@ export default function ContestPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -144,7 +142,6 @@ export default function ContestPage() {
   if (!contest) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation />
         <main className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Contest Not Found</h1>
@@ -159,8 +156,6 @@ export default function ContestPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation />
-
       <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <ContestHeader contest={contest} />

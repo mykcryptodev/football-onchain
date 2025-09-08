@@ -26,6 +26,12 @@ export function Navigation() {
 
           <div className="hidden md:flex items-center space-x-6">
             <Link
+              href="/contest/create"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Create Contest
+            </Link>
+            <Link
               href="/games"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
