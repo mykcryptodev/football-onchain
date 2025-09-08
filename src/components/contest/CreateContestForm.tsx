@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -32,6 +32,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { chain, contests, usdc } from "@/constants";
+import { abi } from "@/constants/abis/contests";
+import { client } from "@/providers/Thirdweb";
+import { getContract, prepareContractCall } from "thirdweb";
+import { TransactionButton } from "thirdweb/react";
 
 // Types for API responses
 type Game = {
@@ -139,6 +144,53 @@ export function CreateContestForm() {
     },
   });
 
+  const createContestCreationTx = useCallback(async () => {
+    const formData = form.getValues();
+
+    // Validate form data
+    if (
+      !formData.gameId ||
+      !formData.title ||
+      !formData.description ||
+      !formData.boxCost
+    ) {
+      throw new Error("Please fill in all required fields");
+    }
+
+    // Convert box cost to wei (assuming 18 decimals for ETH, 6 for USDC)
+    const decimals = formData.currency === "ETH" ? 18 : 6;
+    const boxCostWei = BigInt(
+      Math.floor(parseFloat(formData.boxCost) * Math.pow(10, decimals)),
+    );
+
+    // Get currency address
+    const currencyAddress =
+      formData.currency === "USDC"
+        ? usdc[chain.id]
+        : "0x0000000000000000000000000000000000000000"; // ETH is represented as zero address
+
+    // Get the contract instance
+    const contract = getContract({
+      client,
+      chain,
+      address: contests[chain.id],
+      abi: abi as any, // Type assertion to bypass ABI type issues
+    });
+
+    // Prepare the contract call
+    return prepareContractCall({
+      contract,
+      method: "createContest",
+      params: [
+        BigInt(formData.gameId), // gameId
+        boxCostWei, // boxCost
+        currencyAddress, // boxCurrency
+        formData.title, // title
+        formData.description, // description
+      ],
+    });
+  }, [form]);
+
   // Fetch current week/season on component mount
   useEffect(() => {
     const fetchCurrentWeek = async () => {
@@ -200,26 +252,10 @@ export function CreateContestForm() {
   }, [seasonType, week, form]);
 
   function onSubmit(data: CreateContestFormValues) {
-    // Find the selected game for additional context
-    const selectedGame = games.find(game => game.id === data.gameId);
-    const contestData = {
-      ...data,
-      selectedGame,
-    };
-
-    // TODO: Implement contest creation logic
-    console.log("Contest creation data:", contestData);
-
-    // Here you would typically:
-    // 1. Call the smart contract to create the contest
-    // 2. Handle the transaction
-    // 3. Redirect to the new contest page
-
-    // For now, show a success toast
-    toast.success("Contest created successfully!", {
-      description:
-        "Your contest has been submitted. Check console for details.",
-    });
+    // This function is now handled by the TransactionButton
+    // The form validation will still work, but the actual submission
+    // is handled by the createContestCreationTx function
+    console.log("Form validated successfully");
   }
 
   return (
@@ -591,7 +627,26 @@ export function CreateContestForm() {
               <Button type="button" variant="outline">
                 Cancel
               </Button>
-              <Button type="submit">Create Contest</Button>
+              <TransactionButton
+                className="!size-9"
+                transaction={createContestCreationTx}
+                onTransactionConfirmed={result => {
+                  toast.success("Contest created successfully!", {
+                    description: "Your contest has been created onchain.",
+                  });
+                  // Reset form after successful creation
+                  form.reset();
+                }}
+                onError={error => {
+                  toast.error("Failed to create contest", {
+                    description:
+                      error.message ||
+                      "An error occurred while creating the contest.",
+                  });
+                }}
+              >
+                Create Contest
+              </TransactionButton>
             </div>
           </form>
         </Form>
