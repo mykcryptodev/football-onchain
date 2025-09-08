@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -32,6 +33,35 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+// Types for API responses
+type Game = {
+  id: string;
+  name: string;
+  shortName: string;
+  date: string;
+  competitions: {
+    competitors: Array<{
+      team: {
+        name: string;
+        abbreviation: string;
+      };
+      homeAway: string;
+    }>;
+  } | null;
+};
+
+type CurrentWeekResponse = {
+  week: number;
+  season: number;
+  seasonYear: number;
+};
+
+type GamesResponse = {
+  games: Game[];
+  week: any;
+  season: any;
+};
+
 // Form validation schema
 const createContestSchema = z.object({
   title: z
@@ -50,6 +80,12 @@ const createContestSchema = z.object({
     .max(500, {
       message: "Description must not exceed 500 characters.",
     }),
+  seasonType: z.enum(["1", "2", "3"], {
+    message: "Please select a season type.",
+  }),
+  week: z.string().min(1, {
+    message: "Please select a week.",
+  }),
   gameId: z.string().min(1, {
     message: "Please select a game.",
   }),
@@ -82,11 +118,19 @@ const createContestSchema = z.object({
 type CreateContestFormValues = z.infer<typeof createContestSchema>;
 
 export function CreateContestForm() {
+  const [games, setGames] = useState<Game[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+  const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(
+    null,
+  );
+
   const form = useForm<CreateContestFormValues>({
     resolver: zodResolver(createContestSchema),
     defaultValues: {
       title: "",
       description: "",
+      seasonType: "2", // Regular season
+      week: "",
       gameId: "",
       boxCost: "",
       currency: "USDC",
@@ -95,9 +139,76 @@ export function CreateContestForm() {
     },
   });
 
+  // Fetch current week/season on component mount
+  useEffect(() => {
+    const fetchCurrentWeek = async () => {
+      try {
+        const response = await fetch("/api/games/current");
+        if (response.ok) {
+          const data: CurrentWeekResponse = await response.json();
+          setCurrentWeek(data);
+          // Set default values
+          form.setValue(
+            "seasonType",
+            data.season.toString() as "1" | "2" | "3",
+          );
+          form.setValue("week", data.week.toString());
+          // Fetch games for current week/season
+          await fetchGames(data.season.toString(), data.week.toString());
+        }
+      } catch (error) {
+        console.error("Error fetching current week:", error);
+      }
+    };
+
+    fetchCurrentWeek();
+  }, [form]);
+
+  // Function to fetch games based on season type and week
+  const fetchGames = async (seasonType: string, week: string) => {
+    if (!seasonType || !week) return;
+
+    setLoadingGames(true);
+    try {
+      const response = await fetch(
+        `/api/games?season=${seasonType}&week=${week}`,
+      );
+      if (response.ok) {
+        const data: GamesResponse = await response.json();
+        setGames(data.games);
+      } else {
+        toast.error("Failed to fetch games");
+      }
+    } catch (error) {
+      console.error("Error fetching games:", error);
+      toast.error("Error fetching games");
+    } finally {
+      setLoadingGames(false);
+    }
+  };
+
+  // Watch for changes in season type or week
+  const seasonType = form.watch("seasonType");
+  const week = form.watch("week");
+
+  useEffect(() => {
+    if (seasonType && week) {
+      fetchGames(seasonType, week);
+      // Reset game selection when season/week changes
+      form.setValue("gameId", "");
+    }
+  }, [seasonType, week, form]);
+
   function onSubmit(data: CreateContestFormValues) {
+    // Find the selected game for additional context
+    const selectedGame = games.find(game => game.id === data.gameId);
+    const contestData = {
+      ...data,
+      selectedGame,
+    };
+
     // TODO: Implement contest creation logic
-    console.log("Contest creation data:", data);
+    console.log("Contest creation data:", contestData);
 
     // Here you would typically:
     // 1. Call the smart contract to create the contest
@@ -163,6 +274,95 @@ export function CreateContestForm() {
               )}
             />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Season Type */}
+              <FormField
+                control={form.control}
+                name="seasonType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Season Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select season type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="1">Preseason</SelectItem>
+                        <SelectItem value="2">Regular Season</SelectItem>
+                        <SelectItem value="3">Postseason</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Choose the season type.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Week */}
+              <FormField
+                control={form.control}
+                name="week"
+                render={({ field }) => {
+                  const weeksInRegularSeason = 18;
+                  const weeksInPreseason = 4;
+                  const weeksInPostseason = 5;
+
+                  const getMaxWeeks = () => {
+                    switch (seasonType) {
+                      case "1":
+                        return weeksInPreseason;
+                      case "2":
+                        return weeksInRegularSeason;
+                      case "3":
+                        return weeksInPostseason;
+                      default:
+                        return weeksInRegularSeason;
+                    }
+                  };
+
+                  const maxWeeks = getMaxWeeks();
+                  const weekOptions = Array.from(
+                    { length: maxWeeks },
+                    (_, i) => i + 1,
+                  );
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Week</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select week" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {weekOptions.map(week => (
+                            <SelectItem key={week} value={week.toString()}>
+                              Week {week}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription className="text-xs">
+                        Choose the week number.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </div>
+
             {/* Game Selection */}
             <FormField
               control={form.control}
@@ -172,26 +372,96 @@ export function CreateContestForm() {
                   <FormLabel>Game</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
+                    disabled={loadingGames || games.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a game" />
+                        <SelectValue
+                          placeholder={
+                            loadingGames
+                              ? "Loading games..."
+                              : games.length === 0
+                                ? "No games available"
+                                : "Select a game"
+                          }
+                        >
+                          {field.value &&
+                            (() => {
+                              const selectedGame = games.find(
+                                g => g.id === field.value,
+                              );
+                              if (selectedGame) {
+                                const homeTeam =
+                                  selectedGame.competitions?.competitors?.find(
+                                    c => c.homeAway === "home",
+                                  );
+                                const awayTeam =
+                                  selectedGame.competitions?.competitors?.find(
+                                    c => c.homeAway === "away",
+                                  );
+                                return homeTeam && awayTeam
+                                  ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
+                                  : selectedGame.shortName || selectedGame.name;
+                              }
+                              return null;
+                            })()}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="1">
-                        Chiefs vs 49ers - Super Bowl LVIII
-                      </SelectItem>
-                      <SelectItem value="2">
-                        Cowboys vs Eagles - Week 18
-                      </SelectItem>
-                      <SelectItem value="3">
-                        Bills vs Dolphins - Wild Card
-                      </SelectItem>
-                      <SelectItem value="4">
-                        Packers vs Bears - Week 17
-                      </SelectItem>
+                      {games
+                        .sort(
+                          (a, b) =>
+                            new Date(a.date).getTime() -
+                            new Date(b.date).getTime(),
+                        )
+                        .map(game => {
+                          const homeTeam = game.competitions?.competitors?.find(
+                            c => c.homeAway === "home",
+                          );
+                          const awayTeam = game.competitions?.competitors?.find(
+                            c => c.homeAway === "away",
+                          );
+                          const gameDisplay =
+                            homeTeam && awayTeam
+                              ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
+                              : game.shortName || game.name;
+
+                          // Format the date and time
+                          const gameDate = new Date(game.date);
+                          const dateOptions: Intl.DateTimeFormatOptions = {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                          };
+                          const timeOptions: Intl.DateTimeFormatOptions = {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            timeZoneName: "short",
+                          };
+                          const formattedDate = gameDate.toLocaleDateString(
+                            "en-US",
+                            dateOptions,
+                          );
+                          const formattedTime = gameDate.toLocaleTimeString(
+                            "en-US",
+                            timeOptions,
+                          );
+
+                          return (
+                            <SelectItem key={game.id} value={game.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">
+                                  {gameDisplay}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {formattedDate} at {formattedTime}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs">
