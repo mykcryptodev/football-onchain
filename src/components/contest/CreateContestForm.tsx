@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -34,9 +34,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { chain, contests, usdc } from "@/constants";
 import { abi } from "@/constants/abis/contests";
+import { useTokens } from "@/hooks/useTokens";
+import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-import { getContract, prepareContractCall } from "thirdweb";
-import { TransactionButton } from "thirdweb/react";
+import { getContract, prepareContractCall, toUnits } from "thirdweb";
+import { TokenIcon, TokenProvider, TransactionButton } from "thirdweb/react";
 
 // Types for API responses
 type Game = {
@@ -103,7 +105,7 @@ const createContestSchema = z.object({
       message: "Box cost must be a positive number.",
     },
   ),
-  currency: z.enum(["USDC", "ETH"], {
+  currency: z.string().min(1, {
     message: "Please select a currency.",
   }),
   maxParticipants: z.string().refine(
@@ -128,6 +130,15 @@ export function CreateContestForm() {
   const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(
     null,
   );
+  const selectContentRef = useRef<HTMLDivElement>(null);
+  const {
+    tokens,
+    loading: loadingTokens,
+    loadingMore: loadingMoreTokens,
+    hasMore: hasMoreTokens,
+    fetchTokens,
+    loadMoreTokens,
+  } = useTokens();
 
   const form = useForm<CreateContestFormValues>({
     resolver: zodResolver(createContestSchema),
@@ -138,7 +149,7 @@ export function CreateContestForm() {
       week: "",
       gameId: "",
       boxCost: "",
-      currency: "USDC",
+      currency: "",
       maxParticipants: "100",
       payoutStructure: "standard",
     },
@@ -157,17 +168,23 @@ export function CreateContestForm() {
       throw new Error("Please fill in all required fields");
     }
 
-    // Convert box cost to wei (assuming 18 decimals for ETH, 6 for USDC)
-    const decimals = formData.currency === "ETH" ? 18 : 6;
-    const boxCostWei = BigInt(
-      Math.floor(parseFloat(formData.boxCost) * Math.pow(10, decimals)),
+    // Find the selected token
+    const selectedToken = tokens.find(
+      token => token.address === formData.currency,
     );
+    if (!selectedToken) {
+      throw new Error("Please select a valid currency");
+    }
 
-    // Get currency address
+    // Convert box cost to wei using the token's decimals
+    const decimals = selectedToken.decimals;
+    const boxCostWei = toUnits(formData.boxCost, decimals);
+
+    // Get currency address (use zero address for native ETH)
     const currencyAddress =
-      formData.currency === "USDC"
-        ? usdc[chain.id]
-        : "0x0000000000000000000000000000000000000000"; // ETH is represented as zero address
+      selectedToken.symbol === "ETH"
+        ? "0x0000000000000000000000000000000000000000"
+        : selectedToken.address;
 
     // Get the contract instance
     const contract = getContract({
@@ -189,7 +206,7 @@ export function CreateContestForm() {
         formData.description, // description
       ],
     });
-  }, [form]);
+  }, [form, tokens]);
 
   // Fetch current week/season on component mount
   useEffect(() => {
@@ -214,7 +231,11 @@ export function CreateContestForm() {
     };
 
     fetchCurrentWeek();
-  }, [form]);
+    fetchTokens().catch(error => {
+      console.error("Error fetching tokens:", error);
+      toast.error("Error fetching tokens");
+    });
+  }, [form, fetchTokens]);
 
   // Function to fetch games based on season type and week
   const fetchGames = async (seasonType: string, week: string) => {
@@ -238,6 +259,31 @@ export function CreateContestForm() {
       setLoadingGames(false);
     }
   };
+
+  // Set default currency to USDC when tokens are loaded
+  useEffect(() => {
+    if (tokens.length > 0 && !form.getValues("currency")) {
+      const usdcToken = tokens.find(
+        token => token.address.toLowerCase() === usdc[chain.id].toLowerCase(),
+      );
+      if (usdcToken) {
+        form.setValue("currency", usdcToken.address);
+      }
+    }
+  }, [tokens, form]);
+
+  // Handle scroll in select content for infinite loading
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
+
+      if (isNearBottom && hasMoreTokens && !loadingMoreTokens) {
+        loadMoreTokens();
+      }
+    },
+    [hasMoreTokens, loadingMoreTokens, loadMoreTokens],
+  );
 
   // Watch for changes in season type or week
   const seasonType = form.watch("seasonType");
@@ -545,17 +591,65 @@ export function CreateContestForm() {
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
                     <Select
+                      key={`select-${tokens.length}`}
                       onValueChange={field.onChange}
                       defaultValue={field.value}
+                      disabled={loadingTokens}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select currency" />
+                          <SelectValue
+                            placeholder={
+                              loadingTokens
+                                ? "Loading tokens..."
+                                : "Select currency"
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="USDC">USDC</SelectItem>
-                        <SelectItem value="ETH">ETH</SelectItem>
+                      <SelectContent
+                        ref={selectContentRef}
+                        onScroll={handleScroll}
+                        className="max-h-60 overflow-y-auto"
+                      >
+                        {tokens.map((token, index) => (
+                          <SelectItem
+                            key={`${token.address}-${index}`}
+                            value={token.address}
+                            className="w-full"
+                          >
+                            <TokenProvider
+                              address={token.address}
+                              client={client}
+                              chain={chain}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <TokenIcon
+                                  className="size-6 flex-shrink-0"
+                                  iconResolver={resolveTokenIcon(token)}
+                                />
+                                <div className="flex flex-col w-full min-w-0 text-left">
+                                  <span className="font-medium">
+                                    {token.symbol}
+                                  </span>
+                                  <span className="text-muted-foreground text-xs truncate">
+                                    {token.name}
+                                  </span>
+                                </div>
+                              </div>
+                            </TokenProvider>
+                          </SelectItem>
+                        ))}
+                        {loadingMoreTokens && (
+                          <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
+                            Loading more tokens...
+                          </div>
+                        )}
+                        {!hasMoreTokens && tokens.length > 0 && (
+                          <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
+                            No more tokens to load
+                          </div>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs">

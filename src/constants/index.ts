@@ -4,7 +4,7 @@ import { base, baseSepolia } from "thirdweb/chains";
 export const appName = "Football Boxes";
 
 // CHAINS
-export const chain = baseSepolia;
+export const chain = base;
 
 // ADDRESSES
 export const contests = {
