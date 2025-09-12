@@ -130,6 +130,7 @@ export function CreateContestForm() {
   const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(
     null,
   );
+  const [usdEstimation, setUsdEstimation] = useState<string>("");
   const selectContentRef = useRef<HTMLDivElement>(null);
   const {
     tokens,
@@ -288,6 +289,36 @@ export function CreateContestForm() {
   // Watch for changes in season type or week
   const seasonType = form.watch("seasonType");
   const week = form.watch("week");
+  const boxCost = form.watch("boxCost");
+  const currency = form.watch("currency");
+
+  // Calculate USD estimation
+  const calculateUsdEstimation = useCallback(() => {
+    if (!boxCost || !currency || tokens.length === 0) {
+      setUsdEstimation("");
+      return;
+    }
+
+    const selectedToken = tokens.find(token => token.address === currency);
+    if (!selectedToken) {
+      setUsdEstimation("");
+      return;
+    }
+
+    const cost = parseFloat(boxCost);
+    if (isNaN(cost) || cost <= 0) {
+      setUsdEstimation("");
+      return;
+    }
+
+    const usdValue = cost * selectedToken.priceUsd;
+    setUsdEstimation(`≈ $${usdValue.toFixed(2)} USD`);
+  }, [boxCost, currency, tokens]);
+
+  // Update USD estimation when box cost or currency changes
+  useEffect(() => {
+    calculateUsdEstimation();
+  }, [calculateUsdEstimation]);
 
   useEffect(() => {
     if (seasonType && week) {
@@ -577,6 +608,11 @@ export function CreateContestForm() {
                     </FormControl>
                     <FormDescription className="text-xs">
                       Cost per square.
+                      {usdEstimation && (
+                        <span className="ml-2 font-medium text-blue-600">
+                          {usdEstimation}
+                        </span>
+                      )}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
