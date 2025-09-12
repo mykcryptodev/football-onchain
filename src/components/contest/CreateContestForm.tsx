@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -131,7 +131,6 @@ export function CreateContestForm() {
     null,
   );
   const [usdEstimation, setUsdEstimation] = useState<string>("");
-  const selectContentRef = useRef<HTMLDivElement>(null);
   const {
     tokens,
     loading: loadingTokens,
@@ -272,19 +271,6 @@ export function CreateContestForm() {
       }
     }
   }, [tokens, form]);
-
-  // Handle scroll in select content for infinite loading
-  const handleScroll = useCallback(
-    (e: React.UIEvent<HTMLDivElement>) => {
-      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
-
-      if (isNearBottom && hasMoreTokens && !loadingMoreTokens) {
-        loadMoreTokens();
-      }
-    },
-    [hasMoreTokens, loadingMoreTokens, loadMoreTokens],
-  );
 
   // Watch for changes in season type or week
   const seasonType = form.watch("seasonType");
@@ -643,11 +629,7 @@ export function CreateContestForm() {
                           />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent
-                        ref={selectContentRef}
-                        onScroll={handleScroll}
-                        className="max-h-60 overflow-y-auto"
-                      >
+                      <SelectContent className="max-h-60 overflow-y-auto">
                         {tokens.map((token, index) => (
                           <SelectItem
                             key={`${token.address}-${index}`}
@@ -676,6 +658,19 @@ export function CreateContestForm() {
                             </TokenProvider>
                           </SelectItem>
                         ))}
+                        {hasMoreTokens && !loadingMoreTokens && (
+                          <div className="flex items-center justify-center p-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={loadMoreTokens}
+                              className="w-full"
+                            >
+                              Load More Tokens
+                            </Button>
+                          </div>
+                        )}
                         {loadingMoreTokens && (
                           <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
                             Loading more tokens...

@@ -55,9 +55,9 @@ export function useTokens() {
             setTokens(newTokens);
           }
 
-          setHasMore(
-            data.result.pagination?.hasMore ?? newTokens.length === 20,
-          );
+          const hasMoreValue =
+            data.result.pagination?.hasMore ?? newTokens.length === 20;
+          setHasMore(hasMoreValue);
           setCurrentPage(page);
         } else {
           throw new Error(`Failed to fetch tokens: ${response.status}`);
