@@ -23,12 +23,13 @@ export interface TokensResponse {
   };
 }
 
-export function useTokens() {
+export function useTokens(initialSearchQuery?: string) {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
 
   const fetchTokens = useCallback(
     async (page: number = 1, append: boolean = false) => {
@@ -41,9 +42,17 @@ export function useTokens() {
       }
 
       try {
-        const response = await fetch(
-          `/api/tokens?chainId=${chain.id}&page=${page}&limit=20`,
-        );
+        const searchParams = new URLSearchParams({
+          chainId: chain.id.toString(),
+          page: page.toString(),
+          limit: "20",
+        });
+
+        if (searchQuery.trim()) {
+          searchParams.set("name", searchQuery.trim());
+        }
+
+        const response = await fetch(`/api/tokens?${searchParams.toString()}`);
 
         if (response.ok) {
           const data: TokensResponse = await response.json();
@@ -70,7 +79,7 @@ export function useTokens() {
         setLoadingMore(false);
       }
     },
-    [],
+    [searchQuery],
   );
 
   const loadMoreTokens = useCallback(() => {
@@ -85,14 +94,23 @@ export function useTokens() {
     setHasMore(true);
   }, []);
 
+  const updateSearchQuery = useCallback((query: string) => {
+    setSearchQuery(query);
+    setTokens([]);
+    setCurrentPage(1);
+    setHasMore(true);
+  }, []);
+
   return {
     tokens,
     loading,
     loadingMore,
     hasMore,
     currentPage,
+    searchQuery,
     fetchTokens,
     loadMoreTokens,
     resetTokens,
+    updateSearchQuery,
   };
 }

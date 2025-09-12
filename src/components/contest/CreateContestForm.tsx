@@ -39,6 +39,7 @@ import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 import { getContract, prepareContractCall, toUnits } from "thirdweb";
 import { TokenIcon, TokenProvider, TransactionButton } from "thirdweb/react";
+import { TokenPicker } from "./TokenPicker";
 
 // Types for API responses
 type Game = {
@@ -131,6 +132,8 @@ export function CreateContestForm() {
     null,
   );
   const [usdEstimation, setUsdEstimation] = useState<string>("");
+  const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<any>(null);
   const {
     tokens,
     loading: loadingTokens,
@@ -168,10 +171,7 @@ export function CreateContestForm() {
       throw new Error("Please fill in all required fields");
     }
 
-    // Find the selected token
-    const selectedToken = tokens.find(
-      token => token.address === formData.currency,
-    );
+    // Use the selected token
     if (!selectedToken) {
       throw new Error("Please select a valid currency");
     }
@@ -262,15 +262,16 @@ export function CreateContestForm() {
 
   // Set default currency to USDC when tokens are loaded
   useEffect(() => {
-    if (tokens.length > 0 && !form.getValues("currency")) {
+    if (tokens.length > 0 && !selectedToken) {
       const usdcToken = tokens.find(
         token => token.address.toLowerCase() === usdc[chain.id].toLowerCase(),
       );
       if (usdcToken) {
+        setSelectedToken(usdcToken);
         form.setValue("currency", usdcToken.address);
       }
     }
-  }, [tokens, form]);
+  }, [tokens, selectedToken, form]);
 
   // Watch for changes in season type or week
   const seasonType = form.watch("seasonType");
@@ -280,13 +281,7 @@ export function CreateContestForm() {
 
   // Calculate USD estimation
   const calculateUsdEstimation = useCallback(() => {
-    if (!boxCost || !currency || tokens.length === 0) {
-      setUsdEstimation("");
-      return;
-    }
-
-    const selectedToken = tokens.find(token => token.address === currency);
-    if (!selectedToken) {
+    if (!boxCost || !selectedToken) {
       setUsdEstimation("");
       return;
     }
@@ -299,7 +294,7 @@ export function CreateContestForm() {
 
     const usdValue = cost * selectedToken.priceUsd;
     setUsdEstimation(`≈ $${usdValue.toFixed(2)} USD`);
-  }, [boxCost, currency, tokens]);
+  }, [boxCost, selectedToken]);
 
   // Update USD estimation when box cost or currency changes
   useEffect(() => {
@@ -612,77 +607,41 @@ export function CreateContestForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
-                    <Select
-                      key={`select-${tokens.length}`}
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={loadingTokens}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              loadingTokens
-                                ? "Loading tokens..."
-                                : "Select currency"
-                            }
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-60 overflow-y-auto">
-                        {tokens.map((token, index) => (
-                          <SelectItem
-                            key={`${token.address}-${index}`}
-                            value={token.address}
-                            className="w-full"
-                          >
+                    <FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start h-10"
+                        onClick={() => setTokenPickerOpen(true)}
+                      >
+                        {selectedToken ? (
+                          <div className="flex items-center gap-2">
                             <TokenProvider
-                              address={token.address}
+                              address={selectedToken.address}
                               client={client}
                               chain={chain}
                             >
-                              <div className="flex items-center gap-2 w-full">
-                                <TokenIcon
-                                  className="size-6 flex-shrink-0"
-                                  iconResolver={resolveTokenIcon(token)}
-                                />
-                                <div className="flex flex-col w-full min-w-0 text-left">
-                                  <span className="font-medium">
-                                    {token.symbol}
-                                  </span>
-                                  <span className="text-muted-foreground text-xs truncate">
-                                    {token.name}
-                                  </span>
-                                </div>
-                              </div>
+                              <TokenIcon
+                                className="size-6 flex-shrink-0"
+                                iconResolver={resolveTokenIcon(selectedToken)}
+                              />
                             </TokenProvider>
-                          </SelectItem>
-                        ))}
-                        {hasMoreTokens && !loadingMoreTokens && (
-                          <div className="flex items-center justify-center p-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={loadMoreTokens}
-                              className="w-full"
-                            >
-                              Load More Tokens
-                            </Button>
+                            <div className="flex flex-col items-start text-left min-w-0 flex-1">
+                              <span className="font-medium text-sm">
+                                {selectedToken.symbol}
+                              </span>
+                              <span className="text-muted-foreground text-xs truncate">
+                                {selectedToken.name}
+                              </span>
+                            </div>
                           </div>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Select currency
+                          </span>
                         )}
-                        {loadingMoreTokens && (
-                          <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
-                            Loading more tokens...
-                          </div>
-                        )}
-                        {!hasMoreTokens && tokens.length > 0 && (
-                          <div className="flex items-center justify-center p-2 text-sm text-muted-foreground">
-                            No more tokens to load
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      </Button>
+                    </FormControl>
                     <FormDescription className="text-xs">
                       Payment currency.
                     </FormDescription>
@@ -720,6 +679,17 @@ export function CreateContestForm() {
           </form>
         </Form>
       </CardContent>
+
+      {/* Token Picker Modal */}
+      <TokenPicker
+        open={tokenPickerOpen}
+        onOpenChange={setTokenPickerOpen}
+        onTokenSelect={token => {
+          setSelectedToken(token);
+          form.setValue("currency", token.address);
+        }}
+        selectedTokenAddress={selectedToken?.address}
+      />
     </Card>
   );
 }

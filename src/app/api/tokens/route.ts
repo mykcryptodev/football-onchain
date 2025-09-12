@@ -29,15 +29,22 @@ export async function GET(request: NextRequest) {
     const chainId = searchParams.get("chainId") || chain.id.toString();
     const limit = searchParams.get("limit") || "20";
     const page = searchParams.get("page") || "1";
+    const name = searchParams.get("name") || "";
 
-    const response = await fetch(
-      `https://api.thirdweb.com/v1/tokens?chainId=${chainId}&limit=${limit}&page=${page}`,
-      {
-        headers: {
-          "x-secret-key": process.env.THIRDWEB_SECRET_KEY || "",
-        },
+    // Build the API URL with optional search parameters
+    const apiUrl = new URL("https://api.thirdweb.com/v1/tokens");
+    apiUrl.searchParams.set("chainId", chainId);
+    apiUrl.searchParams.set("limit", limit);
+    apiUrl.searchParams.set("page", page);
+    if (name) {
+      apiUrl.searchParams.set("name", name);
+    }
+
+    const response = await fetch(apiUrl.toString(), {
+      headers: {
+        "x-secret-key": process.env.THIRDWEB_SECRET_KEY || "",
       },
-    );
+    });
 
     if (!response.ok) {
       throw new Error(`Thirdweb API error: ${response.status}`);
