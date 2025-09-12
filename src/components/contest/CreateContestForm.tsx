@@ -310,7 +310,8 @@ export function CreateContestForm() {
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Season Type, Week, and Game Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Season Type */}
               <FormField
                 control={form.control}
@@ -397,116 +398,119 @@ export function CreateContestForm() {
                   );
                 }}
               />
-            </div>
 
-            {/* Game Selection */}
-            <FormField
-              control={form.control}
-              name="gameId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Game</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    disabled={loadingGames || games.length === 0}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            loadingGames
-                              ? "Loading games..."
-                              : games.length === 0
-                                ? "No games available"
-                                : "Select a game"
-                          }
-                        >
-                          {field.value &&
-                            (() => {
-                              const selectedGame = games.find(
-                                g => g.id === field.value,
+              {/* Game Selection */}
+              <FormField
+                control={form.control}
+                name="gameId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Game</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={loadingGames || games.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              loadingGames
+                                ? "Loading games..."
+                                : games.length === 0
+                                  ? "No games available"
+                                  : "Select a game"
+                            }
+                          >
+                            {field.value &&
+                              (() => {
+                                const selectedGame = games.find(
+                                  g => g.id === field.value,
+                                );
+                                if (selectedGame) {
+                                  const homeTeam =
+                                    selectedGame.competitions?.competitors?.find(
+                                      c => c.homeAway === "home",
+                                    );
+                                  const awayTeam =
+                                    selectedGame.competitions?.competitors?.find(
+                                      c => c.homeAway === "away",
+                                    );
+                                  return homeTeam && awayTeam
+                                    ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
+                                    : selectedGame.shortName ||
+                                        selectedGame.name;
+                                }
+                                return null;
+                              })()}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {games
+                          .sort(
+                            (a, b) =>
+                              new Date(a.date).getTime() -
+                              new Date(b.date).getTime(),
+                          )
+                          .map(game => {
+                            const homeTeam =
+                              game.competitions?.competitors?.find(
+                                c => c.homeAway === "home",
                               );
-                              if (selectedGame) {
-                                const homeTeam =
-                                  selectedGame.competitions?.competitors?.find(
-                                    c => c.homeAway === "home",
-                                  );
-                                const awayTeam =
-                                  selectedGame.competitions?.competitors?.find(
-                                    c => c.homeAway === "away",
-                                  );
-                                return homeTeam && awayTeam
-                                  ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
-                                  : selectedGame.shortName || selectedGame.name;
-                              }
-                              return null;
-                            })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {games
-                        .sort(
-                          (a, b) =>
-                            new Date(a.date).getTime() -
-                            new Date(b.date).getTime(),
-                        )
-                        .map(game => {
-                          const homeTeam = game.competitions?.competitors?.find(
-                            c => c.homeAway === "home",
-                          );
-                          const awayTeam = game.competitions?.competitors?.find(
-                            c => c.homeAway === "away",
-                          );
-                          const gameDisplay =
-                            homeTeam && awayTeam
-                              ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
-                              : game.shortName || game.name;
+                            const awayTeam =
+                              game.competitions?.competitors?.find(
+                                c => c.homeAway === "away",
+                              );
+                            const gameDisplay =
+                              homeTeam && awayTeam
+                                ? `${awayTeam.team.abbreviation} @ ${homeTeam.team.abbreviation}`
+                                : game.shortName || game.name;
 
-                          // Format the date and time
-                          const gameDate = new Date(game.date);
-                          const dateOptions: Intl.DateTimeFormatOptions = {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          };
-                          const timeOptions: Intl.DateTimeFormatOptions = {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            timeZoneName: "short",
-                          };
-                          const formattedDate = gameDate.toLocaleDateString(
-                            "en-US",
-                            dateOptions,
-                          );
-                          const formattedTime = gameDate.toLocaleTimeString(
-                            "en-US",
-                            timeOptions,
-                          );
+                            // Format the date and time
+                            const gameDate = new Date(game.date);
+                            const dateOptions: Intl.DateTimeFormatOptions = {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            };
+                            const timeOptions: Intl.DateTimeFormatOptions = {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              timeZoneName: "short",
+                            };
+                            const formattedDate = gameDate.toLocaleDateString(
+                              "en-US",
+                              dateOptions,
+                            );
+                            const formattedTime = gameDate.toLocaleTimeString(
+                              "en-US",
+                              timeOptions,
+                            );
 
-                          return (
-                            <SelectItem key={game.id} value={game.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {gameDisplay}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {formattedDate} at {formattedTime}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          );
-                        })}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs">
-                    Select the game for your contest.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                            return (
+                              <SelectItem key={game.id} value={game.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {gameDisplay}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formattedDate} at {formattedTime}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Select the game.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Box Cost */}
@@ -556,66 +560,6 @@ export function CreateContestForm() {
                     </Select>
                     <FormDescription className="text-xs">
                       Payment currency.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Max Participants */}
-              <FormField
-                control={form.control}
-                name="maxParticipants"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Max Participants</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="10"
-                        max="100"
-                        placeholder="100"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs">
-                      Max squares (10-100).
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Payout Structure */}
-              <FormField
-                control={form.control}
-                name="payoutStructure"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payout Structure</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payout structure" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="standard">
-                          Standard (20% per quarter)
-                        </SelectItem>
-                        <SelectItem value="winner-takes-all">
-                          Winner Takes All
-                        </SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs">
-                      Payout distribution method.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
