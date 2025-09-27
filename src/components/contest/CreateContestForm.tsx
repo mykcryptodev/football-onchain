@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { PayoutStrategyType } from "./types";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -124,9 +126,12 @@ const createContestSchema = z.object({
       message: "Max participants must be between 10 and 100.",
     },
   ),
-  payoutStrategy: z.enum(["quarters-only", "score-changes"], {
-    message: "Please select a payout strategy.",
-  }),
+  payoutStrategy: z.enum(
+    Object.values(PayoutStrategyType) as [string, ...string[]],
+    {
+      message: "Please select a payout strategy.",
+    },
+  ),
 });
 
 type CreateContestFormValues = z.infer<typeof createContestSchema>;
@@ -160,7 +165,7 @@ export function CreateContestForm() {
       boxCost: "",
       currency: "",
       maxParticipants: "100",
-      payoutStrategy: "quarters-only",
+      payoutStrategy: PayoutStrategyType.QUARTERS_ONLY,
     },
   });
 
@@ -194,7 +199,7 @@ export function CreateContestForm() {
 
     // Get payout strategy address based on selection
     const payoutStrategyAddress =
-      formData.payoutStrategy === "quarters-only"
+      formData.payoutStrategy === PayoutStrategyType.QUARTERS_ONLY
         ? quartersOnlyPayoutStrategy[chain.id]
         : scoreChangesPayoutStrategy[chain.id];
 
@@ -681,7 +686,7 @@ export function CreateContestForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="quarters-only">
+                      <SelectItem value={PayoutStrategyType.QUARTERS_ONLY}>
                         <div className="flex flex-col">
                           <span className="font-medium">Quarters Only</span>
                           <span className="text-xs text-muted-foreground">
@@ -689,7 +694,7 @@ export function CreateContestForm() {
                           </span>
                         </div>
                       </SelectItem>
-                      <SelectItem value="score-changes">
+                      <SelectItem value={PayoutStrategyType.SCORE_CHANGES}>
                         <div className="flex flex-col">
                           <span className="font-medium">
                             Score Changes + Quarters

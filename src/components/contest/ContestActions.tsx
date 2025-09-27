@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 
-import { Contest } from "./types";
+import { Contest, PayoutStrategyType } from "./types";
 
 interface ContestActionsProps {
   contest: Contest;
@@ -69,7 +69,7 @@ export function ContestActions({
             variant="default"
             onClick={onProcessPayouts}
           >
-            {strategyType === "score-changes"
+            {strategyType === PayoutStrategyType.SCORE_CHANGES
               ? "Process All Payouts (Game Must Be Finished)"
               : "Process Available Payouts"}
           </Button>

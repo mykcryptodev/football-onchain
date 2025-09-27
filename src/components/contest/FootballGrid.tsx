@@ -7,7 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { BoxOwner, Contest, GameScore } from "./types";
+import { getPayoutStrategyType } from "@/lib/payout-utils";
+import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
 
 interface FootballGridProps {
   contest: Contest;
@@ -71,13 +72,29 @@ export function FootballGrid({
     return contest.rows[row] === homeScore && contest.cols[col] === awayScore;
   };
 
+  const isScoreChangeWinner = (row: number, col: number) => {
+    if (!gameScore?.scoringPlays || !contest?.randomValuesSet) return false;
+
+    // Check if this box won any score changes
+    return gameScore.scoringPlays.some(play => {
+      const homeLastDigit = play.homeScore % 10;
+      const awayLastDigit = play.awayScore % 10;
+      return (
+        contest.rows[row] === homeLastDigit &&
+        contest.cols[col] === awayLastDigit
+      );
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Football Squares Grid</CardTitle>
-        <CardDescription>
-          Click on empty squares to select them for purchase
-        </CardDescription>
+        {contest.boxesCanBeClaimed && (
+          <CardDescription>
+            Click on empty squares to select them for purchase
+          </CardDescription>
+        )}
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-11 gap-1 max-w-2xl">
@@ -104,12 +121,23 @@ export function FootballGrid({
               {Array.from({ length: 10 }, (_, col) => {
                 const tokenId = row * 10 + col;
                 const box = boxOwners.find(b => b.tokenId === tokenId);
-                const isWinner =
+
+                // Check for quarter winners
+                const isQuarterWinner =
                   gameScore &&
                   ((gameScore.qComplete >= 1 && isWinningBox(row, col, 1)) ||
                     (gameScore.qComplete >= 2 && isWinningBox(row, col, 2)) ||
                     (gameScore.qComplete >= 3 && isWinningBox(row, col, 3)) ||
                     (gameScore.qComplete >= 4 && isWinningBox(row, col, 4)));
+
+                // Check for score change winners (only for score-changes strategy)
+                const isScoreChangeWinnerBox =
+                  contest &&
+                  getPayoutStrategyType(contest.payoutStrategy) ===
+                    PayoutStrategyType.SCORE_CHANGES &&
+                  isScoreChangeWinner(row, col);
+
+                const isWinner = isQuarterWinner || isScoreChangeWinnerBox;
 
                 return (
                   <div

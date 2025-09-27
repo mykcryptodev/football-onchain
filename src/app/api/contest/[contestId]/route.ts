@@ -79,7 +79,6 @@ export async function GET(
       payoutsPaid,
       totalRewards,
       boxesClaimed,
-      randomValues,
       randomValuesSet,
       title,
       description,
@@ -114,9 +113,6 @@ export async function GET(
     if (redis) {
       const cacheKey = getContestCacheKey(contestId, chain.id);
       await redis.setex(cacheKey, CACHE_TTL.CONTEST, formattedContestData);
-      console.log(
-        `Cached contest ${contestId} on chain ${chain.id} for ${CACHE_TTL.CONTEST} seconds`,
-      );
     }
 
     return NextResponse.json(formattedContestData);

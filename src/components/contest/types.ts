@@ -30,7 +30,40 @@ export interface PayoutInfo {
   eventIndex: number;
 }
 
-export type PayoutStrategyType = "quarters-only" | "score-changes";
+export enum PayoutStrategyType {
+  QUARTERS_ONLY = "quarters-only",
+  SCORE_CHANGES = "score-changes",
+}
+
+export interface ScoringPlay {
+  id: string;
+  type: {
+    id: string;
+    text: string;
+    abbreviation: string;
+  };
+  text: string;
+  awayScore: number;
+  homeScore: number;
+  period: {
+    number: number;
+  };
+  clock: {
+    value: number;
+    displayValue: string;
+  };
+  team: {
+    id: string;
+    displayName: string;
+    abbreviation: string;
+    logo: string;
+  };
+  scoringType: {
+    name: string;
+    displayName: string;
+    abbreviation: string;
+  };
+}
 
 export interface GameScore {
   id: number;
@@ -44,6 +77,7 @@ export interface GameScore {
   awayFLastDigit: number;
   qComplete: number;
   requestInProgress: boolean;
+  scoringPlays?: ScoringPlay[];
 }
 
 export interface BoxOwner {

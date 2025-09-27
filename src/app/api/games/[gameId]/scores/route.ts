@@ -17,6 +17,11 @@ export async function GET(
       );
     }
 
+    console.log(
+      "Fetching game scores for game ID:",
+      `${ESPN_BASE_URL}?event=${gameId}`,
+    );
+
     // Fetch game data from ESPN API
     const response = await fetch(`${ESPN_BASE_URL}?event=${gameId}`, {
       next: { revalidate: 30 }, // revalidate every 30 seconds
@@ -90,6 +95,9 @@ export async function GET(
         : parseInt((awayQ1 + awayQ2 + awayQ3).toString().slice(-1));
     const awayFLastDigit = parseInt(awayF.toString().slice(-1));
 
+    // Extract scoring plays
+    const scoringPlays = data.scoringPlays || [];
+
     // Format the game score data
     const formattedGameScore = {
       id: parseInt(gameId),
@@ -103,6 +111,35 @@ export async function GET(
       awayFLastDigit,
       qComplete: qComplete === 100 ? 4 : qComplete, // Convert 100 to 4 for final
       requestInProgress: false, // Always false since we're fetching directly
+      scoringPlays: scoringPlays.map((play: any) => ({
+        id: play.id,
+        type: {
+          id: play.type.id,
+          text: play.type.text,
+          abbreviation: play.type.abbreviation,
+        },
+        text: play.text,
+        awayScore: play.awayScore,
+        homeScore: play.homeScore,
+        period: {
+          number: play.period.number,
+        },
+        clock: {
+          value: play.clock.value,
+          displayValue: play.clock.displayValue,
+        },
+        team: {
+          id: play.team.id,
+          displayName: play.team.displayName,
+          abbreviation: play.team.abbreviation,
+          logo: play.team.logo,
+        },
+        scoringType: {
+          name: play.scoringType.name,
+          displayName: play.scoringType.displayName,
+          abbreviation: play.scoringType.abbreviation,
+        },
+      })),
     };
 
     return NextResponse.json(formattedGameScore);

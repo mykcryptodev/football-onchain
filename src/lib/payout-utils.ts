@@ -18,9 +18,9 @@ export function getPayoutStrategyType(
   const addressToCheck = payoutStrategyAddress.toLowerCase();
 
   if (addressToCheck === quartersOnlyAddress) {
-    return "quarters-only";
+    return PayoutStrategyType.QUARTERS_ONLY;
   } else if (addressToCheck === scoreChangesAddress) {
-    return "score-changes";
+    return PayoutStrategyType.SCORE_CHANGES;
   } else {
     throw new Error("Invalid payout strategy address");
   }
@@ -95,9 +95,9 @@ export function getStrategyDisplayName(
   strategyType: PayoutStrategyType,
 ): string {
   switch (strategyType) {
-    case "quarters-only":
+    case PayoutStrategyType.QUARTERS_ONLY:
       return "Quarters Only";
-    case "score-changes":
+    case PayoutStrategyType.SCORE_CHANGES:
       return "Score Changes + Quarters";
     default:
       return "Unknown Strategy";
@@ -111,9 +111,9 @@ export function getStrategyDescription(
   strategyType: PayoutStrategyType,
 ): string {
   switch (strategyType) {
-    case "quarters-only":
+    case PayoutStrategyType.QUARTERS_ONLY:
       return "Payouts are made at the end of each quarter. Winners can claim immediately.";
-    case "score-changes":
+    case PayoutStrategyType.SCORE_CHANGES:
       return "Payouts for score changes and quarters. All payouts are made only after the game is completely finished.";
     default:
       return "";

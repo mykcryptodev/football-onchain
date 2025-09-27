@@ -8,7 +8,7 @@ import {
   getStrategyDisplayName,
 } from "@/lib/payout-utils";
 
-import { Contest } from "./types";
+import { Contest, PayoutStrategyType } from "./types";
 
 interface PayoutsCardProps {
   contest: Contest;
@@ -117,7 +117,7 @@ export function PayoutsCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {strategyType === "quarters-only"
+        {strategyType === PayoutStrategyType.QUARTERS_ONLY
           ? renderQuartersOnlyPayouts()
           : renderScoreChangesPayouts()}
 

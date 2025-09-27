@@ -303,7 +303,9 @@ export default function ContestPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Game Scores */}
-            {gameScore && <GameScores gameScore={gameScore} />}
+            {gameScore && (
+              <GameScores gameScore={gameScore} contest={contest} />
+            )}
 
             {/* Payouts */}
             <PayoutsCard contest={contest} />

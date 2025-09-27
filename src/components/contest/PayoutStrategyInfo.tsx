@@ -17,7 +17,7 @@ export function PayoutStrategyInfo({
       : `${percentage}%`;
   };
 
-  if (strategyType === "quarters-only") {
+  if (strategyType === PayoutStrategyType.QUARTERS_ONLY) {
     return (
       <Card className="w-full">
         <CardHeader>
