@@ -7,8 +7,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { chain, contests } from "@/constants";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
+import { ZERO_ADDRESS, createThirdwebClient } from "thirdweb";
+import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
+
+// Create Thirdweb client for AccountProvider
+const client = createThirdwebClient({
+  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
+});
 
 interface FootballGridProps {
   contest: Contest;
@@ -17,6 +25,7 @@ interface FootballGridProps {
   selectedBoxes: number[];
   onBoxClick: (tokenId: number) => void;
   onClaimBoxes?: () => void;
+  isClaimingBoxes?: boolean;
 }
 
 export function FootballGrid({
@@ -26,25 +35,35 @@ export function FootballGrid({
   selectedBoxes,
   onBoxClick,
   onClaimBoxes,
+  isClaimingBoxes = false,
 }: FootballGridProps) {
-  const formatAddress = (address: string) => {
-    if (address === "0x0000000000000000000000000000000000000000") return "";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const isRealUser = (address: string) => {
+    if (address === ZERO_ADDRESS) return false;
+    // Check if it's the contest contract address (not a real user)
+    const contestAddress = contests[chain.id];
+    return address.toLowerCase() !== contestAddress.toLowerCase();
   };
 
   const formatEther = (wei: number) => {
     return (wei / 1e18).toFixed(4);
   };
 
-  const getBoxColor = (tokenId: number) => {
-    const box = boxOwners.find(b => b.tokenId === tokenId);
+  const getBoxColor = (boxPosition: number, actualTokenId: number) => {
+    const box = boxOwners.find(b => b.tokenId === actualTokenId);
     if (!box) return "bg-gray-100";
 
-    if (selectedBoxes.includes(tokenId)) return "bg-blue-500 text-white";
-    if (box.owner !== "0x0000000000000000000000000000000000000000")
+    if (selectedBoxes.includes(boxPosition)) return "bg-blue-500 text-white";
+
+    // If owned by a real user (not contest contract), show as claimed
+    if (box.owner !== ZERO_ADDRESS && isRealUser(box.owner)) {
       return "bg-green-200";
-    if (contest?.boxesCanBeClaimed)
+    }
+
+    // If owned by contest contract or zero address, it's claimable
+    if (contest?.boxesCanBeClaimed) {
       return "bg-gray-50 hover:bg-blue-100 cursor-pointer";
+    }
+
     return "bg-gray-100";
   };
 
@@ -119,8 +138,20 @@ export function FootballGrid({
 
               {/* Box cells */}
               {Array.from({ length: 10 }, (_, col) => {
-                const tokenId = row * 10 + col;
-                const box = boxOwners.find(b => b.tokenId === tokenId);
+                const boxPosition = row * 10 + col; // Grid position (0-99)
+                const expectedTokenId = contest.id * 100 + boxPosition; // Actual NFT token ID
+                const box = boxOwners.find(b => b.tokenId === expectedTokenId);
+
+                // Debug logging for specific box
+                if (boxPosition === 72) {
+                  console.log(`Box position 72 debug:`, {
+                    boxPosition,
+                    expectedTokenId,
+                    box,
+                    isRealUser: box ? isRealUser(box.owner) : false,
+                    boxOwnersLength: boxOwners.length,
+                  });
+                }
 
                 // Check for quarter winners
                 const isQuarterWinner =
@@ -143,20 +174,36 @@ export function FootballGrid({
                   <div
                     key={col}
                     className={`
-                      aspect-square border border-gray-300 p-1 text-xs text-center flex flex-col justify-center
-                      ${getBoxColor(tokenId)}
+                      aspect-square border border-gray-300 p-1 text-xs text-center flex flex-col justify-center items-center
+                      ${getBoxColor(boxPosition, expectedTokenId)}
                       ${isWinner ? "ring-2 ring-yellow-400 bg-yellow-200" : ""}
                     `}
-                    onClick={() => onBoxClick(tokenId)}
+                    onClick={() => onBoxClick(boxPosition)}
                   >
-                    <div className="font-mono text-xs">{tokenId}</div>
-                    {box?.owner &&
-                      box.owner !==
-                        "0x0000000000000000000000000000000000000000" && (
-                        <div className="text-xs truncate">
-                          {formatAddress(box.owner)}
-                        </div>
-                      )}
+                    <div className="font-mono text-xs">{boxPosition}</div>
+                    {box?.owner && box.owner !== ZERO_ADDRESS && (
+                      <div className="flex flex-col items-center gap-1">
+                        {isRealUser(box.owner) && (
+                          <AccountProvider address={box.owner} client={client}>
+                            <div className="flex flex-col items-center gap-1">
+                              <AccountAvatar
+                                style={{
+                                  width: "24px",
+                                  height: "24px",
+                                  borderRadius: "100%",
+                                }}
+                                fallbackComponent={
+                                  <Blobbie
+                                    className="size-6 rounded-full"
+                                    address={box.owner}
+                                  />
+                                }
+                              />
+                            </div>
+                          </AccountProvider>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -177,7 +224,9 @@ export function FootballGrid({
                   ETH
                 </p>
               </div>
-              <Button onClick={onClaimBoxes}>Claim Boxes</Button>
+              <Button onClick={onClaimBoxes} disabled={isClaimingBoxes}>
+                {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
+              </Button>
             </div>
           </div>
         )}

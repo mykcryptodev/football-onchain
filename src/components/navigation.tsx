@@ -1,15 +1,28 @@
 "use client";
 
-import { appName, chain, usdc } from "@/constants";
+import { appDescription, appName, chain, usdc } from "@/constants";
 import { client } from "@/providers/Thirdweb";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { base, baseSepolia } from "thirdweb/chains";
 import { ConnectButton } from "thirdweb/react";
+import { createWallet, inAppWallet } from "thirdweb/wallets";
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
   const { theme } = useTheme();
+
+  const wallets = [
+    inAppWallet({
+      auth: {
+        options: ["x", "telegram", "coinbase", "google", "email", "phone"],
+      },
+    }),
+    createWallet("com.coinbase.wallet"),
+    createWallet("io.metamask"),
+    createWallet("me.rainbow"),
+    createWallet("app.phantom"),
+  ];
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,6 +73,11 @@ export function Navigation() {
             connectButton={{
               label: "Login",
               className: "!size-9",
+            }}
+            wallets={wallets}
+            appMetadata={{
+              name: appName,
+              description: appDescription,
             }}
             connectModal={{
               title: `Login to ${appName}`,

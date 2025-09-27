@@ -8,14 +8,18 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { getPayoutStrategyType } from "@/lib/payout-utils";
-import { Contest, GameScore, PayoutStrategyType } from "./types";
+import { client } from "@/providers/Thirdweb";
+import { ZERO_ADDRESS } from "thirdweb";
+import { AccountAvatar, AccountProvider } from "thirdweb/react";
+import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
 
 interface GameScoresProps {
   gameScore: GameScore;
   contest?: Contest;
+  boxOwners?: BoxOwner[];
 }
 
-export function GameScores({ gameScore, contest }: GameScoresProps) {
+export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Function to calculate the winning box for a scoring play
@@ -32,7 +36,13 @@ export function GameScores({ gameScore, contest }: GameScoresProps) {
 
     if (rowIndex === -1 || colIndex === -1) return null;
 
-    const tokenId = rowIndex * 10 + colIndex;
+    // Calculate the local box number (0-99 within this contest)
+    const localBoxNumber = rowIndex * 10 + colIndex;
+
+    // Add the contest ID offset: each contest has 100 boxes
+    // Contest 0: boxes 0-99, Contest 1: boxes 100-199, etc.
+    const tokenId = localBoxNumber + contest.id * 100;
+
     return {
       tokenId,
       row: rowIndex,
@@ -40,6 +50,16 @@ export function GameScores({ gameScore, contest }: GameScoresProps) {
       homeDigit: homeLastDigit,
       awayDigit: awayLastDigit,
     };
+  };
+
+  // Function to get the owner of a specific box
+  const getBoxOwner = (tokenId: number) => {
+    console.log("Looking for box owner:", { tokenId, contestId: contest?.id });
+    console.log("Available boxOwners:", boxOwners?.length, "boxes");
+    if (!boxOwners) return null;
+    const owner = boxOwners.find(box => box.tokenId === tokenId);
+    console.log("Found owner:", owner);
+    return owner;
   };
 
   return (
@@ -210,12 +230,34 @@ export function GameScores({ gameScore, contest }: GameScoresProps) {
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                           {play.scoringType.abbreviation}
                         </span>
-                        {isScoreChangesStrategy && winningBox && (
-                          <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                            Box #{winningBox.tokenId} ({winningBox.homeDigit}-
-                            {winningBox.awayDigit})
-                          </span>
-                        )}
+                        {isScoreChangesStrategy &&
+                          winningBox &&
+                          (() => {
+                            const boxOwner = getBoxOwner(winningBox.tokenId);
+                            const hasOwner =
+                              boxOwner && boxOwner.owner !== ZERO_ADDRESS;
+
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                                {hasOwner ? (
+                                  <AccountProvider
+                                    address={boxOwner.owner}
+                                    client={client}
+                                  >
+                                    <AccountAvatar className="size-4 rounded-full" />
+                                  </AccountProvider>
+                                ) : (
+                                  <div className="size-4 rounded-full bg-gray-300 flex items-center justify-center">
+                                    <span className="text-xs text-gray-600">
+                                      ?
+                                    </span>
+                                  </div>
+                                )}
+                                Box #{winningBox.tokenId - contest.id * 100} (
+                                {winningBox.homeDigit}-{winningBox.awayDigit})
+                              </span>
+                            );
+                          })()}
                       </div>
                     </div>
                   );

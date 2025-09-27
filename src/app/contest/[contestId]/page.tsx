@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import {
   BoxOwner,
@@ -13,8 +14,11 @@ import {
   GameScores,
   PayoutsCard,
 } from "@/components/contest";
+import { chain, contests } from "@/constants";
+import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useRandomNumbers } from "@/hooks/useRandomNumbers";
 import { useParams } from "next/navigation";
+import { ZERO_ADDRESS } from "thirdweb";
 
 export default function ContestPage() {
   const params = useParams();
@@ -27,20 +31,35 @@ export default function ContestPage() {
   const [refreshingContestData, setRefreshingContestData] = useState(false);
   const [refreshingGameScores, setRefreshingGameScores] = useState(false);
 
+  console.log("contest", contest);
+  console.log("boxOwners state", boxOwners.length, boxOwners);
+
   // Fetch contest data from API
   useEffect(() => {
     const fetchContestData = async () => {
       setLoading(true);
 
       try {
-        // Fetch contest data from API
-        const response = await fetch(`/api/contest/${contestId}`);
+        // Fetch contest data from API with cache-busting
+        const response = await fetch(
+          `/api/contest/${contestId}?t=${Date.now()}`,
+          {
+            cache: "no-store",
+            headers: {
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          },
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch contest data");
         }
 
         const contestData = await response.json();
+        console.log("Raw API response:", contestData);
+        console.log("API response has boxes field:", "boxes" in contestData);
+        console.log("API boxes data:", contestData.boxes?.length || 0);
 
         // Convert the API response to our Contest type
         const contest: Contest = {
@@ -109,23 +128,33 @@ export default function ContestPage() {
           };
         }
 
-        // Mock box owners for now
-        const mockBoxOwners: BoxOwner[] = Array.from(
-          { length: 100 },
-          (_, i) => ({
-            tokenId: i,
-            owner:
-              i < parseInt(contestData.boxesClaimed)
-                ? `0x${Math.random().toString(16).substr(2, 40)}`
-                : "0x0000000000000000000000000000000000000000",
-            row: Math.floor(i / 10),
-            col: i % 10,
-          }),
-        );
+        // Use real box owners data from API
+        const boxOwnersData: BoxOwner[] = contestData.boxes || [];
+        console.log("Received boxes data from API:", boxOwnersData.length);
+        console.log("Raw boxes data:", contestData.boxes);
+        if (boxOwnersData.length > 0) {
+          console.log("Sample box from API:", boxOwnersData[0]);
+          console.log(
+            "Owned boxes from API:",
+            boxOwnersData.filter(
+              box => box.owner !== "0x0000000000000000000000000000000000000000",
+            ).length,
+          );
+        }
+
+        console.log("Setting contest state:", contest);
+        console.log("Setting boxOwners state:", boxOwnersData.length, "boxes");
 
         setContest(contest);
         setGameScore(gameScore);
-        setBoxOwners(mockBoxOwners);
+        setBoxOwners(boxOwnersData);
+
+        console.log(
+          "State set - contest:",
+          contest?.id,
+          "boxOwners:",
+          boxOwnersData.length,
+        );
       } catch (error) {
         console.error("Error fetching contest data:", error);
         // Keep contest as null to show error state
@@ -137,43 +166,139 @@ export default function ContestPage() {
     fetchContestData();
   }, [contestId]);
 
-  const handleBoxClick = (tokenId: number) => {
+  const handleBoxClick = (boxPosition: number) => {
     if (!contest?.boxesCanBeClaimed) return;
 
-    const box = boxOwners.find(b => b.tokenId === tokenId);
-    if (box?.owner !== "0x0000000000000000000000000000000000000000") return; // Already claimed
+    // Calculate the actual NFT token ID from the box position
+    const actualTokenId = contest.id * 100 + boxPosition;
+    const box = boxOwners.find(b => b.tokenId === actualTokenId);
+
+    // Allow clicking if box is unowned (zero address) OR owned by contest contract
+    const isClaimable =
+      !box ||
+      box.owner === ZERO_ADDRESS ||
+      box.owner.toLowerCase() === contests[chain.id].toLowerCase();
+
+    if (!isClaimable) {
+      console.log(
+        `Box ${boxPosition} (token ${actualTokenId}) is already owned by a real user:`,
+        box?.owner,
+      );
+      return; // Already claimed by a real user
+    }
+
+    console.log(
+      `Box ${boxPosition} (token ${actualTokenId}) is claimable, toggling selection`,
+    );
 
     setSelectedBoxes(prev => {
-      if (prev.includes(tokenId)) {
-        return prev.filter(id => id !== tokenId);
+      if (prev.includes(boxPosition)) {
+        return prev.filter(id => id !== boxPosition);
       } else {
-        return [...prev, tokenId];
+        return [...prev, boxPosition];
       }
     });
-  };
-
-  const handleClaimBoxes = () => {
-    // TODO: Implement box claiming logic
-    console.log("Claiming boxes:", selectedBoxes);
   };
 
   const { handleRequestRandomNumbers, isLoading: isRequestingRandomNumbers } =
     useRandomNumbers();
 
+  const {
+    handleClaimBoxes: claimBoxes,
+    isLoading: isClaimingBoxes,
+    error: claimError,
+  } = useClaimBoxes();
+
+  const handleClaimBoxes = async () => {
+    if (!selectedBoxes || selectedBoxes.length === 0) {
+      console.warn("No boxes selected to claim");
+      return;
+    }
+
+    if (!contest) {
+      console.warn("No contest data available");
+      return;
+    }
+
+    try {
+      await claimBoxes(
+        selectedBoxes,
+        contest.id,
+        undefined,
+        contest,
+        // onSuccess callback
+        async () => {
+          // Clear selected boxes after successful claim
+          setSelectedBoxes([]);
+
+          // Invalidate cache and refresh contest data to show updated box ownership
+          try {
+            await invalidateContestCache();
+            await handleRefreshContestData();
+            toast.success("Boxes claimed successfully!");
+          } catch (error) {
+            console.error("Error refreshing after claim:", error);
+            toast.success(
+              "Boxes claimed successfully! (Refresh may be delayed)",
+            );
+          }
+        },
+        // onError callback
+        error => {
+          console.error("Failed to claim boxes:", error);
+          toast.error("Failed to claim boxes. Please try again.");
+        },
+      );
+    } catch (error) {
+      console.error("Failed to claim boxes:", error);
+      toast.error("Failed to claim boxes. Please try again.");
+    }
+  };
+
+  const invalidateContestCache = async () => {
+    try {
+      const response = await fetch(`/api/contest/${contestId}/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chainId: 8453 }), // Base mainnet
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to invalidate cache");
+      }
+
+      const result = await response.json();
+      console.log("Cache invalidated:", result);
+    } catch (error) {
+      console.error("Error invalidating cache:", error);
+      throw error;
+    }
+  };
+
   const handleRefreshContestData = async () => {
     setRefreshingContestData(true);
 
     try {
-      // Call the refresh endpoint to bust cache and get fresh data
-      const response = await fetch(`/api/contest/${contestId}/refresh`, {
-        method: "POST",
-      });
+      // Fetch fresh contest data with force refresh
+      const response = await fetch(
+        `/api/contest/${contestId}?forceRefresh=true&t=${Date.now()}`,
+        {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        },
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to refresh contest data");
+        throw new Error("Failed to fetch contest data");
       }
 
       const contestData = await response.json();
+      console.log("Refreshed contest data:", contestData);
 
       // Convert the API response to our Contest type
       const refreshedContest: Contest = {
@@ -199,7 +324,11 @@ export default function ContestPage() {
         payoutStrategy: contestData.payoutStrategy,
       };
 
+      // Update box owners with fresh data
+      const boxOwnersData: BoxOwner[] = contestData.boxes || [];
+
       setContest(refreshedContest);
+      setBoxOwners(boxOwnersData);
     } catch (error) {
       console.error("Error refreshing contest data:", error);
     } finally {
@@ -297,6 +426,7 @@ export default function ContestPage() {
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
               onClaimBoxes={handleClaimBoxes}
+              isClaimingBoxes={isClaimingBoxes}
             />
           </div>
 
@@ -304,7 +434,11 @@ export default function ContestPage() {
           <div className="space-y-6">
             {/* Game Scores */}
             {gameScore && (
-              <GameScores gameScore={gameScore} contest={contest} />
+              <GameScores
+                gameScore={gameScore}
+                contest={contest}
+                boxOwners={boxOwners}
+              />
             )}
 
             {/* Payouts */}

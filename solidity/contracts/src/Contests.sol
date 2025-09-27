@@ -225,7 +225,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         for (uint8 i = 0; i < numBoxesToClaim;) {
             uint256 tokenId = tokenIds[i];
             if (getTokenIdContestNumber(tokenId) != contestId) revert BoxNotInContest();
-            if (i >= nextTokenId) revert BoxDoesNotExist();
+            if (tokenId >= nextTokenId) revert BoxDoesNotExist();
             // check to make sure the box they are trying to claim isnt already claimed
             // check that the owner of this tokenId is this contract address
             if (boxes.ownerOf(tokenId) != address(this)) revert BoxAlreadyClaimed();

@@ -1,21 +1,16 @@
-import { chain, contests } from "@/constants";
-import { abi } from "@/constants/abis/contests";
-import { CACHE_TTL, getContestCacheKey, redis } from "@/lib/redis";
+import { getContestCacheKey, redis } from "@/lib/redis";
 import { NextRequest, NextResponse } from "next/server";
-import { createThirdwebClient, getContract, readContract } from "thirdweb";
 
-const client = createThirdwebClient({
-  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
-});
-
-const CONTRACTS_ADDRESS = contests[chain.id];
+// Disable Next.js caching for this route
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ contestId: string }> },
+  { params }: { params: { contestId: string } },
 ) {
   try {
-    const { contestId } = await params;
+    const { contestId } = params;
 
     if (!contestId) {
       return NextResponse.json(
@@ -24,94 +19,58 @@ export async function POST(
       );
     }
 
-    if (!CONTRACTS_ADDRESS) {
-      return NextResponse.json(
-        { error: "Contract address not configured" },
-        { status: 500 },
-      );
-    }
+    // Get chain ID from request body or default to Base mainnet
+    const body = await request.json().catch(() => ({}));
+    const chainId = body.chainId || 8453;
 
-    // Clear the cache if Redis is configured
     if (redis) {
-      const cacheKey = getContestCacheKey(contestId, chain.id);
-      await redis.del(cacheKey);
+      const cacheKey = getContestCacheKey(contestId, chainId);
+      const deleted = await redis.del(cacheKey);
+
       console.log(
-        `Cache cleared for contest ${contestId} on chain ${chain.id}`,
+        `Cache invalidated for contest ${contestId} on chain ${chainId}:`,
+        deleted > 0 ? "success" : "not found",
       );
-    }
 
-    // Get the contract instance
-    const contract = getContract({
-      client,
-      chain,
-      address: CONTRACTS_ADDRESS,
-      abi: abi as any,
-    });
+      const response = NextResponse.json({
+        success: true,
+        message: `Cache invalidated for contest ${contestId}`,
+        cacheKey,
+        deleted: deleted > 0,
+      });
 
-    // Call the getContestData function to get fresh contest data
-    const contestData = await readContract({
-      contract,
-      method: "getContestData",
-      params: [parseInt(contestId)],
-    });
-
-    // Extract the data from the returned ContestView struct
-    const {
-      id,
-      gameId,
-      creator,
-      rows,
-      cols,
-      boxCost,
-      boxesCanBeClaimed,
-      payoutsPaid,
-      totalRewards,
-      boxesClaimed,
-      randomValues,
-      randomValuesSet,
-      title,
-      description,
-      payoutStrategy,
-    } = contestData;
-
-    // Format the contest data
-    const formattedContestData = {
-      id: id.toString(),
-      gameId: gameId.toString(),
-      creator,
-      rows: rows.map((r: any) => parseInt(r.toString())),
-      cols: cols.map((c: any) => parseInt(c.toString())),
-      boxCost: {
-        currency: boxCost.currency,
-        amount: boxCost.amount.toString(),
-      },
-      boxesCanBeClaimed,
-      payoutsPaid: {
-        totalPayoutsMade: parseInt(payoutsPaid.totalPayoutsMade.toString()),
-        totalAmountPaid: payoutsPaid.totalAmountPaid.toString(),
-      },
-      totalRewards: totalRewards.toString(),
-      boxesClaimed: boxesClaimed.toString(),
-      randomValuesSet,
-      title,
-      description,
-      payoutStrategy,
-    };
-
-    // Cache the fresh contest data with 1 hour TTL (if Redis is configured)
-    if (redis) {
-      const cacheKey = getContestCacheKey(contestId, chain.id);
-      await redis.setex(cacheKey, CACHE_TTL.CONTEST, formattedContestData);
-      console.log(
-        `Fresh contest data cached for contest ${contestId} on chain ${chain.id}`,
+      // Disable Next.js caching
+      response.headers.set(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate",
       );
-    }
+      response.headers.set("Pragma", "no-cache");
+      response.headers.set("Expires", "0");
+      response.headers.set("Surrogate-Control", "no-store");
 
-    return NextResponse.json(formattedContestData);
+      return response;
+    } else {
+      console.log("Redis not configured, cache invalidation skipped");
+      const response = NextResponse.json({
+        success: true,
+        message: "Redis not configured, cache invalidation skipped",
+      });
+
+      // Disable Next.js caching
+      response.headers.set(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate",
+      );
+      response.headers.set("Pragma", "no-cache");
+      response.headers.set("Expires", "0");
+      response.headers.set("Surrogate-Control", "no-store");
+
+      return response;
+    }
   } catch (error) {
-    console.error("Error refreshing contest data:", error);
+    console.error("Error invalidating cache:", error);
     return NextResponse.json(
-      { error: "Failed to refresh contest data" },
+      { error: "Failed to invalidate cache" },
       { status: 500 },
     );
   }
