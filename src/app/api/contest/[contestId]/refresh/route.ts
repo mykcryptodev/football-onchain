@@ -10,7 +10,7 @@ const client = createThirdwebClient({
 
 const CONTRACTS_ADDRESS = contests[chain.id];
 
-export async function GET(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ contestId: string }> },
 ) {
@@ -31,24 +31,12 @@ export async function GET(
       );
     }
 
-    // Check Redis cache first (if configured)
-    let cachedContest = null;
+    // Clear the cache if Redis is configured
     if (redis) {
       const cacheKey = getContestCacheKey(contestId, chain.id);
-      cachedContest = await redis.get(cacheKey);
-
-      if (cachedContest) {
-        console.log(JSON.stringify(cachedContest));
-        console.log(`Cache hit for contest ${contestId} on chain ${chain.id}`);
-        return NextResponse.json(cachedContest);
-      }
-
+      await redis.del(cacheKey);
       console.log(
-        `Cache miss for contest ${contestId} on chain ${chain.id}, fetching from blockchain`,
-      );
-    } else {
-      console.log(
-        `Redis not configured, fetching contest ${contestId} from blockchain`,
+        `Cache cleared for contest ${contestId} on chain ${chain.id}`,
       );
     }
 
@@ -57,10 +45,10 @@ export async function GET(
       client,
       chain,
       address: CONTRACTS_ADDRESS,
-      abi: abi as any, // Type assertion to bypass ABI type issues
+      abi: abi as any,
     });
 
-    // Call the getContestData function to get contest data
+    // Call the getContestData function to get fresh contest data
     const contestData = await readContract({
       contract,
       method: "getContestData",
@@ -110,20 +98,20 @@ export async function GET(
       payoutStrategy,
     };
 
-    // Cache the contest data with 1 hour TTL (if Redis is configured)
+    // Cache the fresh contest data with 1 hour TTL (if Redis is configured)
     if (redis) {
       const cacheKey = getContestCacheKey(contestId, chain.id);
       await redis.setex(cacheKey, CACHE_TTL.CONTEST, formattedContestData);
       console.log(
-        `Cached contest ${contestId} on chain ${chain.id} for ${CACHE_TTL.CONTEST} seconds`,
+        `Fresh contest data cached for contest ${contestId} on chain ${chain.id}`,
       );
     }
 
     return NextResponse.json(formattedContestData);
   } catch (error) {
-    console.error("Error fetching contest data:", error);
+    console.error("Error refreshing contest data:", error);
     return NextResponse.json(
-      { error: "Failed to fetch contest data" },
+      { error: "Failed to refresh contest data" },
       { status: 500 },
     );
   }

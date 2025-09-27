@@ -16,7 +16,7 @@ contract DummyRandomNumbers is DummyVRF, RandomNumbers {
         return 0.001 ether; // Fixed price for testing
     }
 
-    function requestRandomNumbers(uint256 contestId) external payable override onlyContests {
+    function requestRandomNumbers(uint256 contestId, address recipient) external payable override onlyContests {
         // For testing, use a minimal fee check (0.001 ether)
         if (msg.value < 0.001 ether) revert InsufficientPayment();
 

@@ -17,11 +17,15 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "if(sportsApiResponse.error){console.error(JSON.stringify(sportsApiResponse));console.error(sportsApiResponse.error);throw Error(\"Request failed\")}"
         "const data=sportsApiResponse.data;if(data.Response===\"Error\"){console.error(data.Message);throw Error('Functional error. Read message: '+data.Message)}"
         "const teams=data.header.competitions[0].competitors;const homeTeam=teams.find(team=>team.homeAway===\"home\");const awayTeam=teams.find(team=>team.homeAway===\"away\");if(!homeTeam||!awayTeam){throw Error(\"Unable to find home or away team\")}"
-        "const qComplete=data.header.competitions[0].status.type.completed?100:data.header.competitions[0].status.period-1;const homeTeamScores=homeTeam.linescores;const homeQ1=qComplete<1?0:parseInt(homeTeamScores[0]?.[\"displayValue\"]||0);const homeQ2=qComplete<2?0:parseInt(homeTeamScores[1]?.[\"displayValue\"]||0);const homeQ3=qComplete<3?0:parseInt(homeTeamScores[2]?.[\"displayValue\"]||0);const homeF=qComplete<100?0:parseInt(homeTeam.score?.slice(-1)||0);const homeQ1LastDigit=qComplete<1?0:parseInt(homeQ1.toString().slice(-1));const homeQ2LastDigit=qComplete<2?0:parseInt((homeQ1+homeQ2).toString().slice(-1));const homeQ3LastDigit=qComplete<3?0:parseInt((homeQ1+homeQ2+homeQ3).toString().slice(-1));const homeFLastDigit=parseInt(homeF);"
-        "const awayTeamScores=awayTeam.linescores;const awayQ1=qComplete<1?0:parseInt(awayTeamScores[0]?.[\"displayValue\"]||0);const awayQ2=qComplete<2?0:parseInt(awayTeamScores[1]?.[\"displayValue\"]||0);const awayQ3=qComplete<3?0:parseInt(awayTeamScores[2]?.[\"displayValue\"]||0);const awayF=qComplete<100?0:parseInt(awayTeam.score?.slice(-1)||0);const awayQ1LastDigit=qComplete<1?0:parseInt(awayQ1.toString().slice(-1));const awayQ2LastDigit=qComplete<2?0:parseInt((awayQ1+awayQ2).toString().slice(-1));const awayQ3LastDigit=qComplete<3?0:parseInt((awayQ1+awayQ2+awayQ3).toString().slice(-1));const awayFLastDigit=parseInt(awayF);"
+        "const gameCompleted=data.header.competitions[0].status.type.completed||false;const qComplete=gameCompleted?100:data.header.competitions[0].status.period-1;"
+        "const homeTeamScores=homeTeam.linescores;const homeQ1=qComplete<1?0:parseInt(homeTeamScores[0]?.[\"displayValue\"]||0);const homeQ2=qComplete<2?0:parseInt(homeTeamScores[1]?.[\"displayValue\"]||0);const homeQ3=qComplete<3?0:parseInt(homeTeamScores[2]?.[\"displayValue\"]||0);const homeF=qComplete<100?0:parseInt(homeTeam.score||0);const homeQ1LastDigit=qComplete<1?0:parseInt(homeQ1.toString().slice(-1));const homeQ2LastDigit=qComplete<2?0:parseInt((homeQ1+homeQ2).toString().slice(-1));const homeQ3LastDigit=qComplete<3?0:parseInt((homeQ1+homeQ2+homeQ3).toString().slice(-1));const homeFLastDigit=parseInt(homeF.toString().slice(-1));"
+        "const awayTeamScores=awayTeam.linescores;const awayQ1=qComplete<1?0:parseInt(awayTeamScores[0]?.[\"displayValue\"]||0);const awayQ2=qComplete<2?0:parseInt(awayTeamScores[1]?.[\"displayValue\"]||0);const awayQ3=qComplete<3?0:parseInt(awayTeamScores[2]?.[\"displayValue\"]||0);const awayF=qComplete<100?0:parseInt(awayTeam.score||0);const awayQ1LastDigit=qComplete<1?0:parseInt(awayQ1.toString().slice(-1));const awayQ2LastDigit=qComplete<2?0:parseInt((awayQ1+awayQ2).toString().slice(-1));const awayQ3LastDigit=qComplete<3?0:parseInt((awayQ1+awayQ2+awayQ3).toString().slice(-1));const awayFLastDigit=parseInt(awayF.toString().slice(-1));"
+        "const scoringPlays=data.scoringPlays||[];let scoreChanges=[];scoringPlays.forEach(play=>{const homeScore=play.homeScore||0;const awayScore=play.awayScore||0;const quarter=play.period?.number||1;const homeLastDigit=parseInt(homeScore.toString().slice(-1));const awayLastDigit=parseInt(awayScore.toString().slice(-1));scoreChanges.push({homeScore,awayScore,quarter,homeLastDigit,awayLastDigit})});"
         "function numberToUint256(num){const hex=BigInt(num).toString(16);return hex.padStart(64,'0')}"
         "function packDigits(...digits){return digits.reduce((acc,val)=>acc*10+val,0)}"
-        "const digits=packDigits(homeQ1LastDigit,homeQ2LastDigit,homeQ3LastDigit,homeFLastDigit,awayQ1LastDigit,awayQ2LastDigit,awayQ3LastDigit,awayFLastDigit);const packedResult=[digits,qComplete,];"
+        "const quarterDigits=packDigits(homeQ1LastDigit,homeQ2LastDigit,homeQ3LastDigit,homeFLastDigit,awayQ1LastDigit,awayQ2LastDigit,awayQ3LastDigit,awayFLastDigit);"
+        "let packedResult=[quarterDigits,qComplete,gameCompleted?1:0,scoreChanges.length];"
+        "scoreChanges.slice(0,20).forEach(change=>{const packedChange=change.homeScore*1000000+change.awayScore*10000+change.quarter*1000+change.homeLastDigit*100+change.awayLastDigit*10;packedResult.push(packedChange)});"
         "const encodedResult='0x'+packedResult.map(numberToUint256).join('');"
         "function hexToUint8Array(hexString){if(hexString.startsWith('0x')){hexString=hexString.slice(2)}"
         "const byteArray=new Uint8Array(hexString.length/2);for(let i=0;i<byteArray.length;i++){byteArray[i]=parseInt(hexString.substr(i*2,2),16)}"
@@ -29,18 +33,29 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "const uint8ArrayResult=hexToUint8Array(encodedResult);"
         "return uint8ArrayResult";
 
+    struct ScoreChangeEvent {
+        uint16 homeScore;      // Full home score at this point (uint16 allows up to 65535)
+        uint16 awayScore;      // Full away score at this point
+        uint8 quarter;         // Which quarter (1-4, or 5 for OT)
+        uint8 homeLastDigit;   // Last digit of home score for boxes calculation
+        uint8 awayLastDigit;   // Last digit of away score for boxes calculation
+    }
+
     struct GameScore {
         uint256 id; // a unique id for this game determined by the outside world data set
-        uint8 homeQ1LastDigit; // last digit of the home teams score at the end of q2
-        uint8 homeQ2LastDigit; // last digit of the home team's cumulative score at the end of q1
-        uint8 homeQ3LastDigit; 
+        uint8 homeQ1LastDigit; // last digit of the home teams score at the end of q1
+        uint8 homeQ2LastDigit; // last digit of the home team's cumulative score at the end of q2
+        uint8 homeQ3LastDigit; // last digit of the home team's cumulative score at the end of q3
         uint8 homeFLastDigit; // last digit of the home team's cumulative score at the end of the final period including OT
-        uint8 awayQ1LastDigit; 
-        uint8 awayQ2LastDigit; 
-        uint8 awayQ3LastDigit; 
-        uint8 awayFLastDigit;
+        uint8 awayQ1LastDigit; // last digit of the away teams score at the end of q1
+        uint8 awayQ2LastDigit; // last digit of the away team's cumulative score at the end of q2
+        uint8 awayQ3LastDigit; // last digit of the away team's cumulative score at the end of q3
+        uint8 awayFLastDigit; // last digit of the away team's cumulative score at the end of the final period including OT
         uint8 qComplete; // the number of the last period that has been completed including OT. expect 100 for the game to be considered final.
         bool requestInProgress; // true if there is a pending oracle request
+        bool gameCompleted; // true if the game is officially completed (from status.type.completed)
+        ScoreChangeEvent[] scoreChanges; // All score changes during the game
+        uint8 totalScoreChanges; // Total number of score changes
     }
 
     // cooldown before a game can be requested again
@@ -60,6 +75,12 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     event GameScoresRequested(uint256 indexed gameId, bytes32 requestId); // someone requested game scores from the real world
     event GameScoresUpdated(uint256 indexed gameId, bytes32 requestId); // game scores were updated
     event GameScoreError(uint256 indexed gameId, bytes error); // there was an error fetching game scores
+
+    ////////////////////////////////////
+    ///////////    ERRORS    ///////////
+    ////////////////////////////////////
+    error ScoreChangeIndexOutOfBounds();
+    error CooldownNotMet();
 
     constructor(
         address router_
@@ -95,6 +116,44 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     }
 
     /**
+     * @notice Get whether a game is officially completed
+     * @param gameId The game ID to check
+     * @return gameCompleted True if the game is officially completed
+     */
+    function isGameCompleted(uint256 gameId) external view returns (bool) {
+        return gameScores[gameId].gameCompleted;
+    }
+
+    /**
+     * @notice Get all score changes for a game
+     * @param gameId The game ID to get score changes for
+     * @return scoreChanges Array of all score changes for the game
+     */
+    function getScoreChanges(uint256 gameId) external view returns (ScoreChangeEvent[] memory) {
+        return gameScores[gameId].scoreChanges;
+    }
+
+    /**
+     * @notice Get a specific score change by index
+     * @param gameId The game ID
+     * @param index The index of the score change (0-based)
+     * @return scoreChange The score change event at the specified index
+     */
+    function getScoreChange(uint256 gameId, uint256 index) external view returns (ScoreChangeEvent memory) {
+        if (index >= gameScores[gameId].scoreChanges.length) revert ScoreChangeIndexOutOfBounds();
+        return gameScores[gameId].scoreChanges[index];
+    }
+
+    /**
+     * @notice Get the total number of score changes for a game
+     * @param gameId The game ID
+     * @return count The total number of score changes
+     */
+    function getScoreChangeCount(uint256 gameId) external view returns (uint8) {
+        return gameScores[gameId].totalScoreChanges;
+    }
+
+    /**
      * @notice Send a simple request
      * @param args List of arguments accessible from within the source code
      * @param subscriptionId Billing ID
@@ -110,10 +169,9 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 gameId
     ) external returns (bytes32 requestId) {
         // check to make sure that we haven't requested this game in the last 10 minutes
-        require(
-            block.timestamp - gameScoreLastRequestTime[gameId] > GAME_SCORE_REQUEST_COOLDOWN,
-            "Cooldown not met"
-        );
+        if (block.timestamp - gameScoreLastRequestTime[gameId] <= GAME_SCORE_REQUEST_COOLDOWN) {
+            revert CooldownNotMet();
+        }
         // update the last request time
         gameScoreLastRequestTime[gameId] = block.timestamp;
 
@@ -153,24 +211,53 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
             gameScoreErrors[gameId] = err;
             emit GameScoreError(gameId, err);
         }
-        // Extract values from the bytes response
+
+        // Extract quarter-end scores from the bytes response
         uint256 packedDigitsValue = _bytesToUint256(response, 0);
-        
-        // overwrite the gamescore with the newly fetched gamescore
-        GameScore memory gameScore = GameScore(
-            gameId, // gameId stored when 
-            uint8(packedDigitsValue / 10**7), // homeQ1LastDigit
-            uint8((packedDigitsValue / 10**6) % 10), // homeQ2LastDigit
-            uint8((packedDigitsValue / 10**5) % 10), // homeQ3LastDigit
-            uint8((packedDigitsValue / 10**4) % 10), // homeFLastDigit
-            uint8((packedDigitsValue / 10**3) % 10), // awayQ1LastDigit
-            uint8((packedDigitsValue / 10**2) % 10), // awayQ2LastDigit
-            uint8((packedDigitsValue / 10**1) % 10), // awayQ3LastDigit
-            uint8(packedDigitsValue % 10), // awayFLastDigit
-            uint8(_bytesToUint256(response, 1)), // qComplete
-            false // request is no longer in progress
-        );
-        gameScores[gameId] = gameScore;
+        uint8 qComplete = uint8(_bytesToUint256(response, 1));
+        bool gameCompleted = _bytesToUint256(response, 2) == 1;
+        uint8 totalScoreChanges = uint8(_bytesToUint256(response, 3));
+
+        // Clear existing score changes for this game
+        delete gameScores[gameId].scoreChanges;
+
+        // Create new GameScore with updated data
+        GameScore storage gameScore = gameScores[gameId];
+        gameScore.id = gameId;
+        gameScore.homeQ1LastDigit = uint8(packedDigitsValue / 10**7);
+        gameScore.homeQ2LastDigit = uint8((packedDigitsValue / 10**6) % 10);
+        gameScore.homeQ3LastDigit = uint8((packedDigitsValue / 10**5) % 10);
+        gameScore.homeFLastDigit = uint8((packedDigitsValue / 10**4) % 10);
+        gameScore.awayQ1LastDigit = uint8((packedDigitsValue / 10**3) % 10);
+        gameScore.awayQ2LastDigit = uint8((packedDigitsValue / 10**2) % 10);
+        gameScore.awayQ3LastDigit = uint8((packedDigitsValue / 10**1) % 10);
+        gameScore.awayFLastDigit = uint8(packedDigitsValue % 10);
+        gameScore.qComplete = qComplete;
+        gameScore.requestInProgress = false;
+        gameScore.gameCompleted = gameCompleted;
+        gameScore.totalScoreChanges = totalScoreChanges;
+
+        // Extract score changes (up to 20 changes)
+        for (uint8 i = 0; i < totalScoreChanges && i < 20; i++) {
+            uint256 packedChange = _bytesToUint256(response, 4 + i);
+
+            // Unpack the score change data
+            // Format: homeScore*1000000 + awayScore*10000 + quarter*1000 + homeLastDigit*100 + awayLastDigit*10
+            uint16 homeScore = uint16(packedChange / 1000000);
+            uint16 awayScore = uint16((packedChange / 10000) % 100);
+            uint8 quarter = uint8((packedChange / 1000) % 10);
+            uint8 homeLastDigit = uint8((packedChange / 100) % 10);
+            uint8 awayLastDigit = uint8((packedChange / 10) % 10);
+
+            gameScore.scoreChanges.push(ScoreChangeEvent({
+                homeScore: homeScore,
+                awayScore: awayScore,
+                quarter: quarter,
+                homeLastDigit: homeLastDigit,
+                awayLastDigit: awayLastDigit
+            }));
+        }
+
         emit GameScoresUpdated(gameId, requestId);
     }
 
@@ -189,4 +276,3 @@ function _bytesToUint256(bytes memory input, uint8 index) pure returns (uint256 
         result |= uint256(uint8(input[index * 32 + i])) << (8 * (31 - i));
     }
 }
-

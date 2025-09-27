@@ -7,6 +7,8 @@ import "../src/Boxes.sol";
 import "../src/GameScoreOracle.sol";
 import "../src/ContestsManager.sol";
 import "../src/RandomNumbers.sol";
+import "../src/QuartersOnlyPayoutStrategy.sol";
+import "../src/ScoreChangesPayoutStrategy.sol";
 import "./DummyVRF.sol";
 import "./DummyRandomNumbers.sol";
 
@@ -17,6 +19,8 @@ contract ContestsTest is Test {
     ContestsManager public contestsManager;
     DummyRandomNumbers public randomNumbers;
     DummyVRF public dummyVRF;
+    QuartersOnlyPayoutStrategy public quartersOnlyStrategy;
+    ScoreChangesPayoutStrategy public scoreChangesStrategy;
 
     address public treasury = address(1);
     address public player1 = address(2);
@@ -47,6 +51,10 @@ contract ContestsTest is Test {
         randomNumbers = new DummyRandomNumbers(
             address(dummyVRF)
         );
+
+        // Deploy Payout Strategy contracts
+        quartersOnlyStrategy = new QuartersOnlyPayoutStrategy();
+        scoreChangesStrategy = new ScoreChangesPayoutStrategy();
 
         // Deploy Contests contract
         contests = new Contests(
@@ -80,7 +88,7 @@ contract ContestsTest is Test {
         string memory description = "This is a test contest for the game";
 
         uint256 contestsBefore = contests.contestIdCounter();
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestsAfter = contests.contestIdCounter();
 
         assertEq(contestsAfter, contestsBefore + 1, "Contest should be created");
@@ -94,7 +102,7 @@ contract ContestsTest is Test {
         string memory title = "Random Test Contest";
         string memory description = "Testing random values";
 
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0; // First contest created
 
         // Set up event expectation BEFORE the action that should emit it
@@ -139,7 +147,7 @@ contract ContestsTest is Test {
         string memory title = "Super Bowl LVIII";
         string memory description = "Kansas City Chiefs vs San Francisco 49ers - The ultimate championship showdown!";
 
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Test individual getters
@@ -162,7 +170,7 @@ contract ContestsTest is Test {
         string memory description = "Valid description";
 
         // Create contest first (no validation in createContest anymore)
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Test that updating with empty title fails
@@ -178,7 +186,7 @@ contract ContestsTest is Test {
         string memory description = "Valid description";
 
         // Create contest first (no validation in createContest anymore)
-        contests.createContest(gameId, boxCost, boxCurrency, validTitle, description);
+        contests.createContest(gameId, boxCost, boxCurrency, validTitle, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Create a title that exceeds MAX_TITLE_LENGTH (100 characters)
@@ -196,7 +204,7 @@ contract ContestsTest is Test {
         string memory validDescription = "Valid description";
 
         // Create contest first (no validation in createContest anymore)
-        contests.createContest(gameId, boxCost, boxCurrency, title, validDescription);
+        contests.createContest(gameId, boxCost, boxCurrency, title, validDescription, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Create a description that exceeds MAX_DESCRIPTION_LENGTH (500 characters)
@@ -214,7 +222,7 @@ contract ContestsTest is Test {
         string memory description = "";
 
         // This should not revert - empty description is allowed
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         (, string memory retrievedDescription) = contestsManager.getContestInfo(contestId);
@@ -233,7 +241,7 @@ contract ContestsTest is Test {
         string memory description = "This description is exactly five hundred characters long and should be accepted by the contract. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui of";
 
         // This should not revert - exactly at the limits
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         (string memory retrievedTitle, string memory retrievedDescription) = contestsManager.getContestInfo(contestId);
@@ -250,7 +258,7 @@ contract ContestsTest is Test {
         string memory originalTitle = "Original Title";
         string memory originalDescription = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription);
+        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Update only the title (keep description the same)
@@ -274,7 +282,7 @@ contract ContestsTest is Test {
         string memory originalTitle = "Original Title";
         string memory originalDescription = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription);
+        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Update only the description (keep title the same)
@@ -298,7 +306,7 @@ contract ContestsTest is Test {
         string memory originalTitle = "Original Title";
         string memory originalDescription = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription);
+        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Update both title and description
@@ -326,7 +334,7 @@ contract ContestsTest is Test {
         string memory originalTitle = "Original Title";
         string memory originalDescription = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription);
+        contests.createContest(gameId, boxCost, boxCurrency, originalTitle, originalDescription, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Update with the same values - no events should be emitted
@@ -346,7 +354,7 @@ contract ContestsTest is Test {
         string memory title = "Original Title";
         string memory description = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Try to update as non-creator
@@ -369,7 +377,7 @@ contract ContestsTest is Test {
         string memory title = "Original Title";
         string memory description = "Original Description";
 
-        contests.createContest(gameId, boxCost, boxCurrency, title, description);
+        contests.createContest(gameId, boxCost, boxCurrency, title, description, address(quartersOnlyStrategy));
         uint256 contestId = 0;
 
         // Test empty title

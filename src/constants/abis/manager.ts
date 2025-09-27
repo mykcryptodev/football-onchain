@@ -102,6 +102,7 @@ export const abi = [
           { internalType: "uint8", name: "awayFLastDigit", type: "uint8" },
           { internalType: "uint8", name: "qComplete", type: "uint8" },
           { internalType: "bool", name: "requestInProgress", type: "bool" },
+          { internalType: "bool", name: "gameCompleted", type: "bool" },
         ],
         internalType: "struct IContestTypes.GameScore",
         name: "gameScores",

@@ -86,7 +86,10 @@ contract ContestsManager is Ownable {
         Get the currency of the contest
      */
     function getContestCurrency(uint256 contestId) external view returns (address, uint256, string memory, string memory, uint256) {
-        (,,,IContestTypes.Cost memory boxCost,,,,,,,) = contestStorage.contests(contestId);
+        // Get contest data through individual field access since the struct contains mappings
+        IContestTypes.ContestView memory contest = _getContestData(contestId);
+        IContestTypes.Cost memory boxCost = contest.boxCost;
+
         if (boxCost.currency == address(0)) {
             return (address(0), 18, "ETH", "Ether", boxCost.amount);
         }
@@ -114,8 +117,8 @@ contract ContestsManager is Ownable {
     }
 
     function getGameIdForContest (uint256 contestId) public view returns (uint256) {
-        (, uint256 gameId,,,,,,,,,) = contestStorage.contests(contestId);
-        return gameId;
+        IContestTypes.ContestView memory contest = _getContestData(contestId);
+        return contest.gameId;
     }
 
     function calculateWinningQuarters(uint256 rowScore, uint256 colScore, IContestTypes.GameScore memory gameScores) public pure returns (uint8[] memory) {
@@ -157,14 +160,14 @@ contract ContestsManager is Ownable {
      */
     function updateContestInfo(uint256 _contestId, string memory _newTitle, string memory _newDescription) external {
         // Get contest info to check creator
-        (,, address creator,,,,,,, string memory currentTitle, string memory currentDescription) = contestStorage.contests(_contestId);
-        if (msg.sender != creator) revert CallerNotContestCreator();
+        IContestTypes.ContestView memory contest = _getContestData(_contestId);
+        if (msg.sender != contest.creator) revert CallerNotContestCreator();
         if (bytes(_newTitle).length == 0) revert TitleEmpty();
         if (bytes(_newTitle).length > MAX_TITLE_LENGTH) revert TitleTooLong();
         if (bytes(_newDescription).length > MAX_DESCRIPTION_LENGTH) revert DescriptionTooLong();
 
-        bool titleChanged = keccak256(bytes(currentTitle)) != keccak256(bytes(_newTitle));
-        bool descriptionChanged = keccak256(bytes(currentDescription)) != keccak256(bytes(_newDescription));
+        bool titleChanged = keccak256(bytes(contest.title)) != keccak256(bytes(_newTitle));
+        bool descriptionChanged = keccak256(bytes(contest.description)) != keccak256(bytes(_newDescription));
 
         // Only call the update if something actually changed
         if (titleChanged || descriptionChanged) {
@@ -184,7 +187,20 @@ contract ContestsManager is Ownable {
         Get both title and description of a contest
      */
     function getContestInfo(uint256 contestId) external view returns (string memory title, string memory description) {
-        (,,,,,,,,, string memory contestTitle, string memory contestDescription) = contestStorage.contests(contestId);
-        return (contestTitle, contestDescription);
+        IContestTypes.ContestView memory contest = _getContestData(contestId);
+        return (contest.title, contest.description);
+    }
+
+    /**
+        Internal function to get contest data safely
+        Since Contest struct now contains mappings, we can't return it directly from contests mapping
+        This function reconstructs the contest data without the mapping fields
+     */
+    function _getContestData(uint256 contestId) internal view returns (IContestTypes.ContestView memory) {
+        // We need to call individual getter functions from the Contests contract
+        // since the struct contains mappings that can't be returned directly
+
+        // Get basic contest data through a custom getter in Contests contract
+        return contestStorage.getContestData(contestId);
     }
 }

@@ -1,4 +1,6 @@
-export const abi = [
+import { Abi } from "viem";
+
+export const abi: Abi = [
   {
     inputs: [
       { internalType: "address", name: "treasury_", type: "address" },
@@ -45,6 +47,9 @@ export const abi = [
   { inputs: [], name: "FailedToSendETH", type: "error" },
   { inputs: [], name: "GameIdNotSet", type: "error" },
   { inputs: [], name: "InsufficientPayment", type: "error" },
+  { inputs: [], name: "InvalidPayoutStrategy", type: "error" },
+  { inputs: [], name: "PayoutAlreadyMade", type: "error" },
+  { inputs: [], name: "PayoutCalculationFailed", type: "error" },
   { inputs: [], name: "RandomValuesAlreadyFetched", type: "error" },
   { inputs: [], name: "RewardsNotClaimable", type: "error" },
   {
@@ -189,35 +194,7 @@ export const abi = [
   },
   {
     inputs: [],
-    name: "FINAL_PAYOUT",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "PERCENT_DENOMINATOR",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "Q1_PAYOUT",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "Q2_PAYOUT",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "Q3_PAYOUT",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -254,56 +231,9 @@ export const abi = [
     type: "function",
   },
   {
-    inputs: [
-      { internalType: "uint256", name: "contestId", type: "uint256" },
-      { internalType: "uint256", name: "tokenId", type: "uint256" },
-    ],
-    name: "claimReward",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "contestIdCounter",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
-    name: "contests",
-    outputs: [
-      { internalType: "uint256", name: "id", type: "uint256" },
-      { internalType: "uint256", name: "gameId", type: "uint256" },
-      { internalType: "address", name: "creator", type: "address" },
-      {
-        components: [
-          { internalType: "address", name: "currency", type: "address" },
-          { internalType: "uint256", name: "amount", type: "uint256" },
-        ],
-        internalType: "struct IContestTypes.Cost",
-        name: "boxCost",
-        type: "tuple",
-      },
-      { internalType: "bool", name: "boxesCanBeClaimed", type: "bool" },
-      {
-        components: [
-          { internalType: "bool", name: "q1Paid", type: "bool" },
-          { internalType: "bool", name: "q2Paid", type: "bool" },
-          { internalType: "bool", name: "q3Paid", type: "bool" },
-          { internalType: "bool", name: "finalPaid", type: "bool" },
-        ],
-        internalType: "struct IContestTypes.RewardPayment",
-        name: "rewardsPaid",
-        type: "tuple",
-      },
-      { internalType: "uint256", name: "totalRewards", type: "uint256" },
-      { internalType: "uint256", name: "boxesClaimed", type: "uint256" },
-      { internalType: "bool", name: "randomValuesSet", type: "bool" },
-      { internalType: "string", name: "title", type: "string" },
-      { internalType: "string", name: "description", type: "string" },
-    ],
     stateMutability: "view",
     type: "function",
   },
@@ -333,6 +263,7 @@ export const abi = [
       { internalType: "address", name: "boxCurrency", type: "address" },
       { internalType: "string", name: "title", type: "string" },
       { internalType: "string", name: "description", type: "string" },
+      { internalType: "address", name: "payoutStrategy", type: "address" },
     ],
     name: "createContest",
     outputs: [],
@@ -407,6 +338,75 @@ export const abi = [
     type: "function",
   },
   {
+    inputs: [
+      { internalType: "uint256", name: "contestId", type: "uint256" },
+      { internalType: "uint256", name: "rowScore", type: "uint256" },
+      { internalType: "uint256", name: "colScore", type: "uint256" },
+    ],
+    name: "getBoxOwner",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "getContestData",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint256", name: "id", type: "uint256" },
+          { internalType: "uint256", name: "gameId", type: "uint256" },
+          { internalType: "address", name: "creator", type: "address" },
+          { internalType: "uint8[]", name: "rows", type: "uint8[]" },
+          { internalType: "uint8[]", name: "cols", type: "uint8[]" },
+          {
+            components: [
+              { internalType: "address", name: "currency", type: "address" },
+              { internalType: "uint256", name: "amount", type: "uint256" },
+            ],
+            internalType: "struct IContestTypes.Cost",
+            name: "boxCost",
+            type: "tuple",
+          },
+          { internalType: "bool", name: "boxesCanBeClaimed", type: "bool" },
+          {
+            components: [
+              {
+                internalType: "uint256",
+                name: "totalPayoutsMade",
+                type: "uint256",
+              },
+              {
+                internalType: "uint256",
+                name: "totalAmountPaid",
+                type: "uint256",
+              },
+            ],
+            internalType: "struct IContestTypes.PayoutTrackerView",
+            name: "payoutsPaid",
+            type: "tuple",
+          },
+          { internalType: "uint256", name: "totalRewards", type: "uint256" },
+          { internalType: "uint256", name: "boxesClaimed", type: "uint256" },
+          {
+            internalType: "uint256[]",
+            name: "randomValues",
+            type: "uint256[]",
+          },
+          { internalType: "bool", name: "randomValuesSet", type: "bool" },
+          { internalType: "string", name: "title", type: "string" },
+          { internalType: "string", name: "description", type: "string" },
+          { internalType: "address", name: "payoutStrategy", type: "address" },
+        ],
+        internalType: "struct IContestTypes.ContestView",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "uint256", name: "gameId", type: "uint256" }],
     name: "getGameScores",
     outputs: [
@@ -423,11 +423,22 @@ export const abi = [
           { internalType: "uint8", name: "awayFLastDigit", type: "uint8" },
           { internalType: "uint8", name: "qComplete", type: "uint8" },
           { internalType: "bool", name: "requestInProgress", type: "bool" },
+          { internalType: "bool", name: "gameCompleted", type: "bool" },
         ],
         internalType: "struct IContestTypes.GameScore",
         name: "",
         type: "tuple",
       },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "getPayoutStats",
+    outputs: [
+      { internalType: "uint256", name: "totalPayoutsMade", type: "uint256" },
+      { internalType: "uint256", name: "totalAmountPaid", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
@@ -457,6 +468,7 @@ export const abi = [
           { internalType: "uint8", name: "awayFLastDigit", type: "uint8" },
           { internalType: "uint8", name: "qComplete", type: "uint8" },
           { internalType: "bool", name: "requestInProgress", type: "bool" },
+          { internalType: "bool", name: "gameCompleted", type: "bool" },
         ],
         internalType: "struct IContestTypes.GameScore",
         name: "gameScores",
@@ -465,6 +477,23 @@ export const abi = [
     ],
     name: "getWinningQuarters",
     outputs: [{ internalType: "uint8[]", name: "", type: "uint8[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "contestId", type: "uint256" },
+      { internalType: "bytes32", name: "payoutId", type: "bytes32" },
+    ],
+    name: "isPayoutMade",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "isRandomValuesSet",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
     type: "function",
   },
@@ -502,6 +531,13 @@ export const abi = [
     name: "owner",
     outputs: [{ internalType: "address", name: "", type: "address" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "processPayouts",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {

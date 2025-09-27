@@ -14,6 +14,7 @@ interface IContestTypes {
         uint8 awayFLastDigit;
         uint8 qComplete;
         bool requestInProgress;
+        bool gameCompleted; // true if the game is officially completed (from status.type.completed)
     }
 
     struct Contest {
@@ -24,13 +25,14 @@ interface IContestTypes {
         uint8[] cols;
         Cost boxCost;
         bool boxesCanBeClaimed;
-        RewardPayment rewardsPaid;
+        PayoutTracker payoutsPaid;
         uint256 totalRewards;
         uint256 boxesClaimed;
         uint256[] randomValues;
         bool randomValuesSet;
         string title;
         string description;
+        address payoutStrategy;  // Address of the payout strategy contract
     }
 
     struct Cost {
@@ -38,11 +40,35 @@ interface IContestTypes {
         uint256 amount;
     }
 
-    struct RewardPayment {
-        bool q1Paid;
-        bool q2Paid;
-        bool q3Paid;
-        bool finalPaid;
+    struct PayoutTracker {
+        mapping(bytes32 => bool) payoutsMade;  // Track which specific payouts have been made
+        uint256 totalPayoutsMade;              // Total number of payouts made
+        uint256 totalAmountPaid;               // Total amount paid out
+    }
+
+    // Memory-safe version of PayoutTracker without mappings (for external functions)
+    struct PayoutTrackerView {
+        uint256 totalPayoutsMade;              // Total number of payouts made
+        uint256 totalAmountPaid;               // Total amount paid out
+    }
+
+    // Memory-safe version of Contest without mappings (for external functions)
+    struct ContestView {
+        uint256 id;
+        uint256 gameId;
+        address creator;
+        uint8[] rows;
+        uint8[] cols;
+        Cost boxCost;
+        bool boxesCanBeClaimed;
+        PayoutTrackerView payoutsPaid;
+        uint256 totalRewards;
+        uint256 boxesClaimed;
+        uint256[] randomValues;
+        bool randomValuesSet;
+        string title;
+        string description;
+        address payoutStrategy;  // Address of the payout strategy contract
     }
 
     struct BoxCost {

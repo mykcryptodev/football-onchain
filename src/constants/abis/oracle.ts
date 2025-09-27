@@ -4,10 +4,12 @@ export const abi = [
     stateMutability: "nonpayable",
     type: "constructor",
   },
+  { inputs: [], name: "CooldownNotMet", type: "error" },
   { inputs: [], name: "EmptyArgs", type: "error" },
   { inputs: [], name: "EmptySource", type: "error" },
   { inputs: [], name: "NoInlineSecrets", type: "error" },
   { inputs: [], name: "OnlyRouterCanFulfill", type: "error" },
+  { inputs: [], name: "ScoreChangeIndexOutOfBounds", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -170,6 +172,8 @@ export const abi = [
       { internalType: "uint8", name: "awayFLastDigit", type: "uint8" },
       { internalType: "uint8", name: "qComplete", type: "uint8" },
       { internalType: "bool", name: "requestInProgress", type: "bool" },
+      { internalType: "bool", name: "gameCompleted", type: "bool" },
+      { internalType: "uint8", name: "totalScoreChanges", type: "uint8" },
     ],
     stateMutability: "view",
     type: "function",
@@ -194,6 +198,56 @@ export const abi = [
   },
   {
     inputs: [
+      { internalType: "uint256", name: "gameId", type: "uint256" },
+      { internalType: "uint256", name: "index", type: "uint256" },
+    ],
+    name: "getScoreChange",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint16", name: "homeScore", type: "uint16" },
+          { internalType: "uint16", name: "awayScore", type: "uint16" },
+          { internalType: "uint8", name: "quarter", type: "uint8" },
+          { internalType: "uint8", name: "homeLastDigit", type: "uint8" },
+          { internalType: "uint8", name: "awayLastDigit", type: "uint8" },
+        ],
+        internalType: "struct GameScoreOracle.ScoreChangeEvent",
+        name: "",
+        type: "tuple",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "gameId", type: "uint256" }],
+    name: "getScoreChangeCount",
+    outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "gameId", type: "uint256" }],
+    name: "getScoreChanges",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint16", name: "homeScore", type: "uint16" },
+          { internalType: "uint16", name: "awayScore", type: "uint16" },
+          { internalType: "uint8", name: "quarter", type: "uint8" },
+          { internalType: "uint8", name: "homeLastDigit", type: "uint8" },
+          { internalType: "uint8", name: "awayLastDigit", type: "uint8" },
+        ],
+        internalType: "struct GameScoreOracle.ScoreChangeEvent[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
       { internalType: "bytes32", name: "requestId", type: "bytes32" },
       { internalType: "bytes", name: "response", type: "bytes" },
       { internalType: "bytes", name: "err", type: "bytes" },
@@ -201,6 +255,13 @@ export const abi = [
     name: "handleOracleFulfillment",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "gameId", type: "uint256" }],
+    name: "isGameCompleted",
+    outputs: [{ internalType: "bool", name: "", type: "bool" }],
+    stateMutability: "view",
     type: "function",
   },
   {

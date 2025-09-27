@@ -52,7 +52,7 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
         contests = IContests(_contests);
     }
 
-    function requestRandomNumbers(uint256 contestId) external payable virtual onlyContests {
+    function requestRandomNumbers(uint256 contestId, address recipient) external payable virtual onlyContests {
         // Calculate the request price dynamically
         uint256 requestPrice = i_vrfV2PlusWrapper.calculateRequestPriceNative(CALLBACK_GAS_LIMIT, NUM_WORDS);
 
@@ -74,7 +74,7 @@ contract RandomNumbers is VRFV2PlusWrapperConsumerBase, ConfirmedOwner {
 
         // Refund excess payment
         if (msg.value > requestPrice) {
-            (bool success, ) = payable(msg.sender).call{value: msg.value - requestPrice}("");
+            (bool success, ) = payable(recipient).call{value: msg.value - requestPrice}("");
             if (!success) revert RefundFailed();
         }
 

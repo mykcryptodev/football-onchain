@@ -2,14 +2,15 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.22;
 
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {GameScoreOracle} from "./GameScoreOracle.sol";
 import {Boxes} from "./Boxes.sol";
 import {ContestsManager} from "./ContestsManager.sol";
 import {IContestTypes} from "./IContestTypes.sol";
 import {RandomNumbers} from "./RandomNumbers.sol";
+import {IPayoutStrategy} from "./IPayoutStrategy.sol";
 
 contract Contests is ConfirmedOwner, IERC721Receiver {
     using SafeERC20 for IERC20;
@@ -20,7 +21,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     uint256 public contestIdCounter = 0;
 
     // a list of all contests created
-    mapping (uint256 contestId => IContestTypes.Contest contest) public contests;
+    mapping (uint256 contestId => IContestTypes.Contest contest) internal contests;
 
     // a list of all contests created by the user
     mapping (address creator => uint256[] contestId) public contestsByUser;
@@ -46,11 +47,6 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     // default row and columns
     uint8[] private defaultScores = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-    // payouts
-    uint256 public constant Q1_PAYOUT = 150; // q1 wins 15% of the pot
-    uint256 public constant Q2_PAYOUT = 300; // q2 wins 30% of the pot
-    uint256 public constant Q3_PAYOUT = 150; // q3 wins 15% of the pot
-    uint256 public constant FINAL_PAYOUT = 380; // final wins 38% of the pot
     // treasury fee is set at 2%
     uint256 public constant TREASURY_FEE = 20;
     // denominator for fees and payouts
@@ -85,6 +81,9 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     error CallerNotContestCreator();
     error CallerNotRandomNumbers();
     error CallerNotContestsManager();
+    error InvalidPayoutStrategy();
+    error PayoutAlreadyMade();
+    error PayoutCalculationFailed();
 
     // modifier for only random numbers contract
     modifier onlyRandomNumbers() {
@@ -128,18 +127,17 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         if (msg.value < requiredFee) revert InsufficientPayment();
 
         // fetch the contest
-        IContestTypes.Contest memory contest = contests[_contestId];
+        IContestTypes.Contest storage contest = contests[_contestId];
         if (contest.randomValuesSet) revert RandomValuesAlreadyFetched();
         if (contest.boxesClaimed != NUM_BOXES_IN_CONTEST) {
             if (msg.sender != contest.creator) revert CallerNotContestCreator();
         }
 
         // Forward the call to RandomNumbers contract
-        randomNumbers.requestRandomNumbers{value: msg.value}(_contestId);
+        randomNumbers.requestRandomNumbers{value: msg.value}(_contestId, msg.sender);
 
         // Update contest state
         contest.boxesCanBeClaimed = false;
-        contests[_contestId] = contest;
 
         emit ScoresRequested(_contestId);
     }
@@ -152,29 +150,44 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     /**
         Create a new contest
      */
-    function createContest(uint256 gameId, uint256 boxCost, address boxCurrency, string memory title, string memory description) external {
+    function createContest(
+        uint256 gameId,
+        uint256 boxCost,
+        address boxCurrency,
+        string memory title,
+        string memory description,
+        address payoutStrategy
+    ) external {
         if (gameId == 0) revert GameIdNotSet();
         if (boxCost == 0) revert BoxCostNotSet();
+        if (payoutStrategy == address(0)) revert InvalidPayoutStrategy();
+
+        // Validate that the payout strategy implements the correct interface
+        try IPayoutStrategy(payoutStrategy).getStrategyType() returns (bytes32) {
+            // Strategy is valid
+        } catch {
+            revert InvalidPayoutStrategy();
+        }
+
         // Note: Title and description validation is handled in ContestsManager.updateContestInfo()
-        // create the contest struct
-        IContestTypes.Contest memory contest = IContestTypes.Contest({
-            id: contestIdCounter, // the id of the contest
-            gameId: gameId, // the game that this contest is tied to
-            creator: msg.sender, // sender is the creator
-            rows: defaultScores, // default rows
-            cols: defaultScores, // default cols
-            boxCost: IContestTypes.Cost(boxCurrency, boxCost), // the cost of a box
-            boxesCanBeClaimed: true, // boxes can be claimed
-            rewardsPaid: IContestTypes.RewardPayment(false, false, false, false), // rewards have not been paid out yet
-            totalRewards: 0, // total amount collected for the contest
-            boxesClaimed: 0, // no boxes have been claimed yet
-            randomValues: new uint [](2), // holds random values to be used when assigning values to rows and cols
-            randomValuesSet: false, // chainlink has not yet given us random values for row and col values
-            title: title, // the title of the contest
-            description: description // the description of the contest
-        });
-        // save this to the list of contests
-        contests[contestIdCounter] = contest;
+        // create the contest struct directly in storage
+        IContestTypes.Contest storage contest = contests[contestIdCounter];
+        contest.id = contestIdCounter; // the id of the contest
+        contest.gameId = gameId; // the game that this contest is tied to
+        contest.creator = msg.sender; // sender is the creator
+        contest.rows = defaultScores; // default rows
+        contest.cols = defaultScores; // default cols
+        contest.boxCost = IContestTypes.Cost(boxCurrency, boxCost); // the cost of a box
+        contest.boxesCanBeClaimed = true; // boxes can be claimed
+        contest.payoutsPaid.totalPayoutsMade = 0; // initialize payout tracker
+        contest.payoutsPaid.totalAmountPaid = 0; // initialize payout tracker
+        contest.totalRewards = 0; // total amount collected for the contest
+        contest.boxesClaimed = 0; // no boxes have been claimed yet
+        contest.randomValues = new uint [](2); // holds random values to be used when assigning values to rows and cols
+        contest.randomValuesSet = false; // chainlink has not yet given us random values for row and col values
+        contest.title = title; // the title of the contest
+        contest.description = description; // the description of the contest
+        contest.payoutStrategy = payoutStrategy; // the payout strategy contract
         // add this to the list of contests created by the user
         contestsByUser[msg.sender].push(contestIdCounter);
         // mint 100 nfts for this contest
@@ -195,7 +208,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     function claimBoxes(uint256[] memory tokenIds, address player) external payable {
         uint256 contestId = getTokenIdContestNumber(tokenIds[0]);
         // fetch the contest
-        IContestTypes.Contest memory contest = contests[contestId];
+        IContestTypes.Contest storage contest = contests[contestId];
         // check to make sure that the contest still allows for boxes to be claimed
         if (!contest.boxesCanBeClaimed) revert BoxesCannotBeClaimed();
         // determine cost based on number of boxes to claim
@@ -227,8 +240,6 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         contest.boxesClaimed += numBoxesToClaim;
         // increase the total amount in the contest by the total amount purchased by this user
         contest.totalRewards += totalCost;
-        // set the contest changes in state
-        contests[contestId] = contest;
 
         // refund any excess ETH that was sent
         if (msg.value > totalCost) {
@@ -236,52 +247,95 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         }
     }
 
-    function claimReward(uint256 contestId, uint256 tokenId) external {
+    /**
+     * @dev Process all available payouts for a contest using its payout strategy
+     */
+    function processPayouts(uint256 contestId) external {
         IContestTypes.Contest storage contest = contests[contestId];
         if (!contest.randomValuesSet) revert RewardsNotClaimable();
 
-        (uint256 rowScore, uint256 colScore) = fetchBoxScores(contest.id, tokenId);
-        IContestTypes.GameScore memory gameScores_ = getGameScores(contest.gameId);
-        uint8[] memory winningQuarters = getWinningQuarters(contest.id, rowScore, colScore, gameScores_);
+        // Validate game state with the payout strategy
+        IPayoutStrategy strategy = IPayoutStrategy(contest.payoutStrategy);
+        (bool isValid, string memory reason) = strategy.validateGameState(contest.gameId, gameScoreOracle);
+        if (!isValid) revert RewardsNotClaimable();
 
-        uint256 userReward = calculateAndUpdateRewards(contest, winningQuarters);
+        // Calculate total pot after treasury fee
+        uint256 totalPotAfterFee = contest.totalRewards - (contest.totalRewards * TREASURY_FEE / PERCENT_DENOMINATOR);
 
-        if (userReward > 0) {
-            _sendReward(boxes.ownerOf(tokenId), userReward, contest.boxCost.currency);
+        // Get all payouts from the strategy
+        try strategy.calculatePayouts(
+            contestId,
+            contest.gameId,
+            totalPotAfterFee,
+            gameScoreOracle,
+            this.getBoxOwner
+        ) returns (IPayoutStrategy.PayoutInfo[] memory payouts) {
+
+            // Process each payout
+            for (uint256 i = 0; i < payouts.length; i++) {
+                IPayoutStrategy.PayoutInfo memory payout = payouts[i];
+
+                // Generate unique payout ID
+                bytes32 payoutId = keccak256(abi.encodePacked(
+                    contestId,
+                    payout.quarter,
+                    payout.eventIndex,
+                    payout.reason
+                ));
+
+                // Check if this payout has already been made
+                if (!contest.payoutsPaid.payoutsMade[payoutId]) {
+                    // Mark payout as made
+                    contest.payoutsPaid.payoutsMade[payoutId] = true;
+                    contest.payoutsPaid.totalPayoutsMade++;
+                    contest.payoutsPaid.totalAmountPaid += payout.amount;
+
+                    // Send the payout
+                    _sendReward(payout.winner, payout.amount, contest.boxCost.currency);
+                }
+            }
+
+            // Send treasury fee if final payout is complete
+            _sendTreasuryFeeIfComplete(contest);
+
+        } catch {
+            revert PayoutCalculationFailed();
         }
     }
 
-    function calculateAndUpdateRewards(IContestTypes.Contest storage contest, uint8[] memory winningQuarters) internal returns (uint256) {
-        uint256 userReward = 0;
-        bool finalPaid = false;
+    /**
+     * @dev Get the owner of a box given the contest ID and row/col scores
+     * This function is used as a callback by payout strategies
+     */
+    function getBoxOwner(uint256 contestId, uint256 rowScore, uint256 colScore) external view returns (address) {
+        IContestTypes.Contest storage contest = contests[contestId];
 
-        for (uint8 i = 0; i < winningQuarters.length; i++) {
-            uint8 quarter = winningQuarters[i];
-            if (!isRewardPaidForQuarter(contest.id, quarter)) {
-                userReward += calculateQuarterReward(contest, quarter);
-                updateRewardPayment(contest, quarter);
-                if (quarter == 4) {
-                    finalPaid = true;
+        // Find the box position that matches these scores
+        for (uint8 row = 0; row < 10; row++) {
+            if (contest.rows[row] == rowScore) {
+                for (uint8 col = 0; col < 10; col++) {
+                    if (contest.cols[col] == colScore) {
+                        uint256 tokenId = contestId * 100 + row * 10 + col;
+                        return boxes.ownerOf(tokenId);
+                    }
                 }
             }
         }
 
-        if (finalPaid) {
+        // Should never reach here if contest is properly set up
+        return address(this); // Return contract address if no owner found
+    }
+
+    /**
+     * @dev Send treasury fee if all payouts are complete
+     */
+    function _sendTreasuryFeeIfComplete(IContestTypes.Contest storage contest) internal {
+        // Check if game is officially completed
+        bool gameCompleted = gameScoreOracle.isGameCompleted(contest.gameId);
+
+        if (gameCompleted) {
             _sendTreasuryFee(contest.totalRewards, contest.boxCost.currency);
         }
-
-        return userReward;
-    }
-
-    function calculateQuarterReward(IContestTypes.Contest memory contest, uint8 quarter) internal pure returns (uint256) {
-        return contest.totalRewards * getQuarterPayout(quarter) / PERCENT_DENOMINATOR;
-    }
-
-    function updateRewardPayment(IContestTypes.Contest storage contest, uint8 quarter) internal {
-        if (quarter == 1) contest.rewardsPaid.q1Paid = true;
-        else if (quarter == 2) contest.rewardsPaid.q2Paid = true;
-        else if (quarter == 3) contest.rewardsPaid.q3Paid = true;
-        else if (quarter == 4) contest.rewardsPaid.finalPaid = true;
     }
 
     function fetchFreshGameScores(
@@ -391,7 +445,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     function fetchBoxScores(
         uint256 contestId, uint256 tokenId
     ) public view returns(uint256 rowScore, uint256 colScore) {
-        IContestTypes.Contest memory contest = contests[contestId];
+        IContestTypes.Contest storage contest = contests[contestId];
         uint256 boxId = tokenId % 100; // makes this a number between 0-99
         // get the row and col positions of the box
         uint256 colPosition = boxId % 10; // box 45 becomes 5, 245 becomes 5, etc.
@@ -402,26 +456,76 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         return (rowScore, colScore);
     }
 
-    function isRewardPaidForQuarter(uint256 contestId, uint8 quarter) public view returns (bool) {
-        IContestTypes.Contest memory contest = contests[contestId];
-
-        if (quarter == 1) return contest.rewardsPaid.q1Paid;
-        if (quarter == 2) return contest.rewardsPaid.q2Paid;
-        if (quarter == 3) return contest.rewardsPaid.q3Paid;
-        if (quarter == 4) return contest.rewardsPaid.finalPaid;
-        return false;
+    /**
+     * @dev Check if a specific payout has been made
+     */
+    function isPayoutMade(uint256 contestId, bytes32 payoutId) public view returns (bool) {
+        return contests[contestId].payoutsPaid.payoutsMade[payoutId];
     }
 
-    function getQuarterPayout(uint8 quarter) internal pure returns (uint256) {
-        if (quarter == 1) return Q1_PAYOUT;
-        if (quarter == 2) return Q2_PAYOUT;
-        if (quarter == 3) return Q3_PAYOUT;
-        if (quarter == 4) return FINAL_PAYOUT;
-        return 0;
+    /**
+     * @dev Get payout statistics for a contest
+     */
+    function getPayoutStats(uint256 contestId) external view returns (
+        uint256 totalPayoutsMade,
+        uint256 totalAmountPaid
+    ) {
+        IContestTypes.Contest storage contest = contests[contestId];
+        return (contest.payoutsPaid.totalPayoutsMade, contest.payoutsPaid.totalAmountPaid);
+    }
+
+    /**
+     * @dev Get contest data without mapping fields (for ContestsManager compatibility)
+     * Since Contest struct contains mappings, we return a ContestView without those fields
+     */
+    function getContestData(uint256 contestId) external view returns (IContestTypes.ContestView memory) {
+        IContestTypes.Contest storage contest = contests[contestId];
+
+        // Create a new contest view without the mapping fields
+        IContestTypes.ContestView memory contestData = IContestTypes.ContestView({
+            id: contest.id,
+            gameId: contest.gameId,
+            creator: contest.creator,
+            rows: contest.rows,
+            cols: contest.cols,
+            boxCost: contest.boxCost,
+            boxesCanBeClaimed: contest.boxesCanBeClaimed,
+            payoutsPaid: IContestTypes.PayoutTrackerView({
+                totalPayoutsMade: contest.payoutsPaid.totalPayoutsMade,
+                totalAmountPaid: contest.payoutsPaid.totalAmountPaid
+            }),
+            totalRewards: contest.totalRewards,
+            boxesClaimed: contest.boxesClaimed,
+            randomValues: contest.randomValues,
+            randomValuesSet: contest.randomValuesSet,
+            title: contest.title,
+            description: contest.description,
+            payoutStrategy: contest.payoutStrategy
+        });
+
+        return contestData;
     }
 
     function getTokenIdContestNumber(uint256 tokenId) public pure returns (uint256) {
         return tokenId / 100;
+    }
+
+    /**
+     * @dev Get whether random values are set for a contest (for Boxes contract)
+     */
+    function isRandomValuesSet(uint256 contestId) external view returns (bool) {
+        return contests[contestId].randomValuesSet;
+    }
+
+    /**
+     * @dev Check if a reward has been paid for a quarter (for Boxes contract compatibility)
+     * This is a simplified version that checks if any payout has been made
+     * In the new system, we don't track quarters specifically anymore
+     */
+    function isRewardPaidForQuarter(uint256 contestId, uint8 quarter) external view returns (bool) {
+        // For now, return false to indicate rewards are always claimable
+        // The new payout system handles this differently through processPayouts()
+        return false;
     }
 
     // Essential getter functions (optimized)
@@ -439,8 +543,9 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     }
 
     function getGameScores(uint256 gameId) public view returns (IContestTypes.GameScore memory) {
-        (uint8 homeQ1, uint8 homeQ2, uint8 homeQ3, uint8 homeF, uint8 awayQ1, uint8 awayQ2, uint8 awayQ3, uint8 awayF, uint8 qComplete, bool requestInProgress) = gameScoreOracle.getGameScores(gameId);
-        return IContestTypes.GameScore(gameId, homeQ1, homeQ2, homeQ3, homeF, awayQ1, awayQ2, awayQ3, awayF, qComplete, requestInProgress);
+        (uint8 homeQ1LastDigit, uint8 homeQ2LastDigit, uint8 homeQ3LastDigit, uint8 homeFLastDigit, uint8 awayQ1LastDigit, uint8 awayQ2LastDigit, uint8 awayQ3LastDigit, uint8 awayFLastDigit, uint8 qComplete, bool requestInProgress) = gameScoreOracle.getGameScores(gameId);
+        bool gameCompleted = gameScoreOracle.isGameCompleted(gameId);
+        return IContestTypes.GameScore(gameId, homeQ1LastDigit, homeQ2LastDigit, homeQ3LastDigit, homeFLastDigit, awayQ1LastDigit, awayQ2LastDigit, awayQ3LastDigit, awayFLastDigit, qComplete, requestInProgress, gameCompleted);
     }
 
     /**
@@ -467,11 +572,10 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         uint8[] memory rows,
         uint8[] memory cols
     ) external onlyRandomNumbers {
-        IContestTypes.Contest memory contest = contests[contestId];
+        IContestTypes.Contest storage contest = contests[contestId];
         contest.randomValuesSet = true;
         contest.rows = rows;
         contest.cols = cols;
-        contests[contestId] = contest;
 
         emit ScoresAssigned(contestId);
     }

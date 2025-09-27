@@ -7,6 +7,8 @@ import {Contests} from "../contracts/src/Contests.sol";
 import {ContestsManager} from "../contracts/src/ContestsManager.sol";
 import {GameScoreOracle} from "../contracts/src/GameScoreOracle.sol";
 import {RandomNumbers} from "../contracts/src/RandomNumbers.sol";
+import {QuartersOnlyPayoutStrategy} from "../contracts/src/QuartersOnlyPayoutStrategy.sol";
+import {ScoreChangesPayoutStrategy} from "../contracts/src/ScoreChangesPayoutStrategy.sol";
 
 interface IFunctionsSubscriptionRegistry {
     function addConsumer(uint64 subscriptionId, address consumer) external;
@@ -25,6 +27,8 @@ contract Deploy is Script {
     ContestsManager public contestsReader;
     RandomNumbers public randomNumbers;
     Contests public contests;
+    QuartersOnlyPayoutStrategy public quartersOnlyStrategy;
+    ScoreChangesPayoutStrategy public scoreChangesStrategy;
 
     function setUp() public {
         // Base Sepolia (84532)
@@ -90,7 +94,18 @@ contract Deploy is Script {
         console.log("RandomNumbers deployed at:", address(randomNumbers));
         console.log("");
 
-        // 5. Add GameScoreOracle to Functions subscription
+        // 5. Deploy Payout Strategy contracts
+        console.log("Deploying QuartersOnlyPayoutStrategy contract...");
+        quartersOnlyStrategy = new QuartersOnlyPayoutStrategy();
+        console.log("QuartersOnlyPayoutStrategy deployed at:", address(quartersOnlyStrategy));
+        console.log("");
+
+        console.log("Deploying ScoreChangesPayoutStrategy contract...");
+        scoreChangesStrategy = new ScoreChangesPayoutStrategy();
+        console.log("ScoreChangesPayoutStrategy deployed at:", address(scoreChangesStrategy));
+        console.log("");
+
+        // 6. Add GameScoreOracle to Functions subscription
         console.log("Adding GameScoreOracle to Functions subscription...");
         IFunctionsSubscriptionRegistry registry = IFunctionsSubscriptionRegistry(
             functionsSubscriptionRegistry[chainId]
@@ -102,7 +117,7 @@ contract Deploy is Script {
         console.log("GameScoreOracle added to Functions subscription");
         console.log("");
 
-        // 6. Deploy Contests contract
+        // 7. Deploy Contests contract
         console.log("Deploying Contests contract...");
         contests = new Contests(
             deployer,                   // treasury
@@ -114,7 +129,7 @@ contract Deploy is Script {
         console.log("Contests deployed at:", address(contests));
         console.log("");
 
-        // 7. Configure contract relationships
+        // 8. Configure contract relationships
         console.log("Configuring contract relationships...");
 
         // Set contests in boxes contract
@@ -133,11 +148,13 @@ contract Deploy is Script {
 
         console.log("");
         console.log("=== Deployment Summary ===");
-        console.log("Boxes:          ", address(boxes));
-        console.log("GameScoreOracle:", address(gameScoreOracle));
-        console.log("ContestsManager: ", address(contestsReader));
-        console.log("RandomNumbers:  ", address(randomNumbers));
-        console.log("Contests:       ", address(contests));
+        console.log("Boxes:                      ", address(boxes));
+        console.log("GameScoreOracle:            ", address(gameScoreOracle));
+        console.log("ContestsManager:            ", address(contestsReader));
+        console.log("RandomNumbers:              ", address(randomNumbers));
+        console.log("QuartersOnlyPayoutStrategy: ", address(quartersOnlyStrategy));
+        console.log("ScoreChangesPayoutStrategy: ", address(scoreChangesStrategy));
+        console.log("Contests:                   ", address(contests));
         console.log("");
 
         // Check if we should skip verification during deployment
@@ -193,6 +210,12 @@ contract Deploy is Script {
             apiKey,
             verifierUrl
         );
+
+        console.log("Verifying QuartersOnlyPayoutStrategy...");
+        _verifyContract("QuartersOnlyPayoutStrategy", address(quartersOnlyStrategy), "", apiKey, verifierUrl);
+
+        console.log("Verifying ScoreChangesPayoutStrategy...");
+        _verifyContract("ScoreChangesPayoutStrategy", address(scoreChangesStrategy), "", apiKey, verifierUrl);
 
         console.log("Verifying Contests...");
         string memory contestsArgs = vm.toString(abi.encode(
@@ -288,6 +311,8 @@ contract Deploy is Script {
             vm.toString(abi.encode(vrfWrapper[chainId])),
             verifierUrl
         );
+        _printVerificationCommand("QuartersOnlyPayoutStrategy", address(quartersOnlyStrategy), "", verifierUrl);
+        _printVerificationCommand("ScoreChangesPayoutStrategy", address(scoreChangesStrategy), "", verifierUrl);
 
         string memory contestsArgs = vm.toString(abi.encode(
             deployer,
@@ -373,6 +398,20 @@ contract Deploy is Script {
             abi.encode(vrfWrapper[chainId])
         );
         totalGasEstimate += randomGas;
+
+        uint256 quartersStrategyGas = _estimateContractGas(
+            "QuartersOnlyPayoutStrategy",
+            type(QuartersOnlyPayoutStrategy).creationCode,
+            ""
+        );
+        totalGasEstimate += quartersStrategyGas;
+
+        uint256 scoreChangesStrategyGas = _estimateContractGas(
+            "ScoreChangesPayoutStrategy",
+            type(ScoreChangesPayoutStrategy).creationCode,
+            ""
+        );
+        totalGasEstimate += scoreChangesStrategyGas;
 
         uint256 contestsGas = _estimateContractGas("Contests", type(Contests).creationCode, "");
         totalGasEstimate += contestsGas;

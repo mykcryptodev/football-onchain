@@ -106,15 +106,17 @@ Boxes: ~ 1250000 gas
 GameScoreOracle: ~ 2100000 gas
 ContestsManager: ~ 980000 gas
 RandomNumbers: ~ 1800000 gas
+QuartersOnlyPayoutStrategy: ~ 800000 gas
+ScoreChangesPayoutStrategy: ~ 1200000 gas
 Contests: ~ 3200000 gas
 Setup transactions: ~ 300000 gas
 
 === Cost Summary ===
-Total estimated gas:     14668200
+Total estimated gas:     16668200
 Gas price (fallback):    1 gwei
-Total estimated cost:   0.014668 ETH
+Total estimated cost:   0.016668 ETH
 Your current balance:   10.000000 ETH
-Remaining balance:      9.985332 ETH
+Remaining balance:      9.983332 ETH
 
 Note: These are estimates and actual costs may vary due to network conditions.
 
@@ -172,13 +174,14 @@ make verify-contracts-sepolia
 The script performs these steps in order:
 
 1. **Deploy Boxes Contract** - NFT contract for box ownership
-2. **Deploy GameScoreOracle Contract** - Chainlink Functions oracle for game scores
+2. **Deploy GameScoreOracle Contract** - Enhanced oracle with score change tracking and game completion status
 3. **Deploy ContestsManager Contract** - Read-only contract for contest data
 4. **Deploy RandomNumbers Contract** - Chainlink VRF for random number generation
-5. **Add GameScoreOracle to Functions Subscription** - Register oracle with Chainlink
-6. **Deploy Contests Contract** - Main contest management contract
-7. **Configure Contract Relationships** - Set up inter-contract dependencies
-8. **Auto-Verify Contracts** - Call external verification script (if SKIP_VERIFICATION=false and ETHERSCAN_API_KEY is set)
+5. **Deploy Payout Strategy Contracts** - QuartersOnlyPayoutStrategy and ScoreChangesPayoutStrategy
+6. **Add GameScoreOracle to Functions Subscription** - Register oracle with Chainlink
+7. **Deploy Contests Contract** - Main contest management contract
+8. **Configure Contract Relationships** - Set up inter-contract dependencies
+9. **Auto-Verify Contracts** - All 7 contracts including the new payout strategies (if SKIP_VERIFICATION=false and ETHERSCAN_API_KEY is set)
 
 **Gas Estimation Process** (runs before deployment by default):
 1. **Estimate Contract Sizes** - Calculate deployment gas for each contract

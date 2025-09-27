@@ -70,7 +70,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
 
     function _generateBaseJSON(uint256 tokenId, BoxAttributes memory attrs) private view returns (string memory) {
         (uint256 rowScore, uint256 colScore) = contests.fetchBoxScores(attrs.contestId, tokenId);
-        (,,,,,,,,bool randomValuesSet,,) = contests.contests(attrs.contestId);
+        bool randomValuesSet = contests.isRandomValuesSet(attrs.contestId);
         return string(
             abi.encodePacked(
                 '{',

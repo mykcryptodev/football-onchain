@@ -32,7 +32,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { chain, contests, usdc } from "@/constants";
+import {
+  chain,
+  contests,
+  quartersOnlyPayoutStrategy,
+  scoreChangesPayoutStrategy,
+  usdc,
+} from "@/constants";
 import { abi } from "@/constants/abis/contests";
 import { useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
@@ -118,8 +124,8 @@ const createContestSchema = z.object({
       message: "Max participants must be between 10 and 100.",
     },
   ),
-  payoutStructure: z.enum(["standard", "winner-takes-all", "custom"], {
-    message: "Please select a payout structure.",
+  payoutStrategy: z.enum(["quarters-only", "score-changes"], {
+    message: "Please select a payout strategy.",
   }),
 });
 
@@ -154,7 +160,7 @@ export function CreateContestForm() {
       boxCost: "",
       currency: "",
       maxParticipants: "100",
-      payoutStructure: "standard",
+      payoutStrategy: "quarters-only",
     },
   });
 
@@ -186,6 +192,12 @@ export function CreateContestForm() {
         ? "0x0000000000000000000000000000000000000000"
         : selectedToken.address;
 
+    // Get payout strategy address based on selection
+    const payoutStrategyAddress =
+      formData.payoutStrategy === "quarters-only"
+        ? quartersOnlyPayoutStrategy[chain.id]
+        : scoreChangesPayoutStrategy[chain.id];
+
     // Get the contract instance
     const contract = getContract({
       client,
@@ -204,6 +216,7 @@ export function CreateContestForm() {
         currencyAddress, // boxCurrency
         formData.title, // title
         formData.description, // description
+        payoutStrategyAddress, // payoutStrategy
       ],
     });
   }, [form, tokens]);
@@ -650,6 +663,62 @@ export function CreateContestForm() {
                 )}
               />
             </div>
+
+            {/* Payout Strategy Selection */}
+            <FormField
+              control={form.control}
+              name="payoutStrategy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payout Strategy</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payout strategy" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="quarters-only">
+                        <div className="flex flex-col">
+                          <span className="font-medium">Quarters Only</span>
+                          <span className="text-xs text-muted-foreground">
+                            Q1: 15% • Q2: 20% • Q3: 15% • Q4: 50%
+                          </span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="score-changes">
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            Score Changes + Quarters
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            50% for score changes • 50% for quarters
+                          </span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="text-xs">
+                    <div className="space-y-1">
+                      <div>
+                        <strong>Quarters Only:</strong> Pay out only at the end
+                        of each quarter. Winners can claim immediately after
+                        each quarter.
+                      </div>
+                      <div>
+                        <strong>Score Changes + Quarters:</strong> Pay out for
+                        every score change plus quarters. All payouts happen
+                        only after the game is completely finished.
+                      </div>
+                    </div>
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end space-x-4">
               <Button type="button" variant="outline">

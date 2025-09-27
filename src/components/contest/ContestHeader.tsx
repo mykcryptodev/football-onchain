@@ -1,4 +1,9 @@
 import { Badge } from "@/components/ui/badge";
+import {
+  getPayoutStrategyType,
+  getStrategyDescription,
+  getStrategyDisplayName,
+} from "@/lib/payout-utils";
 
 import { Contest } from "./types";
 
@@ -7,6 +12,10 @@ interface ContestHeaderProps {
 }
 
 export function ContestHeader({ contest }: ContestHeaderProps) {
+  const strategyType = getPayoutStrategyType(contest.payoutStrategy);
+  const strategyName = getStrategyDisplayName(strategyType);
+  const strategyDescription = getStrategyDescription(strategyType);
+
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
@@ -21,6 +30,12 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           <Badge variant={contest.randomValuesSet ? "default" : "outline"}>
             {contest.randomValuesSet ? "Numbers Set" : "Pending Numbers"}
           </Badge>
+          <Badge
+            variant="outline"
+            className="bg-blue-50 text-blue-700 border-blue-200"
+          >
+            {strategyName}
+          </Badge>
         </div>
       </div>
       {contest.description && (
@@ -28,6 +43,11 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           <p className="text-lg text-muted-foreground">{contest.description}</p>
         </div>
       )}
+      <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+        <p className="text-sm text-muted-foreground">
+          <strong>Payout Strategy:</strong> {strategyDescription}
+        </p>
+      </div>
     </div>
   );
 }

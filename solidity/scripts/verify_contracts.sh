@@ -109,6 +109,8 @@ if command -v jq &> /dev/null; then
     ORACLE_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "GameScoreOracle") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     MANAGER_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ContestsManager") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     RANDOM_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "RandomNumbers") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
+    QUARTERS_STRATEGY_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "QuartersOnlyPayoutStrategy") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
+    SCORE_CHANGES_STRATEGY_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ScoreChangesPayoutStrategy") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     CONTESTS_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "Contests") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
 else
     print_warning "jq not found. Please install jq for automatic address extraction, or provide addresses manually."
@@ -126,6 +128,10 @@ if [ -z "$BOXES_ADDRESS" ] || [ "$BOXES_ADDRESS" = "null" ]; then
     read MANAGER_ADDRESS
     echo -n "RandomNumbers address: "
     read RANDOM_ADDRESS
+    echo -n "QuartersOnlyPayoutStrategy address: "
+    read QUARTERS_STRATEGY_ADDRESS
+    echo -n "ScoreChangesPayoutStrategy address: "
+    read SCORE_CHANGES_STRATEGY_ADDRESS
     echo -n "Contests address: "
     read CONTESTS_ADDRESS
 else
@@ -134,6 +140,8 @@ else
     echo "  GameScoreOracle: $ORACLE_ADDRESS"
     echo "  ContestsManager: $MANAGER_ADDRESS"
     echo "  RandomNumbers: $RANDOM_ADDRESS"
+    echo "  QuartersOnlyPayoutStrategy: $QUARTERS_STRATEGY_ADDRESS"
+    echo "  ScoreChangesPayoutStrategy: $SCORE_CHANGES_STRATEGY_ADDRESS"
     echo "  Contests: $CONTESTS_ADDRESS"
 fi
 
@@ -203,6 +211,36 @@ fi
 forge verify-contract "$RANDOM_ADDRESS" \
     contracts/src/RandomNumbers.sol:RandomNumbers \
     --constructor-args $(cast abi-encode "constructor(address)" "$VRF_WRAPPER") \
+    --chain "$CHAIN_ID" \
+    --etherscan-api-key "$ETHERSCAN_API_KEY" \
+    --verifier-url "$VERIFIER_URL" \
+    --watch \
+    --retries 15 \
+    --delay 10
+
+echo ""
+print_info "Waiting $VERIFICATION_DELAY seconds to avoid rate limits..."
+sleep $VERIFICATION_DELAY
+
+echo ""
+print_info "Verifying QuartersOnlyPayoutStrategy..."
+forge verify-contract "$QUARTERS_STRATEGY_ADDRESS" \
+    contracts/src/QuartersOnlyPayoutStrategy.sol:QuartersOnlyPayoutStrategy \
+    --chain "$CHAIN_ID" \
+    --etherscan-api-key "$ETHERSCAN_API_KEY" \
+    --verifier-url "$VERIFIER_URL" \
+    --watch \
+    --retries 15 \
+    --delay 10
+
+echo ""
+print_info "Waiting $VERIFICATION_DELAY seconds to avoid rate limits..."
+sleep $VERIFICATION_DELAY
+
+echo ""
+print_info "Verifying ScoreChangesPayoutStrategy..."
+forge verify-contract "$SCORE_CHANGES_STRATEGY_ADDRESS" \
+    contracts/src/ScoreChangesPayoutStrategy.sol:ScoreChangesPayoutStrategy \
     --chain "$CHAIN_ID" \
     --etherscan-api-key "$ETHERSCAN_API_KEY" \
     --verifier-url "$VERIFIER_URL" \

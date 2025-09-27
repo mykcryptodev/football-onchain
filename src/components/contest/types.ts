@@ -10,18 +10,27 @@ export interface Contest {
     amount: number;
   };
   boxesCanBeClaimed: boolean;
-  rewardsPaid: {
-    q1Paid: boolean;
-    q2Paid: boolean;
-    q3Paid: boolean;
-    finalPaid: boolean;
+  payoutsPaid: {
+    totalPayoutsMade: number;
+    totalAmountPaid: number;
   };
   totalRewards: number;
   boxesClaimed: number;
   randomValuesSet: boolean;
   title: string;
   description: string;
+  payoutStrategy: string; // Address of the payout strategy contract
 }
+
+export interface PayoutInfo {
+  winner: string;
+  amount: number;
+  reason: string;
+  quarter: number;
+  eventIndex: number;
+}
+
+export type PayoutStrategyType = "quarters-only" | "score-changes";
 
 export interface GameScore {
   id: number;

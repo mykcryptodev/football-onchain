@@ -8,6 +8,8 @@ import {MockERC20} from "./MockERC20.sol";
 import {IContestTypes} from "../src/IContestTypes.sol";
 import {Boxes} from "../src/Boxes.sol";
 import {GameScoreOracle} from "../src/GameScoreOracle.sol";
+import {QuartersOnlyPayoutStrategy} from "../src/QuartersOnlyPayoutStrategy.sol";
+import {ScoreChangesPayoutStrategy} from "../src/ScoreChangesPayoutStrategy.sol";
 import "./DummyVRF.sol";
 import "forge-std/console.sol";
 import "./DummyRandomNumbers.sol";
@@ -18,6 +20,8 @@ contract ContestsManagerTest is Test {
     MockERC20 public mockToken;
     Boxes public boxes;
     GameScoreOracle public gameScoreOracle;
+    QuartersOnlyPayoutStrategy public quartersOnlyStrategy;
+    ScoreChangesPayoutStrategy public scoreChangesStrategy;
     DummyVRF public dummyVRF;
     DummyRandomNumbers public randomNumbers;
     address public constant TREASURY = address(0x1);
@@ -42,6 +46,10 @@ contract ContestsManagerTest is Test {
 
         randomNumbers = new DummyRandomNumbers(address(dummyVRF));
 
+        // Deploy Payout Strategy contracts
+        quartersOnlyStrategy = new QuartersOnlyPayoutStrategy();
+        scoreChangesStrategy = new ScoreChangesPayoutStrategy();
+
         // Deploy Contests contract
         contests = new Contests(
             TREASURY,
@@ -62,7 +70,7 @@ contract ContestsManagerTest is Test {
         // Create contest with ETH as currency
         uint256 gameId = 1;
         uint256 boxCost = 0.1 ether;
-        contests.createContest(gameId, boxCost, address(0), "Test Contest", "Test Description");
+        contests.createContest(gameId, boxCost, address(0), "Test Contest", "Test Description", address(quartersOnlyStrategy));
 
         // Get currency details for contest 0
         (address currency, uint256 decimals, string memory symbol, string memory name, uint256 amount) = reader.getContestCurrency(0);
@@ -78,7 +86,7 @@ contract ContestsManagerTest is Test {
         // Create contest with ERC20 token as currency
         uint256 gameId = 1;
         uint256 boxCost = 100 * 10**18; // 100 tokens
-        contests.createContest(gameId, boxCost, address(mockToken), "ERC20 Test Contest", "Test with ERC20 token");
+        contests.createContest(gameId, boxCost, address(mockToken), "ERC20 Test Contest", "Test with ERC20 token", address(quartersOnlyStrategy));
 
         // Get currency details for contest 0
         (address currency, uint256 decimals, string memory symbol, string memory name, uint256 amount) = reader.getContestCurrency(0);

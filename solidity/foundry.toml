@@ -11,7 +11,7 @@ solc_version = "0.8.26"                                   # Set the Solidity com
 evm_version = "paris"                                     # Set the EVM target version.
 optimizer = true                                          # Enable the Solidity compiler optimiser.
 optimizer_runs = 999_999                                  # Configure the number of optimiser runs.
-via_ir = false                                            # Prevent the compilation pipeline from running through the Yul intermediate representation.
+via_ir = true                                             # Enable the compilation pipeline to run through the Yul intermediate representation to fix stack too deep errors.
 verbosity = 3                                             # Set the verbosity level for the tests.
 ffi = false                                               # Enable the foreign function interface (ffi) cheatcode.
 fs_permissions = [{ access = "read-write", path = "./" }] # Configure read-write access to the project root.
