@@ -35,6 +35,24 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "return bytes}"
         "return hexToUint8Array(encodedResult);";
 
+    string public constant WEEK_GAMES_SOURCE =
+        "const y=args[0],s=args[1],w=args[2];"
+        "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
+        "const e=r.data?.events||[];let d=[BigInt(e.length),999999999n];"
+        "e.forEach(v=>d.push(BigInt(v.id)));"
+        "const x='0x'+d.map(n=>n.toString(16).padStart(64,'0')).join('');"
+        "const b=new Uint8Array(x.length/2-1);for(let i=2;i<x.length;i+=2)b[i/2-1]=parseInt(x.substr(i,2),16);return b;";
+
+    string public constant WEEK_RESULTS_SOURCE =
+        "const y=args[0],s=args[1],w=args[2];"
+        "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
+        "const e=r.data?.events||[];let p=0n,c=0;"
+        "for(let i=0;i<e.length;i++){const v=e[i],m=v.competitions[0].competitors;"
+        "const h=m.find(t=>t.homeAway==='home'),a=m.find(t=>t.homeAway==='away');"
+        "if(v.status.type.completed&&h&&a){if(+h.score>+a.score)p|=(1n<<BigInt(i));c++;}}"
+        "const x='0x'+[BigInt(c),p].map(n=>n.toString(16).padStart(64,'0')).join('');"
+        "const b=new Uint8Array(x.length/2-1);for(let i=2;i<x.length;i+=2)b[i/2-1]=parseInt(x.substr(i,2),16);return b;";
+
     string public constant SCORE_CHANGES_SOURCE =
         "const eventId=args[0];"
         "const url='https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary';"
@@ -65,6 +83,22 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 awayLastDigit;   // Last digit of away score for boxes calculation
     }
 
+    struct WeekGames {
+        uint8 seasonType;       // 1=preseason, 2=regular, 3=postseason
+        uint8 weekNumber;
+        uint256 year;
+        uint256[] gameIds;      // ESPN game IDs for this week
+        uint256 earliestKickoff; // Earliest game kickoff time
+        bool isFinalized;       // True when data has been fetched
+    }
+
+    struct WeekResults {
+        uint256 weekId;         // Composite key: (year << 16) | (seasonType << 8) | weekNumber
+        uint256 packedResults;  // Packed winner data: bit 0 = game 0 winner (0=away, 1=home), etc
+        uint8 gamesCount;       // Number of games with results
+        bool isFinalized;       // True when all games are complete
+    }
+
     struct GameScore {
         uint256 id; // a unique id for this game determined by the outside world data set
         uint8 qComplete; // the number of the last period that has been completed including OT. expect 100 for the game to be considered final.
@@ -87,7 +121,9 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     // Request types enum
     enum RequestType {
         QUARTER_SCORES,
-        SCORE_CHANGES
+        SCORE_CHANGES,
+        WEEK_GAMES,
+        WEEK_RESULTS
     }
     // chainlink requestId => request type
     mapping (bytes32 requestId => RequestType requestType) public requestTypes;
@@ -97,6 +133,11 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     mapping (uint256 gameId => uint256 lastUpdatedTimestamp) public quarterScoresLastRequestTime;
     mapping (uint256 gameId => uint256 lastUpdatedTimestamp) public scoreChangesLastRequestTime;
 
+    // Week game data storage
+    mapping (uint256 weekId => WeekGames) public weekGames; // weekId = (year << 16) | (seasonType << 8) | weekNumber
+    mapping (uint256 weekId => WeekResults) public weekResults;
+    mapping (bytes32 requestId => uint256 weekId) public weekRequests;
+
     ////////////////////////////////////
     ///////////    EVENTS    ///////////
     ////////////////////////////////////
@@ -105,6 +146,10 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     event ScoreChangesRequested(uint256 indexed gameId, bytes32 requestId); // a request was made to fetch score changes
     event ScoreChangesUpdated(uint256 indexed gameId, bytes32 requestId); // score changes were updated
     event GameScoreError(uint256 indexed gameId, bytes error); // there was an error fetching game scores
+    event WeekGamesRequested(uint256 indexed weekId, bytes32 requestId); // someone requested games for a week
+    event WeekGamesUpdated(uint256 indexed weekId, uint8 gameCount); // week games were updated
+    event WeekResultsRequested(uint256 indexed weekId, bytes32 requestId); // someone requested results for a week
+    event WeekResultsUpdated(uint256 indexed weekId, uint8 gameCount); // week results were updated
 
     ////////////////////////////////////
     ///////////    ERRORS    ///////////
@@ -385,8 +430,29 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         bytes memory response,
         bytes memory err
     ) internal override {
-        uint256 gameId = gameScoreRequests[requestId];
         RequestType requestType = requestTypes[requestId];
+
+        // Handle week requests differently
+        if (requestType == RequestType.WEEK_GAMES || requestType == RequestType.WEEK_RESULTS) {
+            uint256 weekId = weekRequests[requestId];
+
+            // Store error if exists
+            if (err.length > 0) {
+                // For week requests, we don't have a specific error storage yet
+                // Could add weekErrors mapping if needed
+                return;
+            }
+
+            if (requestType == RequestType.WEEK_GAMES) {
+                _fulfillWeekGamesRequest(weekId, response);
+            } else if (requestType == RequestType.WEEK_RESULTS) {
+                _fulfillWeekResultsRequest(weekId, response);
+            }
+            return;
+        }
+
+        // Original game request handling
+        uint256 gameId = gameScoreRequests[requestId];
 
         // store an error if one exists
         if (err.length > 0) {
@@ -454,6 +520,57 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         emit ScoreChangesUpdated(gameId, requestId);
     }
 
+    /**
+     * @notice Fulfill week games request (gas optimized)
+     */
+    function _fulfillWeekGamesRequest(
+        uint256 weekId,
+        bytes memory response
+    ) internal {
+        // Extract data: [gameCount, earliestKickoff, gameId1, gameId2, ...]
+        uint256 gameCount = _bytesToUint256(response, 0);
+        uint256 earliestKickoff = _bytesToUint256(response, 1);
+
+        // Create storage reference for gas efficiency
+        WeekGames storage wg = weekGames[weekId];
+
+        // Extract year, season, week from weekId for storage
+        wg.year = weekId >> 16;
+        wg.seasonType = uint8((weekId >> 8) & 0xFF);
+        wg.weekNumber = uint8(weekId & 0xFF);
+        wg.earliestKickoff = earliestKickoff;
+        wg.isFinalized = true;
+
+        // Store game IDs
+        delete wg.gameIds; // Clear existing array
+        for (uint256 i = 0; i < gameCount && i < 20; i++) { // Limit to 20 games max for gas
+            wg.gameIds.push(_bytesToUint256(response, uint8(2 + i)));
+        }
+
+        emit WeekGamesUpdated(weekId, uint8(gameCount));
+    }
+
+    /**
+     * @notice Fulfill week results request (gas optimized)
+     */
+    function _fulfillWeekResultsRequest(
+        uint256 weekId,
+        bytes memory response
+    ) internal {
+        // Extract data: [gameCount, packedResults]
+        uint256 gameCount = _bytesToUint256(response, 0);
+        uint256 packedResults = _bytesToUint256(response, 1);
+
+        // Store results
+        WeekResults storage wr = weekResults[weekId];
+        wr.weekId = weekId;
+        wr.gamesCount = uint8(gameCount);
+        wr.packedResults = packedResults;
+        wr.isFinalized = true;
+
+        emit WeekResultsUpdated(weekId, uint8(gameCount));
+    }
+
     function timeUntilQuarterScoresCooldownExpires(uint256 gameId) external view returns (uint256) {
         uint256 timeSinceLastRequest = block.timestamp - quarterScoresLastRequestTime[gameId];
         if (timeSinceLastRequest > QUARTER_SCORES_REQUEST_COOLDOWN) {
@@ -470,6 +587,140 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         } else {
             return SCORE_CHANGES_REQUEST_COOLDOWN - timeSinceLastRequest;
         }
+    }
+
+    /**
+     * @notice Fetch all games for a specific NFL week
+     * @param subscriptionId Billing ID
+     * @param gasLimit Gas limit for the request
+     * @param jobId bytes32 representation of donId
+     * @param year The year (e.g., 2024)
+     * @param seasonType 1=preseason, 2=regular, 3=postseason
+     * @param weekNumber Week number
+     */
+    function fetchWeekGames(
+        uint64 subscriptionId,
+        uint32 gasLimit,
+        bytes32 jobId,
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) external returns (bytes32 requestId) {
+        // Create week ID
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+
+        // Create a chainlink request
+        FunctionsRequest.Request memory req;
+        req.initializeRequestForInlineJavaScript(WEEK_GAMES_SOURCE);
+
+        // Create args array
+        string[] memory args = new string[](3);
+        args[0] = year.toString();
+        args[1] = uint256(seasonType).toString();
+        args[2] = uint256(weekNumber).toString();
+        req.setArgs(args);
+
+        // Send request
+        requestId = _sendRequest(
+            req.encodeCBOR(),
+            subscriptionId,
+            gasLimit,
+            jobId
+        );
+
+        weekRequests[requestId] = weekId;
+        requestTypes[requestId] = RequestType.WEEK_GAMES;
+
+        emit WeekGamesRequested(weekId, requestId);
+    }
+
+    /**
+     * @notice Fetch results for all games in a specific NFL week
+     * @param subscriptionId Billing ID
+     * @param gasLimit Gas limit for the request
+     * @param jobId bytes32 representation of donId
+     * @param year The year (e.g., 2024)
+     * @param seasonType 1=preseason, 2=regular, 3=postseason
+     * @param weekNumber Week number
+     */
+    function fetchWeekResults(
+        uint64 subscriptionId,
+        uint32 gasLimit,
+        bytes32 jobId,
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) external returns (bytes32 requestId) {
+        // Create week ID
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+
+        // Create a chainlink request
+        FunctionsRequest.Request memory req;
+        req.initializeRequestForInlineJavaScript(WEEK_RESULTS_SOURCE);
+
+        // Create args array
+        string[] memory args = new string[](3);
+        args[0] = year.toString();
+        args[1] = uint256(seasonType).toString();
+        args[2] = uint256(weekNumber).toString();
+        req.setArgs(args);
+
+        // Send request
+        requestId = _sendRequest(
+            req.encodeCBOR(),
+            subscriptionId,
+            gasLimit,
+            jobId
+        );
+
+        weekRequests[requestId] = weekId;
+        requestTypes[requestId] = RequestType.WEEK_RESULTS;
+
+        emit WeekResultsRequested(weekId, requestId);
+    }
+
+    /**
+     * @notice Get games for a specific week
+     * @param year The year
+     * @param seasonType The season type
+     * @param weekNumber The week number
+     * @return gameIds Array of ESPN game IDs
+     * @return earliestKickoff Earliest kickoff timestamp
+     */
+    function getWeekGames(
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) external view returns (uint256[] memory gameIds, uint256 earliestKickoff) {
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        WeekGames memory wg = weekGames[weekId];
+        return (wg.gameIds, wg.earliestKickoff);
+    }
+
+    /**
+     * @notice Get results for a specific week
+     * @param year The year
+     * @param seasonType The season type
+     * @param weekNumber The week number
+     * @return winners Array where each element is 0 (away) or 1 (home)
+     */
+    function getWeekResults(
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) external view returns (uint8[] memory winners) {
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        WeekResults memory wr = weekResults[weekId];
+        WeekGames memory wg = weekGames[weekId];
+
+        winners = new uint8[](wg.gameIds.length);
+
+        // Unpack results from bit field
+        for (uint256 i = 0; i < wg.gameIds.length; i++) {
+            winners[i] = (wr.packedResults & (1 << i)) != 0 ? 1 : 0;
+        }
+
+        return winners;
     }
 }
 

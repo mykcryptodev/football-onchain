@@ -145,6 +145,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error InvalidPayoutStructure();
     error PayoutAlreadyComplete();
     error NoWinners();
+    error GamesNotFetched();
 
     // ============ Constructor ============
 
@@ -167,28 +168,27 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
      * @param seasonType 1=preseason, 2=regular, 3=postseason
      * @param weekNumber Week number within the season
      * @param year The year of the season
-     * @param gameIds Array of ESPN game IDs for this week
      * @param currency Token address for entry fee (address(0) for ETH)
      * @param entryFee Cost to submit predictions
-     * @param submissionDeadline Timestamp when submissions close (usually first game kickoff)
      * @param payoutType 0=winner-take-all, 1=top3, 2=top5
      */
     function createContest(
         uint8 seasonType,
         uint8 weekNumber,
         uint256 year,
-        uint256[] memory gameIds,
         address currency,
         uint256 entryFee,
-        uint256 submissionDeadline,
         uint8 payoutType
     ) external returns (uint256 contestId) {
         // Validate inputs
         if (seasonType < 1 || seasonType > 3) revert InvalidSeasonType();
         if (weekNumber < 1 || weekNumber > 18) revert InvalidWeekNumber();
+        if (entryFee == 0) revert InvalidEntryFee();
+
+        // Fetch games from oracle for this week
+        (uint256[] memory gameIds, uint256 submissionDeadline) = gameScoreOracle.getWeekGames(year, seasonType, weekNumber);
         if (gameIds.length == 0) revert NoGamesProvided();
         if (gameIds.length > MAX_GAMES_PER_WEEK) revert TooManyGames();
-        if (entryFee == 0) revert InvalidEntryFee();
 
         contestId = nextContestId++;
 
@@ -324,6 +324,49 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     }
 
     // ============ Game Results & Scoring ============
+
+    /**
+     * @notice Update all game results for a contest from oracle data
+     * @param contestId The contest to update
+     */
+    function updateContestResults(uint256 contestId) external {
+        // Load contest to memory for read-only operations
+        PickemContest memory contestMem = contests[contestId];
+        if (contestMem.id != contestId) revert ContestDoesNotExist();
+
+        // Get results from oracle
+        uint8[] memory winners = gameScoreOracle.getWeekResults(
+            contestMem.year,
+            contestMem.seasonType,
+            contestMem.weekNumber
+        );
+
+        if (winners.length == 0 || winners.length != contestMem.gameIds.length) {
+            revert GamesNotFetched();
+        }
+
+        // Update results for each game in storage
+        for (uint256 i = 0; i < contestMem.gameIds.length; i++) {
+            uint256 gameId = contestMem.gameIds[i];
+            // Prepare GameResult in memory, then write to storage
+            GameResult memory resultMem = GameResult({
+                gameId: gameId,
+                winner: winners[i],
+                totalPoints: 0, // Not used for pick'em
+                isFinalized: true
+            });
+            gameResults[contestId][gameId] = resultMem;
+        }
+
+        // Mark contest as finalized in storage only if not already finalized
+        if (!contests[contestId].gamesFinalized) {
+            contests[contestId].gamesFinalized = true;
+            emit GamesFinalized(contestId);
+
+            // Calculate winners automatically
+            _calculateWinners(contestId);
+        }
+    }
 
     /**
      * @notice Update game results for a contest (can be called by oracle or admin)
