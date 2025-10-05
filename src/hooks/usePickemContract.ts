@@ -370,12 +370,12 @@ export function usePickemContract() {
         contract: oracle,
         method: "fetchWeekGames",
         params: [
-          params.subscriptionId, // Already bigint (uint64)
-          BigInt(params.gasLimit), // Convert number to bigint (uint32)
-          params.jobId, // bytes32
-          BigInt(params.year), // Already bigint (uint256)
-          BigInt(params.seasonType), // Convert number to bigint (uint8)
-          BigInt(params.weekNumber), // Convert number to bigint (uint8)
+          params.subscriptionId,
+          params.gasLimit,
+          params.jobId,
+          BigInt(params.year),
+          params.seasonType,
+          params.weekNumber,
         ],
       });
 

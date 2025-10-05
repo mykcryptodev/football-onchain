@@ -1,6 +1,4 @@
-import { Abi } from "thirdweb/utils";
-
-export const abi: Abi = [
+export const abi = [
   {
     inputs: [{ internalType: "address", name: "router_", type: "address" }],
     stateMutability: "nonpayable",
@@ -584,4 +582,4 @@ export const abi: Abi = [
     stateMutability: "view",
     type: "function",
   },
-];
+] as const;
