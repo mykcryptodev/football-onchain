@@ -27,7 +27,7 @@ import {
   usdc,
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
-import { useTokens } from "@/hooks/useTokens";
+import { Token, useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -76,12 +76,7 @@ export default function CreatePickemForm() {
   const [isFetchingGames, setIsFetchingGames] = useState(false);
   const [showGames, setShowGames] = useState(false);
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<{
-    address: string;
-    symbol: string;
-    decimals: number;
-    name: string;
-  } | null>(null);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const { tokens, loading: _loadingTokens, fetchTokens } = useTokens();
   const [formData, setFormData] = useState({

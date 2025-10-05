@@ -25,14 +25,14 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
 
   // Function to calculate the winning box for a scoring play
   const getWinningBoxForPlay = (play: {
-    homeScore?: string;
-    awayScore?: string;
+    homeScore?: number;
+    awayScore?: number;
   }) => {
     if (!contest?.randomValuesSet) return null;
 
     // Calculate the last digits of the scores after this play
-    const homeLastDigit = play.homeScore % 10;
-    const awayLastDigit = play.awayScore % 10;
+    const homeLastDigit = Number(play.homeScore || 0) % 10;
+    const awayLastDigit = Number(play.awayScore || 0) % 10;
 
     // Find the row and column indices that match these digits
     const rowIndex = contest.rows.findIndex(row => row === homeLastDigit);

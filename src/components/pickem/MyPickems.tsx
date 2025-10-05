@@ -23,6 +23,16 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 
 import PickemLeaderboard from "./PickemLeaderboard";
 
+interface Contest {
+  gamesFinalized: boolean;
+  payoutComplete: boolean;
+  totalPrizePool: bigint;
+  seasonType: number;
+  weekNumber: number;
+  year: bigint;
+  gameIds: readonly bigint[];
+}
+
 interface PickemNFT {
   tokenId: number;
   contestId: number;
@@ -38,7 +48,7 @@ interface PickemNFT {
   prizeWon: bigint;
   claimed: boolean;
   rank?: number;
-  contest?: unknown; // Full contest object
+  contest?: Contest;
 }
 
 export default function MyPickems() {
@@ -172,7 +182,7 @@ export default function MyPickems() {
 
   const getStatusBadge = (nft: PickemNFT) => {
     // Check if contest games are finalized first
-    if (!nft.contest.gamesFinalized) {
+    if (!nft.contest?.gamesFinalized) {
       return (
         <Badge variant="outline">
           <Clock className="h-3 w-3 mr-1" />
@@ -192,7 +202,7 @@ export default function MyPickems() {
     }
 
     // If contest payout is complete (all prizes distributed)
-    if (nft.contest.payoutComplete) {
+    if (nft.contest?.payoutComplete) {
       return (
         <Badge variant="secondary">
           <CheckCircle className="h-3 w-3 mr-1" />
@@ -361,7 +371,7 @@ export default function MyPickems() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       NFT #{nft.tokenId} • Contest #{nft.contestId} •{" "}
-                      {!nft.contest.gamesFinalized
+                      {!nft.contest?.gamesFinalized
                         ? "Pending Finalization"
                         : "Finalized"}
                     </p>
@@ -412,7 +422,7 @@ export default function MyPickems() {
                 {/* Actions */}
                 <div className="space-y-2">
                   {/* Show finalize button only if games not finalized */}
-                  {!nft.contest.gamesFinalized && (
+                  {!nft.contest?.gamesFinalized && (
                     <Button
                       className="w-full"
                       disabled={finalizing[nft.contestId] || !account}
@@ -427,9 +437,9 @@ export default function MyPickems() {
                   )}
 
                   {/* Claim section - show different states */}
-                  {nft.contest.gamesFinalized && (
+                  {nft.contest?.gamesFinalized && (
                     <>
-                      {nft.contest.payoutComplete ? (
+                      {nft.contest?.payoutComplete ? (
                         // All prizes distributed
                         <div className="text-center py-3 px-4 bg-muted rounded-lg">
                           <CheckCircle className="h-5 w-5 mx-auto text-green-500 mb-1" />

@@ -15,19 +15,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { chain, usdc } from "@/constants";
-import { useTokens } from "@/hooks/useTokens";
+import { useTokens, type Token } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
 interface TokenPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTokenSelect: (token: {
-    address: string;
-    symbol: string;
-    decimals: number;
-    name: string;
-  }) => void;
+  onTokenSelect: (token: Token) => void;
   selectedTokenAddress?: string;
 }
 
@@ -89,12 +84,7 @@ export function TokenPicker({
   }, [tokens, selectedTokenAddress, onTokenSelect, onOpenChange]);
 
   const handleTokenSelect = useCallback(
-    (token: {
-      address: string;
-      symbol: string;
-      decimals: number;
-      name: string;
-    }) => {
+    (token: Token) => {
       onTokenSelect(token);
       onOpenChange(false);
     },
