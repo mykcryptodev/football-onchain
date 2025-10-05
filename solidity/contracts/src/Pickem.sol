@@ -5,6 +5,7 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {GameScoreOracle} from "./GameScoreOracle.sol";
+import {IPickemNFT} from "./IPickemNFT.sol";
 
 /**
  * @title Pickem
@@ -69,6 +70,9 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // Game Score Oracle
     GameScoreOracle public gameScoreOracle;
 
+    // PickemNFT contract
+    IPickemNFT public pickemNFT;
+
     // Treasury fee (2% matching Contests.sol)
     uint256 public constant TREASURY_FEE = 20; // 20/1000 = 2%
     uint256 public constant PERCENT_DENOMINATOR = 1000;
@@ -79,7 +83,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // Mappings
     mapping(uint256 => PickemContest) public contests;
     mapping(uint256 => UserPrediction) public predictions; // tokenId => prediction
-    mapping(uint256 => mapping(address => uint256)) public userTokens; // contestId => user => tokenId
+    mapping(uint256 => mapping(address => uint256[])) public userTokens; // contestId => user => array of tokenIds
     mapping(uint256 => mapping(uint256 => GameResult)) public gameResults; // contestId => gameId => result
     mapping(uint256 => uint256[]) public contestWinners; // contestId => array of winning tokenIds
     mapping(address => uint256[]) public userContests; // user => contestIds they've entered
@@ -131,7 +135,6 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error InvalidCurrency();
     error ContestDoesNotExist();
     error SubmissionDeadlinePassed();
-    error AlreadySubmitted();
     error InvalidPredictions();
     error InsufficientPayment();
     error ContestNotFinalized();
@@ -154,6 +157,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         treasury = _treasury;
         gameScoreOracle = GameScoreOracle(_gameScoreOracle);
+        // pickemNFT will be set via setPickemNFT after deployment
     }
 
     // ============ Contest Creation ============
@@ -241,12 +245,12 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     /**
      * @notice Submit predictions for all games in a contest
      * @param contestId The contest to enter
-     * @param predictions Array of predictions (0=away, 1=home) matching gameIds order
+     * @param picks Array of predictions (0=away, 1=home) matching gameIds order
      * @param tiebreakerPoints Total points prediction for tiebreaker
      */
     function submitPredictions(
         uint256 contestId,
-        uint8[] memory predictions,
+        uint8[] memory picks,
         uint256 tiebreakerPoints
     ) external payable returns (uint256 tokenId) {
         // Load contest struct to memory for cheaper lookups
@@ -256,12 +260,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Validations
         if (contest.id != contestId) revert ContestDoesNotExist();
         if (block.timestamp >= contest.submissionDeadline) revert SubmissionDeadlinePassed();
-        if (userTokens[contestId][msg.sender] != 0) revert AlreadySubmitted();
-        if (predictions.length != contest.gameIds.length) revert InvalidPredictions();
+        if (picks.length != contest.gameIds.length) revert InvalidPredictions();
 
         // Validate each prediction is 0 or 1
-        for (uint256 i = 0; i < predictions.length; i++) {
-            if (predictions[i] > 1) revert InvalidPredictions();
+        for (uint256 i = 0; i < picks.length; i++) {
+            if (picks[i] > 1) revert InvalidPredictions();
         }
 
         // Handle payment
@@ -290,7 +293,19 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // Store picks
         for (uint256 i = 0; i < contest.gameIds.length; i++) {
-            prediction.picks[contest.gameIds[i]] = predictions[i];
+            prediction.picks[contest.gameIds[i]] = picks[i];
+        }
+
+        // Mint NFT if contract is set
+        if (address(pickemNFT) != address(0)) {
+            pickemNFT.mintPrediction(
+                msg.sender,
+                tokenId,
+                contestId,
+                contest.gameIds,
+                picks,
+                tiebreakerPoints
+            );
         }
 
         // Update contest state in storage
@@ -298,8 +313,12 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         contestStorage.totalEntries++;
 
         // Track user's token for this contest
-        userTokens[contestId][msg.sender] = tokenId;
-        userContests[msg.sender].push(contestId);
+        userTokens[contestId][msg.sender].push(tokenId);
+
+        // Only add to userContests if this is the user's first entry in this contest
+        if (userTokens[contestId][msg.sender].length == 1) {
+            userContests[msg.sender].push(contestId);
+        }
 
         emit PredictionSubmitted(contestId, msg.sender, tokenId);
     }
@@ -366,7 +385,6 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // Copy needed fields to memory
         uint256 totalEntries = contestStorage.totalEntries;
-        uint256[] memory gameIds = contestStorage.gameIds;
         PayoutStructure memory payoutStructure = contestStorage.payoutStructure;
 
         uint256[] memory tokenIds = new uint256[](totalEntries);
@@ -381,28 +399,20 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             UserPrediction storage predictionStorage = predictions[tokenId];
             if (predictionStorage.contestId != contestId) continue;
 
-            // Copy prediction fields to memory for computation
-            uint256 tiebreakerPoints = predictionStorage.tiebreakerPoints;
-            uint256 submissionTime = predictionStorage.submissionTime;
-
-            uint8 correctPicks = 0;
-
-            // Calculate correct picks
-            for (uint256 i = 0; i < gameIds.length; i++) {
-                uint256 gameId = gameIds[i];
-                GameResult memory result = gameResults[contestId][gameId];
-
-                if (result.isFinalized && predictionStorage.picks[gameId] == result.winner) {
-                    correctPicks++;
-                }
-            }
+            // Calculate and store score for this prediction
+            uint8 correctPicks = _calculateScore(contestId, tokenId);
 
             // Only write to storage once per prediction
             predictionStorage.correctPicks = correctPicks;
 
+            // Update NFT score if contract is set
+            if (address(pickemNFT) != address(0)) {
+                pickemNFT.updateScore(tokenId, correctPicks);
+            }
+
             tokenIds[entryCount] = tokenId;
             scores[entryCount] = correctPicks;
-            tiebreakers[entryCount] = tiebreakerPoints;
+            tiebreakers[entryCount] = predictionStorage.tiebreakerPoints;
 
             if (correctPicks > maxScore) {
                 maxScore = correctPicks;
@@ -424,32 +434,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // Apply tiebreaker if needed
         if (winnerCount > 1) {
-            // Get tiebreaker game's total points
-            uint256 tiebreakerGameId = gameIds[gameIds.length - 1]; // Last game as tiebreaker
-            uint256 actualTotalPoints = gameResults[contestId][tiebreakerGameId].totalPoints;
-
-            // Sort winners by closest tiebreaker prediction (using memory copies)
-            for (uint256 i = 0; i < winnerCount - 1; i++) {
-                for (uint256 j = i + 1; j < winnerCount; j++) {
-                    UserPrediction storage predI = predictions[winners[i]];
-                    UserPrediction storage predJ = predictions[winners[j]];
-
-                    uint256 diffI = actualTotalPoints > predI.tiebreakerPoints
-                        ? actualTotalPoints - predI.tiebreakerPoints
-                        : predI.tiebreakerPoints - actualTotalPoints;
-
-                    uint256 diffJ = actualTotalPoints > predJ.tiebreakerPoints
-                        ? actualTotalPoints - predJ.tiebreakerPoints
-                        : predJ.tiebreakerPoints - actualTotalPoints;
-
-                    // If j is closer, swap
-                    if (diffJ < diffI || (diffJ == diffI && predJ.submissionTime < predI.submissionTime)) {
-                        uint256 temp = winners[i];
-                        winners[i] = winners[j];
-                        winners[j] = temp;
-                    }
-                }
-            }
+            _applyTiebreaker(contestId, winners, winnerCount);
         }
 
         // Store only the needed winners based on payout structure
@@ -466,23 +451,92 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         emit WinnersCalculated(contestId, finalWinners, uint8(maxScore));
     }
 
+    /**
+     * @notice Helper function to calculate score for a prediction
+     */
+    function _calculateScore(uint256 contestId, uint256 tokenId) internal view returns (uint8) {
+        UserPrediction storage predictionStorage = predictions[tokenId];
+        PickemContest storage contestStorage = contests[contestId];
+        uint8 correctPicks = 0;
+
+        // Calculate correct picks
+        for (uint256 i = 0; i < contestStorage.gameIds.length; i++) {
+            uint256 gameId = contestStorage.gameIds[i];
+            GameResult memory result = gameResults[contestId][gameId];
+
+            if (result.isFinalized && predictionStorage.picks[gameId] == result.winner) {
+                correctPicks++;
+            }
+        }
+
+        return correctPicks;
+    }
+
+    /**
+     * @notice Helper function to apply tiebreaker logic
+     */
+    function _applyTiebreaker(
+        uint256 contestId,
+        uint256[] memory winners,
+        uint256 winnerCount
+    ) internal view {
+        PickemContest storage contestStorage = contests[contestId];
+        uint256[] memory gameIds = contestStorage.gameIds;
+
+        // Get tiebreaker game's total points
+        uint256 tiebreakerGameId = gameIds[gameIds.length - 1]; // Last game as tiebreaker
+        uint256 actualTotalPoints = gameResults[contestId][tiebreakerGameId].totalPoints;
+
+        // Sort winners by closest tiebreaker prediction
+        for (uint256 i = 0; i < winnerCount - 1; i++) {
+            for (uint256 j = i + 1; j < winnerCount; j++) {
+                UserPrediction storage predI = predictions[winners[i]];
+                UserPrediction storage predJ = predictions[winners[j]];
+
+                uint256 diffI = actualTotalPoints > predI.tiebreakerPoints
+                    ? actualTotalPoints - predI.tiebreakerPoints
+                    : predI.tiebreakerPoints - actualTotalPoints;
+
+                uint256 diffJ = actualTotalPoints > predJ.tiebreakerPoints
+                    ? actualTotalPoints - predJ.tiebreakerPoints
+                    : predJ.tiebreakerPoints - actualTotalPoints;
+
+                // If j is closer, swap
+                if (diffJ < diffI || (diffJ == diffI && predJ.submissionTime < predI.submissionTime)) {
+                    uint256 temp = winners[i];
+                    winners[i] = winners[j];
+                    winners[j] = temp;
+                }
+            }
+        }
+    }
+
     // ============ Prize Claims ============
 
     /**
      * @notice Claim prize for a winning prediction
      * @param contestId The contest to claim from
+     * @param tokenId The specific token ID to claim for
      */
-    function claimPrize(uint256 contestId) external {
+    function claimPrize(uint256 contestId, uint256 tokenId) external {
         // Load contest struct into memory for cheaper access
         PickemContest memory contestMem = contests[contestId];
         if (!contestMem.gamesFinalized) revert ContestNotFinalized();
 
-        uint256 tokenId = userTokens[contestId][msg.sender];
-        if (tokenId == 0) revert NoPrizeToClain();
+        // Verify the caller owns this token
+        uint256[] memory userTokenList = userTokens[contestId][msg.sender];
+        bool ownsToken = false;
+        for (uint256 i = 0; i < userTokenList.length; i++) {
+            if (userTokenList[i] == tokenId) {
+                ownsToken = true;
+                break;
+            }
+        }
+        if (!ownsToken) revert NoPrizeToClain();
 
-        // Load prediction struct into memory for cheaper access
-        UserPrediction memory predictionMem = predictions[tokenId];
-        if (predictionMem.claimed) revert AlreadyClaimed();
+        // Check if already claimed (can't copy to memory due to mapping)
+        UserPrediction storage predictionStorage = predictions[tokenId];
+        if (predictionStorage.claimed) revert AlreadyClaimed();
 
         // Check if user is a winner
         uint256[] memory winners = contestWinners[contestId];
@@ -510,6 +564,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Mark as claimed in storage (only this field needs to be updated)
         predictions[tokenId].claimed = true;
 
+        // Mark NFT as claimed if contract is set
+        if (address(pickemNFT) != address(0)) {
+            pickemNFT.markClaimed(tokenId);
+        }
+
         // Transfer prize
         if (contestMem.currency == address(0)) {
             (bool sent,) = payable(msg.sender).call{value: prizeAmount}("");
@@ -530,6 +589,100 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         }
 
         // Only update payoutComplete in storage if needed
+        if (allClaimed && !contests[contestId].payoutComplete) {
+            contests[contestId].payoutComplete = true;
+            uint256 treasuryAmount = contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR;
+
+            if (contestMem.currency == address(0)) {
+                (bool sent,) = payable(treasury).call{value: treasuryAmount}("");
+                if (!sent) revert TransferFailed();
+            } else {
+                IERC20(contestMem.currency).safeTransfer(treasury, treasuryAmount);
+            }
+        }
+    }
+
+    /**
+     * @notice Claim all prizes for a user's winning predictions in a contest
+     * @param contestId The contest to claim from
+     */
+    function claimAllPrizes(uint256 contestId) external {
+        // Load contest struct into memory for cheaper access
+        PickemContest memory contestMem = contests[contestId];
+        if (!contestMem.gamesFinalized) revert ContestNotFinalized();
+
+        // Get all user's tokens for this contest
+        uint256[] memory userTokenList = userTokens[contestId][msg.sender];
+        if (userTokenList.length == 0) revert NoPrizeToClain();
+
+        // Get contest winners
+        uint256[] memory winners = contestWinners[contestId];
+
+        uint256 totalPrizeAmount = 0;
+        uint256[] memory winningTokens = new uint256[](userTokenList.length);
+        uint256 winningTokenCount = 0;
+
+        // Check each user token to see if it's a winner
+        for (uint256 i = 0; i < userTokenList.length; i++) {
+            uint256 tokenId = userTokenList[i];
+
+            // Skip if already claimed
+            if (predictions[tokenId].claimed) continue;
+
+            // Check if this token is a winner
+            for (uint256 j = 0; j < winners.length; j++) {
+                if (winners[j] == tokenId) {
+                    // Calculate prize for this winning position
+                    uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
+                    uint256 prizeAmount = 0;
+
+                    if (j < contestMem.payoutStructure.payoutPercentages.length) {
+                        prizeAmount = totalPrizePoolAfterFee * contestMem.payoutStructure.payoutPercentages[j] / PERCENT_DENOMINATOR;
+                    }
+
+                    if (prizeAmount > 0) {
+                        totalPrizeAmount += prizeAmount;
+                        winningTokens[winningTokenCount] = tokenId;
+                        winningTokenCount++;
+
+                        // Mark as claimed
+                        predictions[tokenId].claimed = true;
+
+                        // Mark NFT as claimed if contract is set
+                        if (address(pickemNFT) != address(0)) {
+                            pickemNFT.markClaimed(tokenId);
+                        }
+                    }
+
+                    break; // Found this token in winners, move to next token
+                }
+            }
+        }
+
+        if (totalPrizeAmount == 0) revert NoPrizeToClain();
+
+        // Transfer total prize amount
+        if (contestMem.currency == address(0)) {
+            (bool sent,) = payable(msg.sender).call{value: totalPrizeAmount}("");
+            if (!sent) revert TransferFailed();
+        } else {
+            IERC20(contestMem.currency).safeTransfer(msg.sender, totalPrizeAmount);
+        }
+
+        // Emit events for each claimed prize
+        for (uint256 i = 0; i < winningTokenCount; i++) {
+            emit PrizeClaimed(contestId, msg.sender, totalPrizeAmount / winningTokenCount);
+        }
+
+        // Check if all prizes have been claimed to send treasury fee
+        bool allClaimed = true;
+        for (uint256 i = 0; i < winners.length; i++) {
+            if (!predictions[winners[i]].claimed) {
+                allClaimed = false;
+                break;
+            }
+        }
+
         if (allClaimed && !contests[contestId].payoutComplete) {
             contests[contestId].payoutComplete = true;
             uint256 treasuryAmount = contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR;
@@ -587,7 +740,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         return userContests[user];
     }
 
-    function getUserTokenForContest(uint256 contestId, address user) external view returns (uint256) {
+    function getUserTokensForContest(uint256 contestId, address user) external view returns (uint256[] memory) {
         return userTokens[contestId][user];
     }
 
@@ -601,6 +754,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     function setGameScoreOracle(address _oracle) external onlyOwner {
         require(_oracle != address(0), "Invalid oracle");
         gameScoreOracle = GameScoreOracle(_oracle);
+    }
+
+    function setPickemNFT(address _pickemNFT) external onlyOwner {
+        require(_pickemNFT != address(0), "Invalid NFT contract");
+        pickemNFT = IPickemNFT(_pickemNFT);
     }
 
     // ============ ERC721 Receiver ============

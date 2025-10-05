@@ -1,26 +1,26 @@
 import { HardhatUserConfig, task, vars } from "hardhat/config";
 
-import "@nomicfoundation/hardhat-ethers";
-import "@nomicfoundation/hardhat-verify";
-import "@nomicfoundation/hardhat-ledger";
-import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-ethers";
+import "@nomicfoundation/hardhat-foundry";
 import "@nomicfoundation/hardhat-ignition-ethers";
+import "@nomicfoundation/hardhat-ledger";
+import "@nomicfoundation/hardhat-verify";
 import "@typechain/hardhat";
 
-import "xdeployer";
-import "@matterlabs/hardhat-zksync-solc";
 import "@matterlabs/hardhat-zksync-deploy";
-import "@matterlabs/hardhat-zksync-verify";
 import "@matterlabs/hardhat-zksync-ethers";
+import "@matterlabs/hardhat-zksync-solc";
+import "@matterlabs/hardhat-zksync-verify";
+import "xdeployer";
 // Uncomment if you want to use the Truffle Dashboard module
 // You must also uncomment the subsequent `truffle` configuration in this file accordingly
 // import "@truffle/dashboard-hardhat-plugin";
-import "hardhat-gas-reporter";
-import "hardhat-abi-exporter";
-import "solidity-coverage";
-import "hardhat-contract-sizer";
 import * as tdly from "@tenderly/hardhat-tenderly";
+import "hardhat-abi-exporter";
+import "hardhat-contract-sizer";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
 
 // Turning off the automatic Tenderly verification
 tdly.setup({ automaticVerifications: false });
@@ -84,6 +84,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 999_999,
       },
+      viaIR: true, // Enable via-IR compilation to fix stack too deep errors
       evmVersion: "paris", // Prevent using the `PUSH0` and `cancun` opcodes
     },
   },
