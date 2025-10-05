@@ -1,6 +1,3 @@
-import { chain, contests } from "@/constants";
-import { abi as contestsAbi } from "@/constants/abis/contests";
-import { client } from "@/providers/Thirdweb";
 import { useState } from "react";
 import {
   encode,
@@ -15,6 +12,10 @@ import {
   useSendAndConfirmCalls,
   useSendAndConfirmTransaction,
 } from "thirdweb/react";
+
+import { chain, contests } from "@/constants";
+import { abi as contestsAbi } from "@/constants/abis/contests";
+import { client } from "@/providers/Thirdweb";
 
 /**
  * Hook for claiming boxes in contests.
@@ -45,7 +46,7 @@ export function useClaimBoxes() {
     boxNumbers: number[],
     contestId: number,
     playerAddress?: string,
-    contestData?: any,
+    contestData?: unknown,
     onSuccess?: () => void,
     onError?: (error: Error) => void,
   ) => {

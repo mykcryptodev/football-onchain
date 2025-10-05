@@ -1,9 +1,10 @@
-import { chain, contests } from "@/constants";
-import { abi as contestsAbi } from "@/constants/abis/contests";
-import { client } from "@/providers/Thirdweb";
 import { useState } from "react";
 import { getContract, prepareContractCall } from "thirdweb";
 import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
+
+import { chain, contests } from "@/constants";
+import { abi as contestsAbi } from "@/constants/abis/contests";
+import { client } from "@/providers/Thirdweb";
 
 /**
  * Hook for processing payouts in contests.

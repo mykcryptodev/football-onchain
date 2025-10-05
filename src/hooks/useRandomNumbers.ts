@@ -1,11 +1,12 @@
+import { useState } from "react";
+import { getContract, prepareContractCall } from "thirdweb";
+import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+
 import { chain, contests, randomNumbers } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
 import { abi as randomNumbersAbi } from "@/constants/abis/randomNumbers";
 import { estimateRequestPrice } from "@/constants/contracts/randomNumbers";
 import { client } from "@/providers/Thirdweb";
-import { useState } from "react";
-import { getContract, prepareContractCall } from "thirdweb";
-import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 
 export function useRandomNumbers() {
   const [isLoading, setIsLoading] = useState(false);

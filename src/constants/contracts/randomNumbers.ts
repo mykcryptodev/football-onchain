@@ -1,9 +1,9 @@
 import {
+  type AbiParameterToPrimitiveType,
+  type BaseTransactionOptions,
   prepareContractCall,
   prepareEvent,
   readContract,
-  type AbiParameterToPrimitiveType,
-  type BaseTransactionOptions,
 } from "thirdweb";
 
 /**
@@ -526,6 +526,7 @@ export async function getVRFWrapperAddress(options: BaseTransactionOptions) {
  *
  * ```
  */
+// eslint-disable-next-line camelcase
 export async function i_vrfV2PlusWrapper(options: BaseTransactionOptions) {
   return readContract({
     contract: options.contract,

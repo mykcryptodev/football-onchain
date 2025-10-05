@@ -111,7 +111,7 @@ export function PayoutsCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Payouts</CardTitle>
-          <Badge variant="outline" className="text-xs">
+          <Badge className="text-xs" variant="outline">
             {strategyName}
           </Badge>
         </div>

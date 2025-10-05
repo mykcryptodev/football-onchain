@@ -34,7 +34,7 @@ export async function invalidateMultipleContestCaches(
 export async function getContestFromCache(
   contestId: string,
   chainId?: number,
-): Promise<any | null> {
+): Promise<unknown | null> {
   if (!redis) return null;
 
   const cacheKey = getContestCacheKey(contestId, chainId);
@@ -46,7 +46,7 @@ export async function getContestFromCache(
  */
 export async function setContestInCache(
   contestId: string,
-  data: any,
+  data: unknown,
   chainId?: number,
 ): Promise<void> {
   if (!redis) return;

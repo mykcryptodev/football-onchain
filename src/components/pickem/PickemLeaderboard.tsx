@@ -1,5 +1,10 @@
 "use client";
 
+import { Award, Medal, Trophy, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useActiveAccount } from "thirdweb/react";
+import { formatEther } from "viem";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -9,10 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Award, Medal, Trophy, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 interface LeaderboardEntry {
   tokenId: number;
@@ -200,7 +201,7 @@ export default function PickemLeaderboard({
                             {formatAddress(entry.address)}
                           </p>
                           {entry.address === account?.address && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge className="text-xs" variant="secondary">
                               You
                             </Badge>
                           )}

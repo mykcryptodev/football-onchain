@@ -1,5 +1,6 @@
-import { chain } from "@/constants";
 import { useCallback, useState } from "react";
+
+import { chain } from "@/constants";
 
 export interface Token {
   chainId: number;

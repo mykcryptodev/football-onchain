@@ -1,8 +1,9 @@
+import { getContract, readContract, ZERO_ADDRESS } from "thirdweb";
+
 import { BoxOwner } from "@/components/contest/types";
 import { chain, multicall } from "@/constants";
 import { abi as multicallAbi } from "@/constants/abis/multicall";
 import { client } from "@/providers/Thirdweb";
-import { getContract, readContract, ZERO_ADDRESS } from "thirdweb";
 
 /**
  * Get NFT ownership data using Multicall for maximum efficiency
@@ -46,7 +47,7 @@ export async function getNFTOwnershipFromThirdweb(
       params: [calls],
     });
 
-    const [blockNumber, returnData] = result as [bigint, string[]];
+    const [_blockNumber, returnData] = result as [bigint, string[]];
 
     // Each returnData[i] contains the encoded address result
     // You need to decode the address from the bytes
@@ -82,7 +83,7 @@ export async function getBoxOwnersFromThirdweb(
   contestId: number,
   collectionAddress: string,
 ): Promise<BoxOwner[]> {
-  const boxes: BoxOwner[] = [];
+  const _boxes: BoxOwner[] = [];
 
   try {
     // Get all 100 token IDs for this contest

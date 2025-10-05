@@ -1,8 +1,9 @@
-import { Token } from "@/hooks/useTokens";
-import { client } from "@/providers/Thirdweb";
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { resolveScheme } from "thirdweb/storage";
+
+import { Token } from "@/hooks/useTokens";
+import { client } from "@/providers/Thirdweb";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

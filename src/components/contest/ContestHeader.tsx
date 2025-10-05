@@ -31,8 +31,8 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
             {contest.randomValuesSet ? "Numbers Set" : "Pending Numbers"}
           </Badge>
           <Badge
-            variant="outline"
             className="bg-blue-50 text-blue-700 border-blue-200"
+            variant="outline"
           >
             {strategyName}
           </Badge>

@@ -6,11 +6,11 @@ import { Contest, PayoutStrategyType } from "./types";
 
 interface ContestActionsProps {
   contest: Contest;
-  onRequestRandomNumbers?: () => Promise<any>;
+  onRequestRandomNumbers?: () => Promise<void>;
   onRefreshGameScores?: () => void;
   onRefreshContestData?: () => void;
   onProcessPayouts?: () => void;
-  onSyncScoresOnchain?: () => Promise<any>;
+  onSyncScoresOnchain?: () => Promise<void>;
   onViewTransactionHistory?: () => void;
   isRequestingRandomNumbers?: boolean;
   isRefreshingContestData?: boolean;
@@ -44,9 +44,9 @@ export function ContestActions({
         {!contest.randomValuesSet && (
           <Button
             className="w-full"
+            disabled={isRequestingRandomNumbers}
             variant="outline"
             onClick={onRequestRandomNumbers}
-            disabled={isRequestingRandomNumbers}
           >
             {isRequestingRandomNumbers
               ? "Requesting..."
@@ -55,34 +55,34 @@ export function ContestActions({
         )}
         <Button
           className="w-full"
+          disabled={isRefreshingContestData}
           variant="outline"
           onClick={onRefreshContestData}
-          disabled={isRefreshingContestData}
         >
           {isRefreshingContestData ? "Refreshing..." : "Refresh Contest Data"}
         </Button>
         <Button
           className="w-full"
+          disabled={isRefreshingGameScores}
           variant="outline"
           onClick={onRefreshGameScores}
-          disabled={isRefreshingGameScores}
         >
           {isRefreshingGameScores ? "Refreshing..." : "Refresh Game Scores"}
         </Button>
         <Button
           className="w-full"
+          disabled={isSyncingScoresOnchain}
           variant="outline"
           onClick={onSyncScoresOnchain}
-          disabled={isSyncingScoresOnchain}
         >
           {isSyncingScoresOnchain ? "Syncing..." : "Sync Scores Onchain"}
         </Button>
         {contest.randomValuesSet && (
           <Button
             className="w-full"
+            disabled={isProcessingPayouts}
             variant="default"
             onClick={onProcessPayouts}
-            disabled={isProcessingPayouts}
           >
             {isProcessingPayouts
               ? "Processing..."

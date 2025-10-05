@@ -1,13 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { usePickemContract } from "@/hooks/usePickemContract";
 import {
   AlertCircle,
   ArrowLeft,
@@ -23,6 +15,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { usePickemContract } from "@/hooks/usePickemContract";
 
 interface ContestData {
   id: number;
@@ -187,7 +188,7 @@ export default function PickemContestClient({
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/pickem">
-          <Button variant="outline" size="sm">
+          <Button size="sm" variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
@@ -201,8 +202,8 @@ export default function PickemContestClient({
           </p>
         </div>
         <Badge
-          variant={isSubmissionClosed ? "secondary" : "default"}
           className="ml-auto"
+          variant={isSubmissionClosed ? "secondary" : "default"}
         >
           <Clock className="h-3 w-3 mr-1" />
           {getTimeRemaining(contest.submissionDeadline)}
@@ -308,16 +309,16 @@ export default function PickemContestClient({
                       }`}
                       onClick={() => setPicks({ ...picks, [game.gameId]: 0 })}
                     >
-                      <RadioGroupItem value="0" id={`${game.gameId}-away`} />
+                      <RadioGroupItem id={`${game.gameId}-away`} value="0" />
                       <Label
-                        htmlFor={`${game.gameId}-away`}
                         className="flex-1 cursor-pointer"
+                        htmlFor={`${game.gameId}-away`}
                       >
                         <div className="flex items-center gap-2 justify-between w-full">
                           <img
-                            src={game.awayLogo}
                             alt={`${game.awayTeam} logo`}
                             className="h-6 w-6 flex-shrink-0"
+                            src={game.awayLogo}
                           />
                           <span className="font-medium sm:hidden block">
                             {game.awayAbbreviation}
@@ -340,16 +341,16 @@ export default function PickemContestClient({
                       }`}
                       onClick={() => setPicks({ ...picks, [game.gameId]: 1 })}
                     >
-                      <RadioGroupItem value="1" id={`${game.gameId}-home`} />
+                      <RadioGroupItem id={`${game.gameId}-home`} value="1" />
                       <Label
-                        htmlFor={`${game.gameId}-home`}
                         className="flex-1 cursor-pointer"
+                        htmlFor={`${game.gameId}-home`}
                       >
                         <div className="flex items-center gap-2 justify-between w-full">
                           <img
-                            src={game.homeLogo}
                             alt={`${game.homeTeam} logo`}
                             className="h-6 w-6 flex-shrink-0"
+                            src={game.homeLogo}
                           />
                           <span className="font-medium sm:hidden block">
                             {game.homeAbbreviation}
@@ -381,11 +382,11 @@ export default function PickemContestClient({
               <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
               <Input
                 id="tiebreaker"
-                type="number"
                 min="0"
+                placeholder="e.g., 45"
+                type="number"
                 value={tiebreakerPoints}
                 onChange={e => setTiebreakerPoints(e.target.value)}
-                placeholder="e.g., 45"
               />
               <p className="text-sm text-muted-foreground">
                 Guess the total points scored in the highest-scoring game
@@ -406,15 +407,15 @@ export default function PickemContestClient({
 
             {/* Submit Button */}
             <Button
-              onClick={handleSubmit}
+              className="w-full"
+              size="lg"
               disabled={
                 !account ||
                 submitting ||
                 isSubmissionClosed ||
                 getPickedCount() !== games.length
               }
-              className="w-full"
-              size="lg"
+              onClick={handleSubmit}
             >
               {submitting
                 ? "Submitting..."

@@ -1,5 +1,12 @@
 "use client";
 
+import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { ZERO_ADDRESS } from "thirdweb";
+import { TokenIcon, TokenProvider, useActiveAccount } from "thirdweb/react";
+
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,12 +30,7 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 import { useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { ZERO_ADDRESS } from "thirdweb";
-import { TokenIcon, TokenProvider, useActiveAccount } from "thirdweb/react";
+
 import { TokenPicker } from "../contest/TokenPicker";
 
 interface GameInfo {
@@ -74,9 +76,14 @@ export default function CreatePickemForm() {
   const [isFetchingGames, setIsFetchingGames] = useState(false);
   const [showGames, setShowGames] = useState(false);
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<any>(null);
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    decimals: number;
+    name: string;
+  } | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
-  const { tokens, loading: loadingTokens, fetchTokens } = useTokens();
+  const { tokens, loading: _loadingTokens, fetchTokens } = useTokens();
   const [formData, setFormData] = useState({
     seasonType: "2",
     weekNumber: "",
@@ -138,7 +145,7 @@ export default function CreatePickemForm() {
         weekNumber: parseInt(formData.weekNumber),
       });
 
-      let needToRequest = onchainData.gameIds.length === 0;
+      const needToRequest = onchainData.gameIds.length === 0;
 
       if (needToRequest) {
         // Request onchain fetch
@@ -286,8 +293,10 @@ export default function CreatePickemForm() {
           <Label htmlFor="weekNumber">Week Number</Label>
           <Input
             id="weekNumber"
-            type="number"
             min="1"
+            placeholder={`e.g., ${currentWeek}`}
+            type="number"
+            value={formData.weekNumber}
             max={
               formData.seasonType === "1"
                 ? "4"
@@ -295,11 +304,9 @@ export default function CreatePickemForm() {
                   ? "5"
                   : "18"
             }
-            value={formData.weekNumber}
             onChange={e =>
               setFormData({ ...formData, weekNumber: e.target.value })
             }
-            placeholder={`e.g., ${currentWeek}`}
           />
         </div>
       </div>
@@ -307,9 +314,9 @@ export default function CreatePickemForm() {
       {/* Preview Games Button */}
       <div>
         <Button
-          onClick={fetchWeekGames}
           disabled={isFetchingGames || !formData.weekNumber}
           variant="outline"
+          onClick={fetchWeekGames}
         >
           {isFetchingGames ? "Fetching..." : "Fetch Onchain Games & Preview"}
         </Button>
@@ -337,7 +344,7 @@ export default function CreatePickemForm() {
               </div>
             ))}
           </div>
-          <Button variant="ghost" onClick={() => setShowGames(false)} size="sm">
+          <Button size="sm" variant="ghost" onClick={() => setShowGames(false)}>
             Hide Games
           </Button>
         </div>
@@ -349,28 +356,28 @@ export default function CreatePickemForm() {
         <div className="flex gap-4">
           <div className="flex-1">
             <Input
-              type="number"
-              step="0.01"
               min="0.001"
+              placeholder="0.01"
+              step="0.01"
+              type="number"
               value={formData.entryFee}
               onChange={e =>
                 setFormData({ ...formData, entryFee: e.target.value })
               }
-              placeholder="0.01"
             />
           </div>
           <Button
+            className="w-48 justify-start"
             type="button"
             variant="outline"
-            className="w-48 justify-start"
             onClick={() => setTokenPickerOpen(true)}
           >
             {selectedToken ? (
               <div className="flex items-center gap-2">
                 <TokenProvider
                   address={selectedToken.address}
-                  client={client}
                   chain={chain}
+                  client={client}
                 >
                   <TokenIcon
                     className="size-6 flex-shrink-0"
@@ -417,8 +424,8 @@ export default function CreatePickemForm() {
                 key={type.value}
                 className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent/50 cursor-pointer"
               >
-                <RadioGroupItem value={type.value} id={type.value} />
-                <Label htmlFor={type.value} className="flex-1 cursor-pointer">
+                <RadioGroupItem id={type.value} value={type.value} />
+                <Label className="flex-1 cursor-pointer" htmlFor={type.value}>
                   <div className="flex items-center gap-2">
                     <Icon className="h-4 w-4" />
                     <span className="font-medium">{type.label}</span>
@@ -461,10 +468,10 @@ export default function CreatePickemForm() {
 
       {/* Create Button */}
       <Button
-        onClick={handleCreate}
-        disabled={!account || isCreating || games.length === 0}
         className="w-full"
+        disabled={!account || isCreating || games.length === 0}
         size="lg"
+        onClick={handleCreate}
       >
         {isCreating ? "Creating Contest..." : "Create Pick'em Contest"}
       </Button>
@@ -481,11 +488,11 @@ export default function CreatePickemForm() {
       {/* Token Picker Modal */}
       <TokenPicker
         open={tokenPickerOpen}
+        selectedTokenAddress={selectedToken?.address}
         onOpenChange={setTokenPickerOpen}
         onTokenSelect={token => {
           setSelectedToken(token);
         }}
-        selectedTokenAddress={selectedToken?.address}
       />
     </div>
   );

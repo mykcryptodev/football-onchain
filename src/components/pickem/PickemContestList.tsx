@@ -1,5 +1,12 @@
 "use client";
 
+import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { useActiveAccount } from "thirdweb/react";
+import { formatEther } from "viem";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,12 +19,6 @@ import {
   chainlinkSubscriptionId,
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
-import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 interface PickemContest {
   id: number;
@@ -294,10 +295,10 @@ export default function PickemContestList() {
           </div>
         </div>
 
-        <Link href={`/pickem/${contest.id}`} className="w-full block mb-2">
+        <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
           <Button
-            disabled={contest.submissionDeadline <= Date.now()}
             className="w-full"
+            disabled={contest.submissionDeadline <= Date.now()}
           >
             {contest.submissionDeadline <= Date.now()
               ? "Submissions Closed"
@@ -308,22 +309,22 @@ export default function PickemContestList() {
         {!contest.gamesFinalized && (
           <>
             <Button
-              onClick={() => handleFetchWeekResults(contest)}
-              disabled={fetchingResults[contest.id] || !account}
-              variant="outline"
-              size="sm"
               className="w-full mb-2"
+              disabled={fetchingResults[contest.id] || !account}
+              size="sm"
+              variant="outline"
+              onClick={() => handleFetchWeekResults(contest)}
             >
               {fetchingResults[contest.id]
                 ? "Requesting..."
                 : "Fetch Week Results"}
             </Button>
             <Button
-              onClick={() => handleCalculateWinners(contest.id)}
-              disabled={calculatingWinners[contest.id] || !account}
-              variant="secondary"
-              size="sm"
               className="w-full mb-2"
+              disabled={calculatingWinners[contest.id] || !account}
+              size="sm"
+              variant="secondary"
+              onClick={() => handleCalculateWinners(contest.id)}
             >
               {calculatingWinners[contest.id]
                 ? "Calculating..."
@@ -334,11 +335,11 @@ export default function PickemContestList() {
 
         {contest.gamesFinalized && !contest.payoutComplete && (
           <Button
-            onClick={() => handleClaimAllPrizes(contest.id)}
-            disabled={claimingPrizes[contest.id] || !account}
-            variant="secondary"
-            size="sm"
             className="w-full"
+            disabled={claimingPrizes[contest.id] || !account}
+            size="sm"
+            variant="secondary"
+            onClick={() => handleClaimAllPrizes(contest.id)}
           >
             {claimingPrizes[contest.id] ? "Claiming..." : "Claim All Prizes"}
           </Button>
@@ -356,14 +357,14 @@ export default function PickemContestList() {
   );
 
   return (
-    <Tabs defaultValue="active" className="space-y-4">
+    <Tabs className="space-y-4" defaultValue="active">
       <TabsList>
         <TabsTrigger value="active">Active</TabsTrigger>
         <TabsTrigger value="completed">Completed</TabsTrigger>
         <TabsTrigger value="all">All</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="active" className="space-y-4">
+      <TabsContent className="space-y-4" value="active">
         {contests.filter(contest => !contest.payoutComplete).length === 0 ? (
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -379,7 +380,7 @@ export default function PickemContestList() {
         )}
       </TabsContent>
 
-      <TabsContent value="completed" className="space-y-4">
+      <TabsContent className="space-y-4" value="completed">
         {contests.filter(contest => contest.payoutComplete).length === 0 ? (
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -397,7 +398,7 @@ export default function PickemContestList() {
         )}
       </TabsContent>
 
-      <TabsContent value="all" className="space-y-4">
+      <TabsContent className="space-y-4" value="all">
         {contests.map(contest => renderContestCard(contest))}
       </TabsContent>
     </Tabs>

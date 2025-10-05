@@ -1,15 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { useActiveAccount } from "thirdweb/react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePickemContract } from "@/hooks/usePickemContract";
-import { useState } from "react";
-import { useActiveAccount } from "thirdweb/react";
 
 export default function DebugContests() {
   const account = useActiveAccount();
   const { getNextContestId, getContest } = usePickemContract();
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<{
+    nextContestId: string;
+    contests: unknown[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const debugContests = async () => {
@@ -78,7 +82,7 @@ export default function DebugContests() {
         <CardTitle>Debug Contests</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button onClick={debugContests} disabled={!account || loading}>
+        <Button disabled={!account || loading} onClick={debugContests}>
           {loading ? "Debugging..." : "Debug Contests"}
         </Button>
 

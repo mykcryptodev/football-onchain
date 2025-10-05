@@ -1,3 +1,6 @@
+import { createThirdwebClient, ZERO_ADDRESS } from "thirdweb";
+import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -6,11 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
 import { chain, contests } from "@/constants";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
-import { ZERO_ADDRESS, createThirdwebClient } from "thirdweb";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
 
 // Create Thirdweb client for AccountProvider
@@ -176,17 +177,17 @@ export function FootballGrid({
                           <AccountProvider address={box.owner} client={client}>
                             <div className="flex flex-col items-center gap-1">
                               <AccountAvatar
+                                fallbackComponent={
+                                  <Blobbie
+                                    address={box.owner}
+                                    className="size-6 rounded-full"
+                                  />
+                                }
                                 style={{
                                   width: "24px",
                                   height: "24px",
                                   borderRadius: "100%",
                                 }}
-                                fallbackComponent={
-                                  <Blobbie
-                                    className="size-6 rounded-full"
-                                    address={box.owner}
-                                  />
-                                }
                               />
                             </div>
                           </AccountProvider>
@@ -213,7 +214,7 @@ export function FootballGrid({
                   ETH
                 </p>
               </div>
-              <Button onClick={onClaimBoxes} disabled={isClaimingBoxes}>
+              <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
                 {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
               </Button>
             </div>

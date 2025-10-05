@@ -1,3 +1,8 @@
+import type { Abi } from "abitype";
+import { useState } from "react";
+import { getContract, prepareContractCall, readContract } from "thirdweb";
+import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
+
 import {
   chain,
   chainlinkGasLimit,
@@ -9,9 +14,6 @@ import {
 import { abi as contestsAbi } from "@/constants/abis/contests";
 import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { client } from "@/providers/Thirdweb";
-import { useState } from "react";
-import { getContract, prepareContractCall, readContract } from "thirdweb";
-import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 
 export type FetchType = "quarter-scores" | "score-changes";
 
@@ -35,7 +37,7 @@ export function useFetchGameData() {
   const oracleContract = getContract({
     client,
     address: gameScoreOracle[chain.id],
-    abi: oracleAbi as any, // Type assertion to bypass ABI type issues
+    abi: oracleAbi as Abi, // Type assertion to bypass ABI type issues
     chain,
   });
 

@@ -1,11 +1,5 @@
 "use client";
 
-import { chain, pickem, pickemNFT } from "@/constants";
-import { abi as oracleAbi } from "@/constants/abis/oracle";
-import { abi as pickemAbi } from "@/constants/abis/pickem";
-import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
-
-import { client } from "@/providers/Thirdweb";
 import {
   getContract,
   prepareContractCall,
@@ -14,6 +8,12 @@ import {
 } from "thirdweb";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 import { parseEther } from "viem";
+
+import { chain, pickem, pickemNFT } from "@/constants";
+import { abi as oracleAbi } from "@/constants/abis/oracle";
+import { abi as pickemAbi } from "@/constants/abis/pickem";
+import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
+import { client } from "@/providers/Thirdweb";
 
 export function usePickemContract() {
   const account = useActiveAccount();
@@ -68,7 +68,7 @@ export function usePickemContract() {
       });
 
       // Extract contest ID from events
-      const event = receipt.logs.find(
+      const _event = receipt.logs.find(
         log =>
           log.topics[0] ===
           "0x" + "7d3e2d97e8d8a0f9e7c6a8c6d0e6f5e4d3c2b1a098765432", // ContestCreated event signature

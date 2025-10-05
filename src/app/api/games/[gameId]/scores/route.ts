@@ -34,8 +34,12 @@ export async function GET(
 
     // Extract teams and game status
     const teams = data.header.competitions[0].competitors;
-    const homeTeam = teams.find((team: any) => team.homeAway === "home");
-    const awayTeam = teams.find((team: any) => team.homeAway === "away");
+    const homeTeam = teams.find(
+      (team: { homeAway: string }) => team.homeAway === "home",
+    );
+    const awayTeam = teams.find(
+      (team: { homeAway: string }) => team.homeAway === "away",
+    );
 
     if (!homeTeam || !awayTeam) {
       throw new Error("Unable to find home or away team");
@@ -106,35 +110,56 @@ export async function GET(
       awayFLastDigit,
       qComplete: qComplete === 100 ? 4 : qComplete, // Convert 100 to 4 for final
       requestInProgress: false, // Always false since we're fetching directly
-      scoringPlays: scoringPlays.map((play: any) => ({
-        id: play.id,
-        type: {
-          id: play.type.id,
-          text: play.type.text,
-          abbreviation: play.type.abbreviation,
-        },
-        text: play.text,
-        awayScore: play.awayScore,
-        homeScore: play.homeScore,
-        period: {
-          number: play.period.number,
-        },
-        clock: {
-          value: play.clock.value,
-          displayValue: play.clock.displayValue,
-        },
-        team: {
-          id: play.team.id,
-          displayName: play.team.displayName,
-          abbreviation: play.team.abbreviation,
-          logo: play.team.logo,
-        },
-        scoringType: {
-          name: play.scoringType.name,
-          displayName: play.scoringType.displayName,
-          abbreviation: play.scoringType.abbreviation,
-        },
-      })),
+      scoringPlays: scoringPlays.map(
+        (play: {
+          id: string;
+          text: string;
+          type: { id: string; text: string; abbreviation: string };
+          awayScore?: number;
+          homeScore?: number;
+          period: { number: number };
+          clock: { value?: number; displayValue: string };
+          team: {
+            id: string;
+            displayName: string;
+            abbreviation: string;
+            logo: string;
+          };
+          scoringType: {
+            name: string;
+            displayName: string;
+            abbreviation: string;
+          };
+        }) => ({
+          id: play.id,
+          type: {
+            id: play.type.id,
+            text: play.type.text,
+            abbreviation: play.type.abbreviation,
+          },
+          text: play.text,
+          awayScore: play.awayScore,
+          homeScore: play.homeScore,
+          period: {
+            number: play.period.number,
+          },
+          clock: {
+            value: play.clock.value,
+            displayValue: play.clock.displayValue,
+          },
+          team: {
+            id: play.team.id,
+            displayName: play.team.displayName,
+            abbreviation: play.team.abbreviation,
+            logo: play.team.logo,
+          },
+          scoringType: {
+            name: play.scoringType.name,
+            displayName: play.scoringType.displayName,
+            abbreviation: play.scoringType.abbreviation,
+          },
+        }),
+      ),
     };
 
     return NextResponse.json(formattedGameScore);

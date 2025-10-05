@@ -1,16 +1,17 @@
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ZERO_ADDRESS } from "thirdweb";
+import { AccountAvatar, AccountProvider } from "thirdweb/react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
-
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
-import { ZERO_ADDRESS } from "thirdweb";
-import { AccountAvatar, AccountProvider } from "thirdweb/react";
+
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
 
 interface GameScoresProps {
@@ -23,7 +24,10 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Function to calculate the winning box for a scoring play
-  const getWinningBoxForPlay = (play: any) => {
+  const getWinningBoxForPlay = (play: {
+    homeScore?: string;
+    awayScore?: string;
+  }) => {
     if (!contest?.randomValuesSet) return null;
 
     // Calculate the last digits of the scores after this play
@@ -188,7 +192,7 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
               <div className="space-y-2">
-                {gameScore.scoringPlays.map((play, index) => {
+                {gameScore.scoringPlays.map((play, _index) => {
                   const winningBox = getWinningBoxForPlay(play);
                   const isScoreChangesStrategy =
                     contest &&
@@ -203,9 +207,9 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <img
-                            src={play.team.logo}
                             alt={play.team.displayName}
                             className="h-6 w-6"
+                            src={play.team.logo}
                           />
                           <span className="font-medium">
                             {play.team.abbreviation}

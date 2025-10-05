@@ -1,12 +1,16 @@
 "use client";
 
-import { appDescription, appName, chain, usdc } from "@/constants";
-import { client } from "@/providers/Thirdweb";
+/* eslint-disable simple-import-sort/imports, prettier/prettier */
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { base, baseSepolia } from "thirdweb/chains";
 import { ConnectButton } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
+/* eslint-enable simple-import-sort/imports, prettier/prettier */
+
+import { appDescription, appName, chain, usdc } from "@/constants";
+import { client } from "@/providers/Thirdweb";
+
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
@@ -28,7 +32,7 @@ export function Navigation() {
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-8">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link className="flex items-center space-x-2" href="/">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-lg">
                 FB
@@ -39,32 +43,32 @@ export function Navigation() {
 
           <div className="hidden md:flex items-center space-x-6">
             <Link
-              href="/contest/create"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              href="/contest/create"
             >
               Create Contest
             </Link>
             <Link
-              href="/games"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              href="/games"
             >
               Games
             </Link>
             <Link
-              href="/leaderboard"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              href="/leaderboard"
             >
               Leaderboard
             </Link>
             <Link
-              href="/how-to-play"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              href="/how-to-play"
             >
               How to Play
             </Link>
             <Link
-              href="/pickem"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              href="/pickem"
             >
               Pick&apos;em
             </Link>
@@ -73,17 +77,17 @@ export function Navigation() {
 
         <div className="flex items-center space-x-4 gap-2">
           <ConnectButton
-            client={client}
             chain={chain}
+            client={client}
             theme={theme === "dark" ? "dark" : "light"}
-            connectButton={{
-              label: "Login",
-              className: "!size-9",
-            }}
             wallets={wallets}
             appMetadata={{
               name: appName,
               description: appDescription,
+            }}
+            connectButton={{
+              label: "Login",
+              className: "!size-9",
             }}
             connectModal={{
               title: `Login to ${appName}`,

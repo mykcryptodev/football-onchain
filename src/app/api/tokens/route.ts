@@ -1,5 +1,6 @@
-import { chain } from "@/constants";
 import { NextRequest, NextResponse } from "next/server";
+
+import { chain } from "@/constants";
 
 export interface Token {
   chainId: number;

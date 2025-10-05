@@ -1,8 +1,10 @@
+import { notFound } from "next/navigation";
+import { getContract, readContract } from "thirdweb";
+
 import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { client } from "@/providers/Thirdweb";
-import { notFound } from "next/navigation";
-import { getContract, readContract } from "thirdweb";
+
 import PickemContestClient from "./PickemContestClient";
 
 interface ContestData {

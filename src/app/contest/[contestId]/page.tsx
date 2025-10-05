@@ -1,7 +1,9 @@
 "use client";
 
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ZERO_ADDRESS } from "thirdweb";
 
 import {
   BoxOwner,
@@ -19,8 +21,6 @@ import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useFetchGameData } from "@/hooks/useFetchGameData";
 import { useProcessPayouts } from "@/hooks/useProcessPayouts";
 import { useRandomNumbers } from "@/hooks/useRandomNumbers";
-import { useParams } from "next/navigation";
-import { ZERO_ADDRESS } from "thirdweb";
 
 export default function ContestPage() {
   const params = useParams();
@@ -180,7 +180,7 @@ export default function ContestPage() {
   const {
     handleFetchGameData,
     isLoading: isSyncingScoresOnchain,
-    error: syncScoresOnchainError,
+    error: _syncScoresOnchainError,
   } = useFetchGameData();
 
   const handleClaimBoxes = async () => {
@@ -243,7 +243,7 @@ export default function ContestPage() {
         throw new Error("Failed to invalidate cache");
       }
 
-      const result = await response.json();
+      const _result = await response.json();
     } catch (error) {
       console.error("Error invalidating cache:", error);
       throw error;
@@ -441,7 +441,7 @@ export default function ContestPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Contest Not Found</h1>
             <p className="text-muted-foreground">
-              The contest you're looking for doesn't exist.
+              The contest you&apos;re looking for doesn&apos;t exist.
             </p>
           </div>
         </main>
@@ -463,13 +463,13 @@ export default function ContestPage() {
           <div className="lg:col-span-2">
             <FootballGrid
               key={`${contest.id}-${contest.boxesClaimed}-${boxOwners.length}`}
-              contest={contest}
               boxOwners={boxOwners}
+              contest={contest}
               gameScore={gameScore}
+              isClaimingBoxes={isClaimingBoxes}
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
               onClaimBoxes={handleClaimBoxes}
-              isClaimingBoxes={isClaimingBoxes}
             />
           </div>
 
@@ -478,9 +478,9 @@ export default function ContestPage() {
             {/* Game Scores */}
             {gameScore && (
               <GameScores
-                gameScore={gameScore}
-                contest={contest}
                 boxOwners={boxOwners}
+                contest={contest}
+                gameScore={gameScore}
               />
             )}
 
@@ -490,19 +490,19 @@ export default function ContestPage() {
             {/* Contest Actions */}
             <ContestActions
               contest={contest}
+              isProcessingPayouts={isProcessingPayouts}
+              isRefreshingContestData={refreshingContestData}
+              isRefreshingGameScores={refreshingGameScores}
+              isRequestingRandomNumbers={isRequestingRandomNumbers}
+              isSyncingScoresOnchain={isSyncingScoresOnchain}
+              onProcessPayouts={handleProcessPayouts}
+              onRefreshContestData={handleRefreshContestData}
+              onRefreshGameScores={handleRefreshGameScores}
+              onSyncScoresOnchain={handleSyncScoresOnchain}
+              onViewTransactionHistory={handleViewTransactionHistory}
               onRequestRandomNumbers={() =>
                 handleRequestRandomNumbers(parseInt(contestId))
               }
-              onRefreshContestData={handleRefreshContestData}
-              onRefreshGameScores={handleRefreshGameScores}
-              onProcessPayouts={handleProcessPayouts}
-              onSyncScoresOnchain={handleSyncScoresOnchain}
-              onViewTransactionHistory={handleViewTransactionHistory}
-              isRequestingRandomNumbers={isRequestingRandomNumbers}
-              isRefreshingContestData={refreshingContestData}
-              isRefreshingGameScores={refreshingGameScores}
-              isProcessingPayouts={isProcessingPayouts}
-              isSyncingScoresOnchain={isSyncingScoresOnchain}
             />
           </div>
         </div>

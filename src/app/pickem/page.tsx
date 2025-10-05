@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import CreatePickemForm from "@/components/pickem/CreatePickemForm";
 import DebugContests from "@/components/pickem/DebugContests";
 import MyPickems from "@/components/pickem/MyPickems";
@@ -12,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
 
 export default function PickemPage() {
   const [activeTab, setActiveTab] = useState("contests");
@@ -28,9 +29,9 @@ export default function PickemPage() {
       </div>
 
       <Tabs
+        className="space-y-4"
         value={activeTab}
         onValueChange={setActiveTab}
-        className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="contests">Pickem Contests</TabsTrigger>
@@ -39,7 +40,7 @@ export default function PickemPage() {
           <TabsTrigger value="debug">Debug</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contests" className="space-y-4">
+        <TabsContent className="space-y-4" value="contests">
           <Card>
             <CardHeader>
               <CardTitle>Available Pick&apos;em Contests</CardTitle>
@@ -53,7 +54,7 @@ export default function PickemPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="create" className="space-y-4">
+        <TabsContent className="space-y-4" value="create">
           <Card>
             <CardHeader>
               <CardTitle>Create New Pick&apos;em Contest</CardTitle>
@@ -67,7 +68,7 @@ export default function PickemPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="my-pickems" className="space-y-4">
+        <TabsContent className="space-y-4" value="my-pickems">
           <Card>
             <CardHeader>
               <CardTitle>My Pick&apos;em NFTs</CardTitle>

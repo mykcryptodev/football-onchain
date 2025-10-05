@@ -4,9 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { getContract, prepareContractCall, toUnits } from "thirdweb";
+import { TokenIcon, TokenProvider, TransactionButton } from "thirdweb/react";
 import { z } from "zod";
-
-import { PayoutStrategyType } from "./types";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,9 +45,9 @@ import { abi } from "@/constants/abis/contests";
 import { useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-import { getContract, prepareContractCall, toUnits } from "thirdweb";
-import { TokenIcon, TokenProvider, TransactionButton } from "thirdweb/react";
+
 import { TokenPicker } from "./TokenPicker";
+import { PayoutStrategyType } from "./types";
 
 // Types for API responses
 type Game = {
@@ -74,8 +74,8 @@ type CurrentWeekResponse = {
 
 type GamesResponse = {
   games: Game[];
-  week: any;
-  season: any;
+  week: number;
+  season: { year: number; type: number };
 };
 
 // Form validation schema
@@ -139,19 +139,26 @@ type CreateContestFormValues = z.infer<typeof createContestSchema>;
 export function CreateContestForm() {
   const [games, setGames] = useState<Game[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
-  const [currentWeek, setCurrentWeek] = useState<CurrentWeekResponse | null>(
-    null,
-  );
+  const [, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<any>(null);
+  const [selectedToken, setSelectedToken] = useState<{
+    address: string;
+    symbol: string;
+    decimals: number;
+    name: string;
+    priceUsd?: number;
+    chainId?: number;
+    iconUri?: string;
+    prices?: { usd?: number };
+  } | null>(null);
   const {
     tokens,
-    loading: loadingTokens,
-    loadingMore: loadingMoreTokens,
-    hasMore: hasMoreTokens,
+    loading: _loadingTokens,
+    loadingMore: _loadingMoreTokens,
+    hasMore: _hasMoreTokens,
     fetchTokens,
-    loadMoreTokens,
+    loadMoreTokens: _loadMoreTokens,
   } = useTokens();
 
   const form = useForm<CreateContestFormValues>({
@@ -208,7 +215,8 @@ export function CreateContestForm() {
       client,
       chain,
       address: contests[chain.id],
-      abi: abi as any, // Type assertion to bypass ABI type issues
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abi: abi as any, // Type assertion needed for complex contract ABI
     });
 
     // Prepare the contract call
@@ -295,11 +303,11 @@ export function CreateContestForm() {
   const seasonType = form.watch("seasonType");
   const week = form.watch("week");
   const boxCost = form.watch("boxCost");
-  const currency = form.watch("currency");
+  const _currency = form.watch("currency");
 
   // Calculate USD estimation
   const calculateUsdEstimation = useCallback(() => {
-    if (!boxCost || !selectedToken) {
+    if (!boxCost || !selectedToken || !selectedToken.priceUsd) {
       setUsdEstimation("");
       return;
     }
@@ -327,7 +335,7 @@ export function CreateContestForm() {
     }
   }, [seasonType, week, form]);
 
-  function onSubmit(data: CreateContestFormValues) {
+  function onSubmit(_data: CreateContestFormValues) {
     // This function is now handled by the TransactionButton
     // The form validation will still work, but the actual submission
     // is handled by the createContestCreationTx function
@@ -345,7 +353,7 @@ export function CreateContestForm() {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
             {/* Contest Title */}
             <FormField
               control={form.control}
@@ -373,8 +381,8 @@ export function CreateContestForm() {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Join our Super Bowl squares pool! Winner takes all for each quarter."
                       className="min-h-[100px]"
+                      placeholder="Join our Super Bowl squares pool! Winner takes all for each quarter."
                       {...field}
                     />
                   </FormControl>
@@ -396,8 +404,8 @@ export function CreateContestForm() {
                   <FormItem>
                     <FormLabel>Season Type</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
                       defaultValue={field.value}
+                      onValueChange={field.onChange}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -450,8 +458,8 @@ export function CreateContestForm() {
                     <FormItem>
                       <FormLabel>Week</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
                         value={field.value}
+                        onValueChange={field.onChange}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -483,9 +491,9 @@ export function CreateContestForm() {
                   <FormItem>
                     <FormLabel>Game</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
                       disabled={loadingGames || games.length === 0}
+                      value={field.value}
+                      onValueChange={field.onChange}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -598,10 +606,10 @@ export function CreateContestForm() {
                     <FormLabel>Box Cost</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        step="0.01"
                         min="0"
                         placeholder="10.00"
+                        step="0.01"
+                        type="number"
                         {...field}
                       />
                     </FormControl>
@@ -622,26 +630,29 @@ export function CreateContestForm() {
               <FormField
                 control={form.control}
                 name="currency"
-                render={({ field }) => (
+                render={({ field: _field }) => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
                     <FormControl>
                       <Button
+                        className="w-full justify-start h-10"
                         type="button"
                         variant="outline"
-                        className="w-full justify-start h-10"
                         onClick={() => setTokenPickerOpen(true)}
                       >
                         {selectedToken ? (
                           <div className="flex items-center gap-2">
                             <TokenProvider
                               address={selectedToken.address}
-                              client={client}
                               chain={chain}
+                              client={client}
                             >
                               <TokenIcon
                                 className="size-6 flex-shrink-0"
-                                iconResolver={resolveTokenIcon(selectedToken)}
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                iconResolver={resolveTokenIcon(
+                                  selectedToken as any,
+                                )}
                               />
                             </TokenProvider>
                             <div className="flex flex-col items-start text-left min-w-0 flex-1">
@@ -677,8 +688,8 @@ export function CreateContestForm() {
                 <FormItem>
                   <FormLabel>Payout Strategy</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
                     defaultValue={field.value}
+                    onValueChange={field.onChange}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -732,19 +743,19 @@ export function CreateContestForm() {
               <TransactionButton
                 className="!size-9"
                 transaction={createContestCreationTx}
-                onTransactionConfirmed={result => {
-                  toast.success("Contest created successfully!", {
-                    description: "Your contest has been created onchain.",
-                  });
-                  // Reset form after successful creation
-                  form.reset();
-                }}
                 onError={error => {
                   toast.error("Failed to create contest", {
                     description:
                       error.message ||
                       "An error occurred while creating the contest.",
                   });
+                }}
+                onTransactionConfirmed={_result => {
+                  toast.success("Contest created successfully!", {
+                    description: "Your contest has been created onchain.",
+                  });
+                  // Reset form after successful creation
+                  form.reset();
                 }}
               >
                 Create Contest
@@ -757,12 +768,12 @@ export function CreateContestForm() {
       {/* Token Picker Modal */}
       <TokenPicker
         open={tokenPickerOpen}
+        selectedTokenAddress={selectedToken?.address}
         onOpenChange={setTokenPickerOpen}
         onTokenSelect={token => {
           setSelectedToken(token);
           form.setValue("currency", token.address);
         }}
-        selectedTokenAddress={selectedToken?.address}
       />
     </Card>
   );

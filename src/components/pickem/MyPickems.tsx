@@ -1,12 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePickemContract } from "@/hooks/usePickemContract";
 import {
   CheckCircle,
   Clock,
@@ -19,6 +12,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePickemContract } from "@/hooks/usePickemContract";
+
 import PickemLeaderboard from "./PickemLeaderboard";
 
 interface PickemNFT {
@@ -36,7 +38,7 @@ interface PickemNFT {
   prizeWon: bigint;
   claimed: boolean;
   rank?: number;
-  contest?: any; // Full contest object
+  contest?: unknown; // Full contest object
 }
 
 export default function MyPickems() {
@@ -47,7 +49,7 @@ export default function MyPickems() {
     getNFTPrediction,
     getContest,
     claimPrize,
-    getUserContests,
+    getUserContests: _getUserContests,
     getContestWinners,
     updateContestResults,
   } = usePickemContract();
@@ -85,7 +87,7 @@ export default function MyPickems() {
           // Note: Solidity auto-generated getters don't return arrays from structs
           const [
             contestId,
-            predictor,
+            _predictor,
             submissionTime,
             tiebreakerPoints,
             correctPicks,
@@ -341,14 +343,14 @@ export default function MyPickems() {
       </div>
 
       {/* NFT List */}
-      <Tabs defaultValue="all" className="space-y-4">
+      <Tabs className="space-y-4" defaultValue="all">
         <TabsList>
           <TabsTrigger value="all">All NFTs</TabsTrigger>
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all" className="space-y-4">
+        <TabsContent className="space-y-4" value="all">
           {nfts.map(nft => (
             <Card key={nft.tokenId} className="overflow-hidden">
               <CardHeader>
@@ -378,8 +380,8 @@ export default function MyPickems() {
                       </span>
                     </div>
                     <Progress
-                      value={(Number(nft.correctPicks) / nft.totalGames) * 100}
                       className="h-2"
+                      value={(Number(nft.correctPicks) / nft.totalGames) * 100}
                     />
                     <p
                       className={`text-sm font-medium ${getAccuracyColor((Number(nft.correctPicks) / nft.totalGames) * 100)}`}
@@ -412,11 +414,11 @@ export default function MyPickems() {
                   {/* Show finalize button only if games not finalized */}
                   {!nft.contest.gamesFinalized && (
                     <Button
-                      onClick={() => handleFinalizeContest(nft.contestId)}
-                      disabled={finalizing[nft.contestId] || !account}
-                      variant="secondary"
-                      size="sm"
                       className="w-full"
+                      disabled={finalizing[nft.contestId] || !account}
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleFinalizeContest(nft.contestId)}
                     >
                       {finalizing[nft.contestId]
                         ? "Finalizing..."
@@ -444,11 +446,11 @@ export default function MyPickems() {
                       ) : nft.prizeWon > BigInt(0) ? (
                         // Eligible to claim
                         <Button
+                          className="w-full"
+                          variant="default"
                           onClick={() =>
                             handleClaimPrize(nft.tokenId, nft.contestId)
                           }
-                          className="w-full"
-                          variant="default"
                         >
                           <DollarSign className="h-4 w-4 mr-2" />
                           Claim Prize ({formatEther(nft.prizeWon)} ETH)
@@ -467,9 +469,9 @@ export default function MyPickems() {
 
                   {/* Always show leaderboard button */}
                   <Button
+                    className="w-full"
                     variant="outline"
                     onClick={() => setSelectedContest(nft.contestId)}
-                    className="w-full"
                   >
                     View Leaderboard
                   </Button>
@@ -479,7 +481,7 @@ export default function MyPickems() {
           ))}
         </TabsContent>
 
-        <TabsContent value="active" className="space-y-4">
+        <TabsContent className="space-y-4" value="active">
           {nfts
             .filter(nft => Number(nft.correctPicks) === 0)
             .map(nft => (
@@ -502,7 +504,7 @@ export default function MyPickems() {
             ))}
         </TabsContent>
 
-        <TabsContent value="completed" className="space-y-4">
+        <TabsContent className="space-y-4" value="completed">
           {nfts
             .filter(nft => Number(nft.correctPicks) > 0)
             .map(nft => (

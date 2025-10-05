@@ -1,22 +1,37 @@
 import {
-  prepareEvent,
-  prepareContractCall,
-  readContract,
-  type BaseTransactionOptions,
   type AbiParameterToPrimitiveType,
+  type BaseTransactionOptions,
+  prepareContractCall,
+  prepareEvent,
+  readContract,
 } from "thirdweb";
 
 /**
-* Contract events
-*/
+ * Contract events
+ */
 
 /**
  * Represents the filters for the "Approval" event.
  */
 export type ApprovalEventFilters = Partial<{
-  owner: AbiParameterToPrimitiveType<{"type":"address","name":"owner","indexed":true,"internalType":"address"}>
-approved: AbiParameterToPrimitiveType<{"type":"address","name":"approved","indexed":true,"internalType":"address"}>
-tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","indexed":true,"internalType":"uint256"}>
+  owner: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "owner";
+    indexed: true;
+    internalType: "address";
+  }>;
+  approved: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "approved";
+    indexed: true;
+    internalType: "address";
+  }>;
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    indexed: true;
+    internalType: "uint256";
+  }>;
 }>;
 
 /**
@@ -42,18 +57,28 @@ tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","indexed
  */
 export function approvalEvent(filters: ApprovalEventFilters = {}) {
   return prepareEvent({
-    signature: "event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)",
+    signature:
+      "event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)",
     filters,
   });
-};
-  
+}
 
 /**
  * Represents the filters for the "ApprovalForAll" event.
  */
 export type ApprovalForAllEventFilters = Partial<{
-  owner: AbiParameterToPrimitiveType<{"type":"address","name":"owner","indexed":true,"internalType":"address"}>
-operator: AbiParameterToPrimitiveType<{"type":"address","name":"operator","indexed":true,"internalType":"address"}>
+  owner: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "owner";
+    indexed: true;
+    internalType: "address";
+  }>;
+  operator: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "operator";
+    indexed: true;
+    internalType: "address";
+  }>;
 }>;
 
 /**
@@ -78,19 +103,34 @@ operator: AbiParameterToPrimitiveType<{"type":"address","name":"operator","index
  */
 export function approvalForAllEvent(filters: ApprovalForAllEventFilters = {}) {
   return prepareEvent({
-    signature: "event ApprovalForAll(address indexed owner, address indexed operator, bool approved)",
+    signature:
+      "event ApprovalForAll(address indexed owner, address indexed operator, bool approved)",
     filters,
   });
-};
-  
+}
 
 /**
  * Represents the filters for the "Transfer" event.
  */
 export type TransferEventFilters = Partial<{
-  from: AbiParameterToPrimitiveType<{"type":"address","name":"from","indexed":true,"internalType":"address"}>
-to: AbiParameterToPrimitiveType<{"type":"address","name":"to","indexed":true,"internalType":"address"}>
-tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","indexed":true,"internalType":"uint256"}>
+  from: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "from";
+    indexed: true;
+    internalType: "address";
+  }>;
+  to: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "to";
+    indexed: true;
+    internalType: "address";
+  }>;
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    indexed: true;
+    internalType: "uint256";
+  }>;
 }>;
 
 /**
@@ -116,21 +156,25 @@ tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","indexed
  */
 export function transferEvent(filters: TransferEventFilters = {}) {
   return prepareEvent({
-    signature: "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    signature:
+      "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
     filters,
   });
-};
-  
+}
 
 /**
-* Contract read functions
-*/
+ * Contract read functions
+ */
 
 /**
  * Represents the parameters for the "balanceOf" function.
  */
 export type BalanceOfParams = {
-  owner: AbiParameterToPrimitiveType<{"type":"address","name":"owner","internalType":"address"}>
+  owner: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "owner";
+    internalType: "address";
+  }>;
 };
 
 /**
@@ -148,37 +192,40 @@ export type BalanceOfParams = {
  * ```
  */
 export async function balanceOf(
-  options: BaseTransactionOptions<BalanceOfParams>
+  options: BaseTransactionOptions<BalanceOfParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x70a08231",
-  [
-    {
-      "type": "address",
-      "name": "owner",
-      "internalType": "address"
-    }
-  ],
-  [
-    {
-      "type": "uint256",
-      "name": "",
-      "internalType": "uint256"
-    }
-  ]
-],
-    params: [options.owner]
+      "0x70a08231",
+      [
+        {
+          type: "address",
+          name: "owner",
+          internalType: "address",
+        },
+      ],
+      [
+        {
+          type: "uint256",
+          name: "",
+          internalType: "uint256",
+        },
+      ],
+    ],
+    params: [options.owner],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "getApproved" function.
  */
 export type GetApprovedParams = {
-  tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","internalType":"uint256"}>
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -196,38 +243,45 @@ export type GetApprovedParams = {
  * ```
  */
 export async function getApproved(
-  options: BaseTransactionOptions<GetApprovedParams>
+  options: BaseTransactionOptions<GetApprovedParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x081812fc",
-  [
-    {
-      "type": "uint256",
-      "name": "tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  [
-    {
-      "type": "address",
-      "name": "",
-      "internalType": "address"
-    }
-  ]
-],
-    params: [options.tokenId]
+      "0x081812fc",
+      [
+        {
+          type: "uint256",
+          name: "tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [
+        {
+          type: "address",
+          name: "",
+          internalType: "address",
+        },
+      ],
+    ],
+    params: [options.tokenId],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "isApprovedForAll" function.
  */
 export type IsApprovedForAllParams = {
-  owner: AbiParameterToPrimitiveType<{"type":"address","name":"owner","internalType":"address"}>
-operator: AbiParameterToPrimitiveType<{"type":"address","name":"operator","internalType":"address"}>
+  owner: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "owner";
+    internalType: "address";
+  }>;
+  operator: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "operator";
+    internalType: "address";
+  }>;
 };
 
 /**
@@ -246,42 +300,45 @@ operator: AbiParameterToPrimitiveType<{"type":"address","name":"operator","inter
  * ```
  */
 export async function isApprovedForAll(
-  options: BaseTransactionOptions<IsApprovedForAllParams>
+  options: BaseTransactionOptions<IsApprovedForAllParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0xe985e9c5",
-  [
-    {
-      "type": "address",
-      "name": "owner",
-      "internalType": "address"
-    },
-    {
-      "type": "address",
-      "name": "operator",
-      "internalType": "address"
-    }
-  ],
-  [
-    {
-      "type": "bool",
-      "name": "",
-      "internalType": "bool"
-    }
-  ]
-],
-    params: [options.owner, options.operator]
+      "0xe985e9c5",
+      [
+        {
+          type: "address",
+          name: "owner",
+          internalType: "address",
+        },
+        {
+          type: "address",
+          name: "operator",
+          internalType: "address",
+        },
+      ],
+      [
+        {
+          type: "bool",
+          name: "",
+          internalType: "bool",
+        },
+      ],
+    ],
+    params: [options.owner, options.operator],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "ownerOf" function.
  */
 export type OwnerOfParams = {
-  tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","internalType":"uint256"}>
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -298,34 +355,29 @@ export type OwnerOfParams = {
  *
  * ```
  */
-export async function ownerOf(
-  options: BaseTransactionOptions<OwnerOfParams>
-) {
+export async function ownerOf(options: BaseTransactionOptions<OwnerOfParams>) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x6352211e",
-  [
-    {
-      "type": "uint256",
-      "name": "tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  [
-    {
-      "type": "address",
-      "name": "",
-      "internalType": "address"
-    }
-  ]
-],
-    params: [options.tokenId]
+      "0x6352211e",
+      [
+        {
+          type: "uint256",
+          name: "tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [
+        {
+          type: "address",
+          name: "",
+          internalType: "address",
+        },
+      ],
+    ],
+    params: [options.tokenId],
   });
-};
-
-
-
+}
 
 /**
  * Calls the "name" function on the contract.
@@ -339,28 +391,23 @@ export async function ownerOf(
  *
  * ```
  */
-export async function name(
-  options: BaseTransactionOptions
-) {
+export async function name(options: BaseTransactionOptions) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x06fdde03",
-  [],
-  [
-    {
-      "type": "string",
-      "name": "",
-      "internalType": "string"
-    }
-  ]
-],
-    params: []
+      "0x06fdde03",
+      [],
+      [
+        {
+          type: "string",
+          name: "",
+          internalType: "string",
+        },
+      ],
+    ],
+    params: [],
   });
-};
-
-
-
+}
 
 /**
  * Calls the "symbol" function on the contract.
@@ -374,32 +421,33 @@ export async function name(
  *
  * ```
  */
-export async function symbol(
-  options: BaseTransactionOptions
-) {
+export async function symbol(options: BaseTransactionOptions) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x95d89b41",
-  [],
-  [
-    {
-      "type": "string",
-      "name": "",
-      "internalType": "string"
-    }
-  ]
-],
-    params: []
+      "0x95d89b41",
+      [],
+      [
+        {
+          type: "string",
+          name: "",
+          internalType: "string",
+        },
+      ],
+    ],
+    params: [],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "tokenURI" function.
  */
 export type TokenURIParams = {
-  tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"_tokenId","internalType":"uint256"}>
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "_tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -417,33 +465,30 @@ export type TokenURIParams = {
  * ```
  */
 export async function tokenURI(
-  options: BaseTransactionOptions<TokenURIParams>
+  options: BaseTransactionOptions<TokenURIParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0xc87b56dd",
-  [
-    {
-      "type": "uint256",
-      "name": "_tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  [
-    {
-      "type": "string",
-      "name": "",
-      "internalType": "string"
-    }
-  ]
-],
-    params: [options.tokenId]
+      "0xc87b56dd",
+      [
+        {
+          type: "uint256",
+          name: "_tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [
+        {
+          type: "string",
+          name: "",
+          internalType: "string",
+        },
+      ],
+    ],
+    params: [options.tokenId],
   });
-};
-
-
-
+}
 
 /**
  * Calls the "totalSupply" function on the contract.
@@ -457,32 +502,33 @@ export async function tokenURI(
  *
  * ```
  */
-export async function totalSupply(
-  options: BaseTransactionOptions
-) {
+export async function totalSupply(options: BaseTransactionOptions) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x18160ddd",
-  [],
-  [
-    {
-      "type": "uint256",
-      "name": "",
-      "internalType": "uint256"
-    }
-  ]
-],
-    params: []
+      "0x18160ddd",
+      [],
+      [
+        {
+          type: "uint256",
+          name: "",
+          internalType: "uint256",
+        },
+      ],
+    ],
+    params: [],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "tokenByIndex" function.
  */
 export type TokenByIndexParams = {
-  index: AbiParameterToPrimitiveType<{"type":"uint256","name":"_index","internalType":"uint256"}>
+  index: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "_index";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -500,38 +546,45 @@ export type TokenByIndexParams = {
  * ```
  */
 export async function tokenByIndex(
-  options: BaseTransactionOptions<TokenByIndexParams>
+  options: BaseTransactionOptions<TokenByIndexParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x4f6ccce7",
-  [
-    {
-      "type": "uint256",
-      "name": "_index",
-      "internalType": "uint256"
-    }
-  ],
-  [
-    {
-      "type": "uint256",
-      "name": "",
-      "internalType": "uint256"
-    }
-  ]
-],
-    params: [options.index]
+      "0x4f6ccce7",
+      [
+        {
+          type: "uint256",
+          name: "_index",
+          internalType: "uint256",
+        },
+      ],
+      [
+        {
+          type: "uint256",
+          name: "",
+          internalType: "uint256",
+        },
+      ],
+    ],
+    params: [options.index],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "tokenOfOwnerByIndex" function.
  */
 export type TokenOfOwnerByIndexParams = {
-  owner: AbiParameterToPrimitiveType<{"type":"address","name":"_owner","internalType":"address"}>
-index: AbiParameterToPrimitiveType<{"type":"uint256","name":"_index","internalType":"uint256"}>
+  owner: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "_owner";
+    internalType: "address";
+  }>;
+  index: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "_index";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -550,47 +603,54 @@ index: AbiParameterToPrimitiveType<{"type":"uint256","name":"_index","internalTy
  * ```
  */
 export async function tokenOfOwnerByIndex(
-  options: BaseTransactionOptions<TokenOfOwnerByIndexParams>
+  options: BaseTransactionOptions<TokenOfOwnerByIndexParams>,
 ) {
   return readContract({
     contract: options.contract,
     method: [
-  "0x2f745c59",
-  [
-    {
-      "type": "address",
-      "name": "_owner",
-      "internalType": "address"
-    },
-    {
-      "type": "uint256",
-      "name": "_index",
-      "internalType": "uint256"
-    }
-  ],
-  [
-    {
-      "type": "uint256",
-      "name": "",
-      "internalType": "uint256"
-    }
-  ]
-],
-    params: [options.owner, options.index]
+      "0x2f745c59",
+      [
+        {
+          type: "address",
+          name: "_owner",
+          internalType: "address",
+        },
+        {
+          type: "uint256",
+          name: "_index",
+          internalType: "uint256",
+        },
+      ],
+      [
+        {
+          type: "uint256",
+          name: "",
+          internalType: "uint256",
+        },
+      ],
+    ],
+    params: [options.owner, options.index],
   });
-};
-
+}
 
 /**
-* Contract write functions
-*/
+ * Contract write functions
+ */
 
 /**
  * Represents the parameters for the "approve" function.
  */
 export type ApproveParams = {
-  to: AbiParameterToPrimitiveType<{"type":"address","name":"to","internalType":"address"}>
-tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","internalType":"uint256"}>
+  to: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "to";
+    internalType: "address";
+  }>;
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -611,39 +671,48 @@ tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","interna
  *
  * ```
  */
-export function approve(
-  options: BaseTransactionOptions<ApproveParams>
-) {
+export function approve(options: BaseTransactionOptions<ApproveParams>) {
   return prepareContractCall({
     contract: options.contract,
     method: [
-  "0x095ea7b3",
-  [
-    {
-      "type": "address",
-      "name": "to",
-      "internalType": "address"
-    },
-    {
-      "type": "uint256",
-      "name": "tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  []
-],
-    params: [options.to, options.tokenId]
+      "0x095ea7b3",
+      [
+        {
+          type: "address",
+          name: "to",
+          internalType: "address",
+        },
+        {
+          type: "uint256",
+          name: "tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [],
+    ],
+    params: [options.to, options.tokenId],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "safeTransferFrom" function.
  */
 export type SafeTransferFromParams = {
-  from: AbiParameterToPrimitiveType<{"type":"address","name":"from","internalType":"address"}>
-to: AbiParameterToPrimitiveType<{"type":"address","name":"to","internalType":"address"}>
-tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","internalType":"uint256"}>
+  from: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "from";
+    internalType: "address";
+  }>;
+  to: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "to";
+    internalType: "address";
+  }>;
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -666,42 +735,49 @@ tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","interna
  * ```
  */
 export function safeTransferFrom(
-  options: BaseTransactionOptions<SafeTransferFromParams>
+  options: BaseTransactionOptions<SafeTransferFromParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
-  "0x42842e0e",
-  [
-    {
-      "type": "address",
-      "name": "from",
-      "internalType": "address"
-    },
-    {
-      "type": "address",
-      "name": "to",
-      "internalType": "address"
-    },
-    {
-      "type": "uint256",
-      "name": "tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  []
-],
-    params: [options.from, options.to, options.tokenId]
+      "0x42842e0e",
+      [
+        {
+          type: "address",
+          name: "from",
+          internalType: "address",
+        },
+        {
+          type: "address",
+          name: "to",
+          internalType: "address",
+        },
+        {
+          type: "uint256",
+          name: "tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [],
+    ],
+    params: [options.from, options.to, options.tokenId],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "setApprovalForAll" function.
  */
 export type SetApprovalForAllParams = {
-  operator: AbiParameterToPrimitiveType<{"type":"address","name":"operator","internalType":"address"}>
-approved: AbiParameterToPrimitiveType<{"type":"bool","name":"_approved","internalType":"bool"}>
+  operator: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "operator";
+    internalType: "address";
+  }>;
+  approved: AbiParameterToPrimitiveType<{
+    type: "bool";
+    name: "_approved";
+    internalType: "bool";
+  }>;
 };
 
 /**
@@ -723,38 +799,49 @@ approved: AbiParameterToPrimitiveType<{"type":"bool","name":"_approved","interna
  * ```
  */
 export function setApprovalForAll(
-  options: BaseTransactionOptions<SetApprovalForAllParams>
+  options: BaseTransactionOptions<SetApprovalForAllParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
-  "0xa22cb465",
-  [
-    {
-      "type": "address",
-      "name": "operator",
-      "internalType": "address"
-    },
-    {
-      "type": "bool",
-      "name": "_approved",
-      "internalType": "bool"
-    }
-  ],
-  []
-],
-    params: [options.operator, options.approved]
+      "0xa22cb465",
+      [
+        {
+          type: "address",
+          name: "operator",
+          internalType: "address",
+        },
+        {
+          type: "bool",
+          name: "_approved",
+          internalType: "bool",
+        },
+      ],
+      [],
+    ],
+    params: [options.operator, options.approved],
   });
-};
-
+}
 
 /**
  * Represents the parameters for the "transferFrom" function.
  */
 export type TransferFromParams = {
-  from: AbiParameterToPrimitiveType<{"type":"address","name":"from","internalType":"address"}>
-to: AbiParameterToPrimitiveType<{"type":"address","name":"to","internalType":"address"}>
-tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","internalType":"uint256"}>
+  from: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "from";
+    internalType: "address";
+  }>;
+  to: AbiParameterToPrimitiveType<{
+    type: "address";
+    name: "to";
+    internalType: "address";
+  }>;
+  tokenId: AbiParameterToPrimitiveType<{
+    type: "uint256";
+    name: "tokenId";
+    internalType: "uint256";
+  }>;
 };
 
 /**
@@ -777,33 +864,31 @@ tokenId: AbiParameterToPrimitiveType<{"type":"uint256","name":"tokenId","interna
  * ```
  */
 export function transferFrom(
-  options: BaseTransactionOptions<TransferFromParams>
+  options: BaseTransactionOptions<TransferFromParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
-  "0x23b872dd",
-  [
-    {
-      "type": "address",
-      "name": "from",
-      "internalType": "address"
-    },
-    {
-      "type": "address",
-      "name": "to",
-      "internalType": "address"
-    },
-    {
-      "type": "uint256",
-      "name": "tokenId",
-      "internalType": "uint256"
-    }
-  ],
-  []
-],
-    params: [options.from, options.to, options.tokenId]
+      "0x23b872dd",
+      [
+        {
+          type: "address",
+          name: "from",
+          internalType: "address",
+        },
+        {
+          type: "address",
+          name: "to",
+          internalType: "address",
+        },
+        {
+          type: "uint256",
+          name: "tokenId",
+          internalType: "uint256",
+        },
+      ],
+      [],
+    ],
+    params: [options.from, options.to, options.tokenId],
   });
-};
-
-
+}

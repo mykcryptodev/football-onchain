@@ -1,6 +1,7 @@
+import { useState } from "react";
+
 import { useFetchGameData } from "@/hooks/useFetchGameData";
 import { useFetchScoreChanges } from "@/hooks/useFetchScoreChanges";
-import { useState } from "react";
 
 interface GameDataFetcherProps {
   gameId: number;
@@ -63,13 +64,13 @@ export function GameDataFetcher({ gameId }: GameDataFetcherProps) {
         <div>
           <label className="block text-sm font-medium mb-2">Fetch Type:</label>
           <select
+            className="border rounded px-3 py-2"
             value={selectedFetchType}
             onChange={e =>
               setSelectedFetchType(
                 e.target.value as "quarter-scores" | "score-changes",
               )
             }
-            className="border rounded px-3 py-2"
           >
             <option value="quarter-scores">Quarter Scores</option>
             <option value="score-changes">Score Changes</option>
@@ -80,19 +81,19 @@ export function GameDataFetcher({ gameId }: GameDataFetcherProps) {
         <div>
           <label className="block text-sm font-medium mb-2">Game ID:</label>
           <input
-            type="number"
-            value={gameId}
             readOnly
             className="border rounded px-3 py-2 bg-gray-100"
+            type="number"
+            value={gameId}
           />
         </div>
 
         {/* Action Buttons */}
         <div className="space-x-2">
           <button
-            onClick={handleFetchData}
-            disabled={isFetchingData || isFetchingScoreChanges}
             className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            disabled={isFetchingData || isFetchingScoreChanges}
+            onClick={handleFetchData}
           >
             {isFetchingData || isFetchingScoreChanges
               ? "Fetching..."

@@ -68,11 +68,12 @@ export async function POST(req: NextRequest) {
 
     const result = await batchResult.json();
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in batch-claim API:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to process batch transaction" },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to process batch transaction";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

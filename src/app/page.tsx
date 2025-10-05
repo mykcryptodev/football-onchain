@@ -21,10 +21,10 @@ export default function Home() {
             invite friends, and win big!
           </p>
           <div className="flex gap-4 justify-center flex-col sm:flex-row">
-            <Button size="lg" className="text-lg px-8">
+            <Button className="text-lg px-8" size="lg">
               Create Contest
             </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8">
+            <Button className="text-lg px-8" size="lg" variant="outline">
               Join Contest
             </Button>
           </div>

@@ -2,6 +2,7 @@
 
 import { Search, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { TokenIcon, TokenProvider } from "thirdweb/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,12 +18,16 @@ import { chain, usdc } from "@/constants";
 import { useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-import { TokenIcon, TokenProvider } from "thirdweb/react";
 
 interface TokenPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onTokenSelect: (token: any) => void;
+  onTokenSelect: (token: {
+    address: string;
+    symbol: string;
+    decimals: number;
+    name: string;
+  }) => void;
   selectedTokenAddress?: string;
 }
 
@@ -40,7 +45,7 @@ export function TokenPicker({
     loading,
     loadingMore,
     hasMore,
-    searchQuery: hookSearchQuery,
+    searchQuery: _hookSearchQuery,
     fetchTokens,
     loadMoreTokens,
     updateSearchQuery,
@@ -84,7 +89,12 @@ export function TokenPicker({
   }, [tokens, selectedTokenAddress, onTokenSelect, onOpenChange]);
 
   const handleTokenSelect = useCallback(
-    (token: any) => {
+    (token: {
+      address: string;
+      symbol: string;
+      decimals: number;
+      name: string;
+    }) => {
       onTokenSelect(token);
       onOpenChange(false);
     },
@@ -118,16 +128,16 @@ export function TokenPicker({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              className="pl-10"
               placeholder="Search tokens..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10"
             />
             {searchQuery && (
               <Button
-                variant="ghost"
-                size="sm"
                 className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0"
+                size="sm"
+                variant="ghost"
                 onClick={() => setSearchQuery("")}
               >
                 <X className="h-4 w-4" />
@@ -150,14 +160,14 @@ export function TokenPicker({
                 tokens.map((token, index) => (
                   <Button
                     key={`${token.address}-${index}`}
-                    variant="ghost"
                     className="w-full justify-start p-3 h-auto"
+                    variant="ghost"
                     onClick={() => handleTokenSelect(token)}
                   >
                     <TokenProvider
                       address={token.address}
-                      client={client}
                       chain={chain}
+                      client={client}
                     >
                       <div className="flex items-center gap-3 w-full">
                         <TokenIcon
@@ -190,10 +200,10 @@ export function TokenPicker({
               {hasMore && !loadingMore && (
                 <div className="flex items-center justify-center p-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={loadMoreTokens}
                     className="w-full"
+                    size="sm"
+                    variant="outline"
+                    onClick={loadMoreTokens}
                   >
                     Load More Tokens
                   </Button>

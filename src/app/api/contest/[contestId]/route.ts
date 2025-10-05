@@ -1,11 +1,12 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createThirdwebClient, getContract, readContract } from "thirdweb";
+import { stringify } from "thirdweb/utils";
+
 import { BoxOwner } from "@/components/contest/types";
 import { boxes, chain, contests } from "@/constants";
 import { abi } from "@/constants/abis/contests";
 import { CACHE_TTL, getContestCacheKey, redis } from "@/lib/redis";
 import { getBoxOwnersFromThirdweb } from "@/lib/thirdweb-api";
-import { NextRequest, NextResponse } from "next/server";
-import { createThirdwebClient, getContract, readContract } from "thirdweb";
-import { stringify } from "thirdweb/utils";
 
 // Disable Next.js caching for this route
 export const dynamic = "force-dynamic";
@@ -89,7 +90,8 @@ export async function GET(
       client,
       chain,
       address: CONTRACTS_ADDRESS,
-      abi: abi as any, // Type assertion to bypass ABI type issues
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abi: abi as any, // Type assertion needed for complex contract ABI
     });
 
     // Call the getContestData function to get contest data
@@ -139,8 +141,8 @@ export async function GET(
       id: id.toString(),
       gameId: gameId.toString(),
       creator,
-      rows: rows.map((r: any) => parseInt(r.toString())),
-      cols: cols.map((c: any) => parseInt(c.toString())),
+      rows: rows.map((r: bigint) => parseInt(r.toString())),
+      cols: cols.map((c: bigint) => parseInt(c.toString())),
       boxCost: {
         currency: boxCost.currency,
         amount: boxCost.amount.toString(),

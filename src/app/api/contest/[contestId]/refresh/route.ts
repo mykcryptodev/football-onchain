@@ -1,5 +1,6 @@
-import { getContestCacheKey, redis } from "@/lib/redis";
 import { NextRequest, NextResponse } from "next/server";
+
+import { getContestCacheKey, redis } from "@/lib/redis";
 
 // Disable Next.js caching for this route
 export const dynamic = "force-dynamic";
