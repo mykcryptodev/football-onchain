@@ -32,8 +32,8 @@ export default function PickemPage() {
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="contests">Pickem Contests</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="contests">Contests</TabsTrigger>
           <TabsTrigger value="create">Create Contest</TabsTrigger>
           <TabsTrigger value="my-pickems">My Pick&apos;ems</TabsTrigger>
         </TabsList>

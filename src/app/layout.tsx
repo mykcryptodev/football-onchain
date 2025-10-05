@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { Navigation } from "@/components/navigation";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { appName } from "@/constants";
 import {
   generateFarcasterMetadata,
   getBaseUrl,
@@ -12,7 +13,6 @@ import {
 import { FarcasterProvider } from "@/providers/Farcaster";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
-import { appName } from "@/constants";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({
