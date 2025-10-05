@@ -1,7 +1,10 @@
+"use client";
+
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
+import { useHaptics } from "@/hooks/useHaptics";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -40,17 +43,34 @@ function Button({
   variant,
   size,
   asChild = false,
+  onClick,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
   }) {
   const Comp = asChild ? Slot : "button";
+  const { impactOccurred } = useHaptics();
+
+  const handleClick = React.useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      // Trigger haptic feedback based on button variant
+      const hapticType = variant === "destructive" ? "heavy" : "light";
+      await impactOccurred(hapticType);
+
+      // Call the original onClick handler if provided
+      if (onClick) {
+        onClick(event);
+      }
+    },
+    [impactOccurred, onClick, variant],
+  );
 
   return (
     <Comp
       className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
+      onClick={handleClick}
       {...props}
     />
   );
