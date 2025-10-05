@@ -2,7 +2,15 @@
 
 import { Eye, RefreshCw, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useActiveAccount } from "thirdweb/react";
+import { createThirdwebClient } from "thirdweb";
+import {
+  AccountAddress,
+  AccountAvatar,
+  AccountName,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +25,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePickemContract } from "@/hooks/usePickemContract";
+
+// Create Thirdweb client for AccountProvider
+const client = createThirdwebClient({
+  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
+});
 
 interface ContestPick {
   tokenId: number;
@@ -161,14 +174,11 @@ export default function ContestPicksView({
     }
   };
 
-  const formatAddress = (address: string) => {
-    if (
+  const isCurrentUser = (address: string) => {
+    return (
       account?.address &&
       address.toLowerCase() === account.address.toLowerCase()
-    ) {
-      return "You";
-    }
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    );
   };
 
   const renderPickCell = (picks: number[]) => {
@@ -311,14 +321,12 @@ export default function ContestPicksView({
             </TableHeader>
             <TableBody>
               {allPicks.map((pick, index) => {
-                const isCurrentUser =
-                  account?.address &&
-                  pick.owner.toLowerCase() === account.address.toLowerCase();
+                const isUserPick = isCurrentUser(pick.owner);
 
                 return (
                   <TableRow
                     key={pick.tokenId}
-                    className={isCurrentUser ? "bg-accent/50" : ""}
+                    className={isUserPick ? "bg-accent/50" : ""}
                   >
                     <TableCell>
                       {gamesFinalized ? (
@@ -340,16 +348,58 @@ export default function ContestPicksView({
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {formatAddress(pick.owner)}
-                        </span>
-                        {isCurrentUser && (
-                          <Badge variant="secondary" className="text-xs">
-                            You
-                          </Badge>
-                        )}
-                      </div>
+                      <AccountProvider address={pick.owner} client={client}>
+                        <div className="flex items-center gap-2">
+                          <AccountAvatar
+                            fallbackComponent={
+                              <Blobbie
+                                address={pick.owner}
+                                className="size-8 rounded-full"
+                              />
+                            }
+                            loadingComponent={
+                              <div className="size-8 rounded-full bg-muted animate-pulse" />
+                            }
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "100%",
+                            }}
+                          />
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <AccountName
+                                loadingComponent={
+                                  <span className="text-sm text-muted-foreground">
+                                    Loading...
+                                  </span>
+                                }
+                                fallbackComponent={
+                                  <AccountAddress
+                                    formatFn={addr =>
+                                      `${addr.slice(0, 6)}...${addr.slice(-4)}`
+                                    }
+                                  />
+                                }
+                                className="font-medium text-sm"
+                              />
+                              {isUserPick && (
+                                <Badge variant="secondary" className="text-xs">
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                            {!isUserPick && (
+                              <AccountAddress
+                                formatFn={addr =>
+                                  `${addr.slice(0, 6)}...${addr.slice(-4)}`
+                                }
+                                className="text-xs text-muted-foreground"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </AccountProvider>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       #{pick.tokenId}
