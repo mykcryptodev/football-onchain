@@ -92,7 +92,8 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 seasonType;       // 1=preseason, 2=regular, 3=postseason
         uint8 weekNumber;
         uint256 year;
-        uint256[] gameIds;      // ESPN game IDs for this week
+        uint256[] packedGameIds; // Packed game IDs (3 per uint256)
+        uint8 gamesCount;       // Number of games
         uint256 earliestKickoff; // Earliest game kickoff time
         bool isFinalized;       // True when data has been fetched
     }
@@ -526,7 +527,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     }
 
     /**
-     * @notice Fulfill week games request (gas optimized)
+     * @notice Fulfill week games request (ultra gas optimized)
      */
     function _fulfillWeekGamesRequest(
         uint256 weekId,
@@ -542,49 +543,33 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         wg.year = weekId >> 16;
         wg.seasonType = uint8((weekId >> 8) & 0xFF);
         wg.weekNumber = uint8(weekId & 0xFF);
+        wg.gamesCount = uint8(gameCount);
         wg.earliestKickoff = 0; // Not used anymore
         wg.isFinalized = true;
 
-        // Store game IDs (unpacking from packed format - 3 IDs per uint256)
-        delete wg.gameIds; // Clear existing array
+        // Store packed game IDs directly (much more gas efficient!)
+        delete wg.packedGameIds; // Clear existing array
+
         uint256 packedIndex = 1;
-        uint256 gamesProcessed = 0;
+        uint256 packedCount = 0;
 
         // Process packed uint256s, each containing up to 3 game IDs
-        while (gamesProcessed < gameCount && gamesProcessed < 21) { // Max 21 games
+        while (packedIndex <= 7 && packedCount < 7) { // Max 7 packed uint256s in 256 bytes
             uint256 packed = _bytesToUint256(response, uint8(packedIndex));
             packedIndex++;
 
-            // Extract first ID (bits 170-254, 85 bits)
-            uint256 gameId = (packed >> 170) & ((1 << 85) - 1);
-            if (gameId > 0 && gamesProcessed < gameCount) {
-                wg.gameIds.push(gameId);
-                gamesProcessed++;
+            // Only store non-zero packed values
+            if (packed > 0) {
+                wg.packedGameIds.push(packed);
+                packedCount++;
             }
-
-            // Extract second ID (bits 85-169, 85 bits)
-            gameId = (packed >> 85) & ((1 << 85) - 1);
-            if (gameId > 0 && gamesProcessed < gameCount) {
-                wg.gameIds.push(gameId);
-                gamesProcessed++;
-            }
-
-            // Extract third ID (bits 0-84, 85 bits)
-            gameId = packed & ((1 << 85) - 1);
-            if (gameId > 0 && gamesProcessed < gameCount) {
-                wg.gameIds.push(gameId);
-                gamesProcessed++;
-            }
-
-            // Break if we've processed all available packed data
-            if (packedIndex > 7) break; // Max 7 packed uint256s in 256 bytes
         }
 
         emit WeekGamesUpdated(weekId, uint8(gameCount));
     }
 
     /**
-     * @notice Fulfill week results request (gas optimized)
+     * @notice Fulfill week results request (ultra gas optimized)
      */
     function _fulfillWeekResultsRequest(
         uint256 weekId,
@@ -594,7 +579,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 gameCount = _bytesToUint256(response, 0);
         uint256 packedResults = _bytesToUint256(response, 1);
 
-        // Store results
+        // Store results in single operation
         WeekResults storage wr = weekResults[weekId];
         wr.weekId = weekId;
         wr.gamesCount = uint8(gameCount);
@@ -733,10 +718,39 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
             return (new uint256[](0), 0);
         }
 
+        // Unpack game IDs from packed storage
+        gameIds = new uint256[](wg.gamesCount);
+        uint256 gameIndex = 0;
+
+        for (uint256 i = 0; i < wg.packedGameIds.length && gameIndex < wg.gamesCount; i++) {
+            uint256 packed = wg.packedGameIds[i];
+
+            // Extract first ID (bits 170-254, 85 bits)
+            uint256 gameId = (packed >> 170) & ((1 << 85) - 1);
+            if (gameId > 0 && gameIndex < wg.gamesCount) {
+                gameIds[gameIndex] = gameId;
+                gameIndex++;
+            }
+
+            // Extract second ID (bits 85-169, 85 bits)
+            gameId = (packed >> 85) & ((1 << 85) - 1);
+            if (gameId > 0 && gameIndex < wg.gamesCount) {
+                gameIds[gameIndex] = gameId;
+                gameIndex++;
+            }
+
+            // Extract third ID (bits 0-84, 85 bits)
+            gameId = packed & ((1 << 85) - 1);
+            if (gameId > 0 && gameIndex < wg.gamesCount) {
+                gameIds[gameIndex] = gameId;
+                gameIndex++;
+            }
+        }
+
         // Return games and a default submission deadline (7 days from now)
         // Contest creators can override this if needed
         submissionDeadline = block.timestamp + 7 days;
-        return (wg.gameIds, submissionDeadline);
+        return (gameIds, submissionDeadline);
     }
 
     /**
@@ -755,10 +769,10 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         WeekResults memory wr = weekResults[weekId];
         WeekGames memory wg = weekGames[weekId];
 
-        winners = new uint8[](wg.gameIds.length);
+        winners = new uint8[](wg.gamesCount);
 
         // Unpack results from bit field
-        for (uint256 i = 0; i < wg.gameIds.length; i++) {
+        for (uint256 i = 0; i < wg.gamesCount; i++) {
             winners[i] = (wr.packedResults & (1 << i)) != 0 ? 1 : 0;
         }
 
@@ -767,7 +781,8 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
 }
 
 function _bytesToUint256(bytes memory input, uint8 index) pure returns (uint256 result) {
-    for (uint8 i = 0; i < 32; i++) {
-        result |= uint256(uint8(input[index * 32 + i])) << (8 * (31 - i));
+    uint256 offset = uint256(index) * 32;
+    assembly {
+        result := mload(add(add(input, 0x20), offset))
     }
 }

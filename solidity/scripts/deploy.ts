@@ -86,7 +86,7 @@ async function main() {
   });
   console.log("gameScoreOracle deployed to: " + `${GREEN}${gameScoreOracleAddress}${RESET}\n`);
 
-  let contestsManager: ContestsManager;
+  let contestsManager: any;
   try {
     contestsManager = await hre.ethers.deployContract("ContestsManager");
     await contestsManager.waitForDeployment();

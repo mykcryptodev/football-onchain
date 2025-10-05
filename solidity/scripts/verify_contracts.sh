@@ -112,6 +112,8 @@ if command -v jq &> /dev/null; then
     QUARTERS_STRATEGY_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "QuartersOnlyPayoutStrategy") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     SCORE_CHANGES_STRATEGY_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "ScoreChangesPayoutStrategy") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
     CONTESTS_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "Contests") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
+    PICKEM_NFT_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "PickemNFT") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
+    PICKEM_ADDRESS=$(jq -r '.transactions[] | select(.contractName == "Pickem") | .contractAddress' "$LATEST_RUN" 2>/dev/null | head -1)
 else
     print_warning "jq not found. Please install jq for automatic address extraction, or provide addresses manually."
 fi
@@ -134,6 +136,10 @@ if [ -z "$BOXES_ADDRESS" ] || [ "$BOXES_ADDRESS" = "null" ]; then
     read SCORE_CHANGES_STRATEGY_ADDRESS
     echo -n "Contests address: "
     read CONTESTS_ADDRESS
+    echo -n "PickemNFT address: "
+    read PICKEM_NFT_ADDRESS
+    echo -n "Pickem address: "
+    read PICKEM_ADDRESS
 else
     print_success "Found contract addresses:"
     echo "  Boxes: $BOXES_ADDRESS"
@@ -143,6 +149,8 @@ else
     echo "  QuartersOnlyPayoutStrategy: $QUARTERS_STRATEGY_ADDRESS"
     echo "  ScoreChangesPayoutStrategy: $SCORE_CHANGES_STRATEGY_ADDRESS"
     echo "  Contests: $CONTESTS_ADDRESS"
+    echo "  PickemNFT: $PICKEM_NFT_ADDRESS"
+    echo "  Pickem: $PICKEM_ADDRESS"
 fi
 
 # Verify each contract
@@ -279,6 +287,38 @@ CONTESTS_ARGS=$(cast abi-encode "constructor(address,address,address,address,add
 forge verify-contract "$CONTESTS_ADDRESS" \
     contracts/src/Contests.sol:Contests \
     --constructor-args "$CONTESTS_ARGS" \
+    --chain "$CHAIN_ID" \
+    --etherscan-api-key "$ETHERSCAN_API_KEY" \
+    --verifier-url "$VERIFIER_URL" \
+    --watch \
+    --retries 15 \
+    --delay 10
+
+echo ""
+print_info "Waiting $VERIFICATION_DELAY seconds to avoid rate limits..."
+sleep $VERIFICATION_DELAY
+
+echo ""
+print_info "Verifying PickemNFT..."
+forge verify-contract "$PICKEM_NFT_ADDRESS" \
+    contracts/src/PickemNFT.sol:PickemNFT \
+    --constructor-args $(cast abi-encode "constructor(string,string)" "NFL Pickem 2025" "PICKEM") \
+    --chain "$CHAIN_ID" \
+    --etherscan-api-key "$ETHERSCAN_API_KEY" \
+    --verifier-url "$VERIFIER_URL" \
+    --watch \
+    --retries 15 \
+    --delay 10
+
+echo ""
+print_info "Waiting $VERIFICATION_DELAY seconds to avoid rate limits..."
+sleep $VERIFICATION_DELAY
+
+echo ""
+print_info "Verifying Pickem..."
+forge verify-contract "$PICKEM_ADDRESS" \
+    contracts/src/Pickem.sol:Pickem \
+    --constructor-args $(cast abi-encode "constructor(address,address)" "$OWNER_ADDRESS" "$ORACLE_ADDRESS") \
     --chain "$CHAIN_ID" \
     --etherscan-api-key "$ETHERSCAN_API_KEY" \
     --verifier-url "$VERIFIER_URL" \

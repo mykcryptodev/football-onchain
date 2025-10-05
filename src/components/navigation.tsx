@@ -62,6 +62,12 @@ export function Navigation() {
             >
               How to Play
             </Link>
+            <Link
+              href="/pickem"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Pick&apos;em
+            </Link>
           </div>
         </div>
 

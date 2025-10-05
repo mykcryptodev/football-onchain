@@ -9,6 +9,8 @@ import {GameScoreOracle} from "../contracts/src/GameScoreOracle.sol";
 import {RandomNumbers} from "../contracts/src/RandomNumbers.sol";
 import {QuartersOnlyPayoutStrategy} from "../contracts/src/QuartersOnlyPayoutStrategy.sol";
 import {ScoreChangesPayoutStrategy} from "../contracts/src/ScoreChangesPayoutStrategy.sol";
+import {Pickem} from "../contracts/src/Pickem.sol";
+import {PickemNFT} from "../contracts/src/PickemNFT.sol";
 
 interface IFunctionsSubscriptionRegistry {
     function addConsumer(uint64 subscriptionId, address consumer) external;
@@ -29,6 +31,8 @@ contract Deploy is Script {
     Contests public contests;
     QuartersOnlyPayoutStrategy public quartersOnlyStrategy;
     ScoreChangesPayoutStrategy public scoreChangesStrategy;
+    Pickem public pickem;
+    PickemNFT public pickemNFT;
 
     function setUp() public {
         // Base Sepolia (84532)
@@ -129,7 +133,19 @@ contract Deploy is Script {
         console.log("Contests deployed at:", address(contests));
         console.log("");
 
-        // 8. Configure contract relationships
+        // 8. Deploy PickemNFT contract
+        console.log("Deploying PickemNFT contract...");
+        pickemNFT = new PickemNFT("NFL Pickem 2025", "PICKEM");
+        console.log("PickemNFT deployed at:", address(pickemNFT));
+        console.log("");
+
+        // 9. Deploy Pickem contract
+        console.log("Deploying Pickem contract...");
+        pickem = new Pickem(deployer, address(gameScoreOracle));
+        console.log("Pickem deployed at:", address(pickem));
+        console.log("");
+
+        // 10. Configure contract relationships
         console.log("Configuring contract relationships...");
 
         // Set contests in boxes contract
@@ -144,6 +160,13 @@ contract Deploy is Script {
         randomNumbers.setContests(address(contests));
         console.log("Contests set in RandomNumbers contract");
 
+        // Configure Pickem and PickemNFT relationship
+        pickem.setPickemNFT(address(pickemNFT));
+        console.log("PickemNFT set in Pickem contract");
+
+        pickemNFT.setPickemContract(address(pickem));
+        console.log("Pickem contract set in PickemNFT");
+
         vm.stopBroadcast();
 
         console.log("");
@@ -155,6 +178,8 @@ contract Deploy is Script {
         console.log("QuartersOnlyPayoutStrategy: ", address(quartersOnlyStrategy));
         console.log("ScoreChangesPayoutStrategy: ", address(scoreChangesStrategy));
         console.log("Contests:                   ", address(contests));
+        console.log("PickemNFT:                  ", address(pickemNFT));
+        console.log("Pickem:                     ", address(pickem));
         console.log("");
 
         // Check if we should skip verification during deployment
@@ -415,6 +440,20 @@ contract Deploy is Script {
 
         uint256 contestsGas = _estimateContractGas("Contests", type(Contests).creationCode, "");
         totalGasEstimate += contestsGas;
+
+        uint256 pickemNFTGas = _estimateContractGas(
+            "PickemNFT",
+            type(PickemNFT).creationCode,
+            abi.encode("NFL Pickem 2025", "PICKEM")
+        );
+        totalGasEstimate += pickemNFTGas;
+
+        uint256 pickemGas = _estimateContractGas(
+            "Pickem",
+            type(Pickem).creationCode,
+            abi.encode(deployer, functionsRouter[chainId])
+        );
+        totalGasEstimate += pickemGas;
 
         // Estimate setup transactions (approximate)
         uint256 setupGas = 300000; // Approximate gas for all setup calls
