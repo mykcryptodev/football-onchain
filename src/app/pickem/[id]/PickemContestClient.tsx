@@ -306,6 +306,7 @@ export default function PickemContestClient({
                           ? "border-primary bg-primary/10"
                           : ""
                       }`}
+                      onClick={() => setPicks({ ...picks, [game.gameId]: 0 })}
                     >
                       <RadioGroupItem value="0" id={`${game.gameId}-away`} />
                       <Label
@@ -337,6 +338,7 @@ export default function PickemContestClient({
                           ? "border-primary bg-primary/10"
                           : ""
                       }`}
+                      onClick={() => setPicks({ ...picks, [game.gameId]: 1 })}
                     >
                       <RadioGroupItem value="1" id={`${game.gameId}-home`} />
                       <Label
