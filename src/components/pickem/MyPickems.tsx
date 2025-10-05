@@ -81,11 +81,13 @@ export default function MyPickems() {
           const tokenId = await getUserNFTByIndex(account.address, i);
           const predictionData = await getNFTPrediction(tokenId);
 
-          // Destructure the tuple: [contestId, tiebreakerPoints, submissionTime, correctPicks, claimed]
+          // Destructure the tuple: [contestId, predictor, submissionTime, tiebreakerPoints, correctPicks, claimed]
+          // Note: Solidity auto-generated getters don't return arrays from structs
           const [
             contestId,
-            tiebreakerPoints,
+            predictor,
             submissionTime,
+            tiebreakerPoints,
             correctPicks,
             claimed,
           ] = predictionData;
@@ -115,14 +117,14 @@ export default function MyPickems() {
             seasonType: Number(contest.seasonType),
             weekNumber: Number(contest.weekNumber),
             year: Number(contest.year),
-            picks: [], // We'll need to fetch these from the contract if needed
-            gameIds: contest.gameIds.map(id => id.toString()),
+            picks: [], // Pick arrays not returned from Solidity struct getter
+            gameIds: contest.gameIds.map((id: bigint) => id.toString()),
             correctPicks: Number(correctPicks),
             totalGames: contest.gameIds.length,
             tiebreakerPoints: Number(tiebreakerPoints),
             submissionTime: Number(submissionTime) * 1000,
             prizeWon,
-            claimed: Number(claimed) === 1,
+            claimed: Boolean(claimed),
             rank,
             contest, // Store full contest object
           });
@@ -268,13 +270,16 @@ export default function MyPickems() {
   const totalNFTs = nfts.length;
   const totalWins = nfts.filter(nft => Number(nft.prizeWon) > 0).length;
   const totalPrizes = nfts.reduce((sum, nft) => sum + Number(nft.prizeWon), 0);
+
+  // Only calculate accuracy for finalized contests
+  const finalizedNFTs = nfts.filter(nft => nft.contest?.gamesFinalized);
   const avgAccuracy =
-    nfts
-      .filter(nft => Number(nft.correctPicks) > 0)
-      .reduce(
-        (sum, nft) => sum + (Number(nft.correctPicks) / nft.totalGames) * 100,
-        0,
-      ) / nfts.filter(nft => Number(nft.correctPicks) > 0).length || 0;
+    finalizedNFTs.length > 0
+      ? finalizedNFTs.reduce(
+          (sum, nft) => sum + (Number(nft.correctPicks) / nft.totalGames) * 100,
+          0,
+        ) / finalizedNFTs.length
+      : 0;
 
   return (
     <div className="space-y-6">
