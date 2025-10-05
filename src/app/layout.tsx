@@ -12,6 +12,7 @@ import {
 import { FarcasterProvider } from "@/providers/Farcaster";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
+import { appName } from "@/constants";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({
@@ -33,11 +34,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const fullUrl = `${baseUrl}${pathname}`;
 
   return {
-    title: "Football Boxes - Ultimate Football Squares Experience",
+    title: "Football - Ultimate Football Squares and Pick Em Experience",
     description:
       "Create and join football squares contests with blockchain-powered fair play and instant payouts. The ultimate football boxes experience.",
     other: generateFarcasterMetadata({
-      appName: "Football Boxes",
+      appName,
       imageUrl: `${baseUrl}/embed-image.png`,
       splashImageUrl: `${baseUrl}/splash-image.png`,
       splashBackgroundColor: "#000000",

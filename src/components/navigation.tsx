@@ -38,7 +38,7 @@ export function Navigation() {
                 FB
               </span>
             </div>
-            <span className="font-bold text-xl">Football Boxes</span>
+            <span className="font-bold text-xl">{appName}</span>
           </Link>
 
           <div className="hidden md:flex items-center space-x-6">

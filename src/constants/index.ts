@@ -2,9 +2,9 @@ import { Hex } from "thirdweb";
 import { base, baseSepolia } from "thirdweb/chains";
 
 // APP INFO
-export const appName = "Football Boxes";
+export const appName = "Football";
 export const appDescription =
-  "Play Super Bowl Squares with your friends for any NFL game!";
+  "Play Super Bowl Square and Pick em with your friends for any NFL game!";
 
 // CHAINS
 export const chain = base;
