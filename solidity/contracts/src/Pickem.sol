@@ -211,7 +211,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         (uint256[] memory gameIds, uint256 defaultDeadline) = gameScoreOracle.getWeekGames(year, seasonType, weekNumber);
         if (gameIds.length == 0) revert NoGamesProvided();
         if (gameIds.length > MAX_GAMES_PER_WEEK) revert TooManyGames();
-        
+
         // Use custom deadline if provided, otherwise use oracle default
         uint256 submissionDeadline = customDeadline > 0 ? customDeadline : defaultDeadline;
 
