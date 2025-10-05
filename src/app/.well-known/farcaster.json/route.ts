@@ -1,15 +1,5 @@
 import { appDescription, appName } from "@/constants";
 
-function _withValidProperties(
-  properties: Record<string, undefined | string | string[]>,
-) {
-  return Object.fromEntries(
-    Object.entries(properties).filter(([_key, value]) =>
-      Array.isArray(value) ? value.length > 0 : !!value,
-    ),
-  );
-}
-
 export async function GET() {
   const URL = process.env.NEXT_PUBLIC_URL as string;
   return Response.json({

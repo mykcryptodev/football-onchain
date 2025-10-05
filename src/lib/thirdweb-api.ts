@@ -47,7 +47,7 @@ export async function getNFTOwnershipFromThirdweb(
       params: [calls],
     });
 
-    const [_blockNumber, returnData] = result as [bigint, string[]];
+    const [, returnData] = result as [bigint, string[]];
 
     // Each returnData[i] contains the encoded address result
     // You need to decode the address from the bytes
@@ -83,8 +83,6 @@ export async function getBoxOwnersFromThirdweb(
   contestId: number,
   collectionAddress: string,
 ): Promise<BoxOwner[]> {
-  const _boxes: BoxOwner[] = [];
-
   try {
     // Get all 100 token IDs for this contest
     const tokenIds = Array.from({ length: 100 }, (_, i) => contestId * 100 + i);

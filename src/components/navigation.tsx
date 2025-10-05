@@ -1,12 +1,12 @@
 "use client";
 
-/* eslint-disable simple-import-sort/imports, prettier/prettier */
+/* eslint-disable simple-import-sort/imports */
 import { useTheme } from "next-themes";
 import Link from "next/link";
+/* eslint-enable simple-import-sort/imports */
 import { base, baseSepolia } from "thirdweb/chains";
 import { ConnectButton } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
-/* eslint-enable simple-import-sort/imports, prettier/prettier */
 
 import { appDescription, appName, chain, usdc } from "@/constants";
 import { client } from "@/providers/Thirdweb";

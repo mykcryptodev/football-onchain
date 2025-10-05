@@ -59,7 +59,6 @@ export default function MyPickems() {
     getNFTPrediction,
     getContest,
     claimPrize,
-    getUserContests: _getUserContests,
     getContestWinners,
     updateContestResults,
   } = usePickemContract();
@@ -77,6 +76,7 @@ export default function MyPickems() {
       setNfts([]);
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account]);
 
   const fetchUserNFTs = async () => {
@@ -97,7 +97,7 @@ export default function MyPickems() {
           // Note: Solidity auto-generated getters don't return arrays from structs
           const [
             contestId,
-            _predictor,
+            ,
             submissionTime,
             tiebreakerPoints,
             correctPicks,

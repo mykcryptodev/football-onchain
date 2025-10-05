@@ -78,7 +78,7 @@ export default function CreatePickemForm() {
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
-  const { tokens, loading: _loadingTokens, fetchTokens } = useTokens();
+  const { tokens, fetchTokens } = useTokens();
   const [formData, setFormData] = useState({
     seasonType: "2",
     weekNumber: "",

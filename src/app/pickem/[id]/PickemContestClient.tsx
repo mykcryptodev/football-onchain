@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
@@ -82,6 +82,38 @@ export default function PickemContestClient({
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const fetchGameInfo = useCallback(
+    async (gameIds: string[]) => {
+      try {
+        // Use the week-games API instead of contest-games API
+        const response = await fetch(
+          `/api/week-games?year=${contest.year}&seasonType=${contest.seasonType}&week=${contest.weekNumber}`,
+        );
+        if (!response.ok) {
+          throw new Error(`Failed to fetch games: ${response.statusText}`);
+        }
+
+        const allWeekGames: GameInfo[] = await response.json();
+
+        // Filter to only the games in this contest
+        const games: GameInfo[] = allWeekGames.filter(weekGame =>
+          gameIds.some(contestGameId => contestGameId === weekGame.gameId),
+        );
+
+        setGames(
+          games.sort(
+            (a, b) =>
+              new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+          ),
+        );
+      } catch (error) {
+        console.error("Error fetching game info:", error);
+        toast.error("Failed to load game information");
+      }
+    },
+    [contest.year, contest.seasonType, contest.weekNumber],
+  );
+
   useEffect(() => {
     // Initialize picks
     const initialPicks: Record<string, number> = {};
@@ -92,36 +124,7 @@ export default function PickemContestClient({
 
     // Fetch game info (mock for now)
     fetchGameInfo(contest.gameIds);
-  }, [contest]);
-
-  const fetchGameInfo = async (gameIds: string[]) => {
-    try {
-      // Use the week-games API instead of contest-games API
-      const response = await fetch(
-        `/api/week-games?year=${contest.year}&seasonType=${contest.seasonType}&week=${contest.weekNumber}`,
-      );
-      if (!response.ok) {
-        throw new Error(`Failed to fetch games: ${response.statusText}`);
-      }
-
-      const allWeekGames: GameInfo[] = await response.json();
-
-      // Filter to only the games in this contest
-      const games: GameInfo[] = allWeekGames.filter(weekGame =>
-        gameIds.some(contestGameId => contestGameId === weekGame.gameId),
-      );
-
-      setGames(
-        games.sort(
-          (a, b) =>
-            new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
-        ),
-      );
-    } catch (error) {
-      console.error("Error fetching game info:", error);
-      toast.error("Failed to load game information");
-    }
-  };
+  }, [contest, fetchGameInfo]);
 
   const handleSubmit = async () => {
     if (!contest || !account) return;

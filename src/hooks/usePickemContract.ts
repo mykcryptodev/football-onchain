@@ -67,13 +67,6 @@ export function usePickemContract() {
         transactionHash: result.transactionHash,
       });
 
-      // Extract contest ID from events
-      const _event = receipt.logs.find(
-        log =>
-          log.topics[0] ===
-          "0x" + "7d3e2d97e8d8a0f9e7c6a8c6d0e6f5e4d3c2b1a098765432", // ContestCreated event signature
-      );
-
       return receipt;
     } catch (error) {
       console.error("Error creating contest:", error);

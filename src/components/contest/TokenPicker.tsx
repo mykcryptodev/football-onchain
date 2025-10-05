@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { chain, usdc } from "@/constants";
-import { useTokens, type Token } from "@/hooks/useTokens";
+import { type Token, useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -40,7 +40,6 @@ export function TokenPicker({
     loading,
     loadingMore,
     hasMore,
-    searchQuery: _hookSearchQuery,
     fetchTokens,
     loadMoreTokens,
     updateSearchQuery,

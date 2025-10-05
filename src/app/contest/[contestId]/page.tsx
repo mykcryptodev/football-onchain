@@ -177,11 +177,8 @@ export default function ContestPage() {
     isLoading: isProcessingPayouts,
   } = useProcessPayouts();
 
-  const {
-    handleFetchGameData,
-    isLoading: isSyncingScoresOnchain,
-    error: _syncScoresOnchainError,
-  } = useFetchGameData();
+  const { handleFetchGameData, isLoading: isSyncingScoresOnchain } =
+    useFetchGameData();
 
   const handleClaimBoxes = async () => {
     if (!selectedBoxes || selectedBoxes.length === 0) {
@@ -199,7 +196,12 @@ export default function ContestPage() {
         selectedBoxes,
         contest.id,
         undefined,
-        contest,
+        {
+          boxCost: {
+            amount: contest.boxCost.amount.toString(),
+            currency: contest.boxCost.currency,
+          },
+        },
         // onSuccess callback
         async () => {
           // Clear selected boxes after successful claim
@@ -243,7 +245,7 @@ export default function ContestPage() {
         throw new Error("Failed to invalidate cache");
       }
 
-      const _result = await response.json();
+      await response.json();
     } catch (error) {
       console.error("Error invalidating cache:", error);
       throw error;

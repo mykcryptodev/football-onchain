@@ -192,7 +192,7 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 pt-2">
               <div className="space-y-2">
-                {gameScore.scoringPlays.map((play, _index) => {
+                {gameScore.scoringPlays.map(play => {
                   const winningBox = getWinningBoxForPlay(play);
                   const isScoreChangesStrategy =
                     contest &&

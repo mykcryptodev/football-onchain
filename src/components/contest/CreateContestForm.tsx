@@ -42,7 +42,7 @@ import {
   usdc,
 } from "@/constants";
 import { abi } from "@/constants/abis/contests";
-import { useTokens, type Token } from "@/hooks/useTokens";
+import { type Token, useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -143,14 +143,7 @@ export function CreateContestForm() {
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
-  const {
-    tokens,
-    loading: _loadingTokens,
-    loadingMore: _loadingMoreTokens,
-    hasMore: _hasMoreTokens,
-    fetchTokens,
-    loadMoreTokens: _loadMoreTokens,
-  } = useTokens();
+  const { tokens, fetchTokens } = useTokens();
 
   const form = useForm<CreateContestFormValues>({
     resolver: zodResolver(createContestSchema),
@@ -223,7 +216,7 @@ export function CreateContestForm() {
         payoutStrategyAddress, // payoutStrategy
       ],
     });
-  }, [form, tokens]);
+  }, [form, selectedToken]);
 
   // Fetch current week/season on component mount
   useEffect(() => {
@@ -294,7 +287,6 @@ export function CreateContestForm() {
   const seasonType = form.watch("seasonType");
   const week = form.watch("week");
   const boxCost = form.watch("boxCost");
-  const _currency = form.watch("currency");
 
   // Calculate USD estimation
   const calculateUsdEstimation = useCallback(() => {
@@ -326,7 +318,7 @@ export function CreateContestForm() {
     }
   }, [seasonType, week, form]);
 
-  function onSubmit(_data: CreateContestFormValues) {
+  function onSubmit() {
     // This function is now handled by the TransactionButton
     // The form validation will still work, but the actual submission
     // is handled by the createContestCreationTx function
@@ -621,7 +613,7 @@ export function CreateContestForm() {
               <FormField
                 control={form.control}
                 name="currency"
-                render={({ field: _field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Currency</FormLabel>
                     <FormControl>
@@ -738,7 +730,7 @@ export function CreateContestForm() {
                       "An error occurred while creating the contest.",
                   });
                 }}
-                onTransactionConfirmed={_result => {
+                onTransactionConfirmed={() => {
                   toast.success("Contest created successfully!", {
                     description: "Your contest has been created onchain.",
                   });

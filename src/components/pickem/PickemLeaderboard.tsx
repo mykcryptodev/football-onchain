@@ -42,6 +42,7 @@ export default function PickemLeaderboard({
 
   useEffect(() => {
     fetchLeaderboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId]);
 
   const fetchLeaderboard = async () => {
