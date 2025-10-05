@@ -9,9 +9,9 @@ import {
   generateFarcasterMetadata,
   getBaseUrl,
 } from "@/lib/farcaster-metadata";
+import { FarcasterProvider } from "@/providers/Farcaster";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
-import { FarcasterProvider } from "@/providers/Farcaster";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({

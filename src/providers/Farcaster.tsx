@@ -1,10 +1,11 @@
 "use client";
 
-import { client } from "@/providers/Thirdweb";
-import { sdk } from "@farcaster/frame-sdk";
 import { useCallback, useEffect, useState } from "react";
+import { sdk } from "@farcaster/frame-sdk";
 import { useConnect } from "thirdweb/react";
 import { EIP1193 } from "thirdweb/wallets";
+
+import { client } from "@/providers/Thirdweb";
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
