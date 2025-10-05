@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   chain,
   chainlinkGasLimit,
@@ -226,145 +227,179 @@ export default function PickemContestList() {
     );
   }
 
+  const renderContestCard = (contest: PickemContest) => (
+    <Card key={contest.id} className="hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-semibold">
+              {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {contest.year} Season • {contest.gameIds.length} Games
+            </p>
+          </div>
+          <Badge
+            variant={
+              contest.submissionDeadline > Date.now() ? "default" : "secondary"
+            }
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            {getTimeRemaining(contest.submissionDeadline)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Entry Fee</p>
+              <p className="font-medium">
+                {contest.currency === "ETH"
+                  ? `${formatEther(contest.entryFee)} ETH`
+                  : `${Number(contest.entryFee) / 1e6} USDC`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Prize Pool</p>
+              <p className="font-medium">
+                {contest.currency === "ETH"
+                  ? `${formatEther(contest.totalPrizePool)} ETH`
+                  : `${Number(contest.totalPrizePool) / 1e6} USDC`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Entries</p>
+              <p className="font-medium">{contest.totalEntries}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Payout</p>
+              <p className="font-medium">
+                {PAYOUT_TYPE_LABELS[contest.payoutType]}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Link href={`/pickem/${contest.id}`} className="w-full block mb-2">
+          <Button
+            disabled={contest.submissionDeadline <= Date.now()}
+            className="w-full"
+          >
+            {contest.submissionDeadline <= Date.now()
+              ? "Submissions Closed"
+              : "Make Your Picks"}
+          </Button>
+        </Link>
+
+        {!contest.gamesFinalized && (
+          <>
+            <Button
+              onClick={() => handleFetchWeekResults(contest)}
+              disabled={fetchingResults[contest.id] || !account}
+              variant="outline"
+              size="sm"
+              className="w-full mb-2"
+            >
+              {fetchingResults[contest.id]
+                ? "Requesting..."
+                : "Fetch Week Results"}
+            </Button>
+            <Button
+              onClick={() => handleCalculateWinners(contest.id)}
+              disabled={calculatingWinners[contest.id] || !account}
+              variant="secondary"
+              size="sm"
+              className="w-full mb-2"
+            >
+              {calculatingWinners[contest.id]
+                ? "Calculating..."
+                : "Calculate Winners"}
+            </Button>
+          </>
+        )}
+
+        {contest.gamesFinalized && !contest.payoutComplete && (
+          <Button
+            onClick={() => handleClaimAllPrizes(contest.id)}
+            disabled={claimingPrizes[contest.id] || !account}
+            variant="secondary"
+            size="sm"
+            className="w-full"
+          >
+            {claimingPrizes[contest.id] ? "Claiming..." : "Claim All Prizes"}
+          </Button>
+        )}
+
+        {contest.gamesFinalized && contest.payoutComplete && (
+          <div className="text-center py-3 px-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground font-medium">
+              ✓ All prizes have been distributed
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <>
-      <div className="space-y-4">
-        {contests.map(contest => (
-          <Card key={contest.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {SEASON_TYPE_LABELS[contest.seasonType]} Week{" "}
-                    {contest.weekNumber}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {contest.year} Season • {contest.gameIds.length} Games
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    contest.submissionDeadline > Date.now()
-                      ? "default"
-                      : "secondary"
-                  }
-                >
-                  <Clock className="h-3 w-3 mr-1" />
-                  {getTimeRemaining(contest.submissionDeadline)}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Entry Fee</p>
-                    <p className="font-medium">
-                      {contest.currency === "ETH"
-                        ? `${formatEther(contest.entryFee)} ETH`
-                        : `${Number(contest.entryFee) / 1e6} USDC`}
-                    </p>
-                  </div>
-                </div>
+    <Tabs defaultValue="active" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="active">Active</TabsTrigger>
+        <TabsTrigger value="completed">Completed</TabsTrigger>
+        <TabsTrigger value="all">All</TabsTrigger>
+      </TabsList>
 
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Prize Pool</p>
-                    <p className="font-medium">
-                      {contest.currency === "ETH"
-                        ? `${formatEther(contest.totalPrizePool)} ETH`
-                        : `${Number(contest.totalPrizePool) / 1e6} USDC`}
-                    </p>
-                  </div>
-                </div>
+      <TabsContent value="active" className="space-y-4">
+        {contests.filter(contest => !contest.payoutComplete).length === 0 ? (
+          <div className="text-center py-12">
+            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Active Contests</h3>
+            <p className="text-muted-foreground">
+              All contests have completed payouts
+            </p>
+          </div>
+        ) : (
+          contests
+            .filter(contest => !contest.payoutComplete)
+            .map(contest => renderContestCard(contest))
+        )}
+      </TabsContent>
 
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Entries</p>
-                    <p className="font-medium">{contest.totalEntries}</p>
-                  </div>
-                </div>
+      <TabsContent value="completed" className="space-y-4">
+        {contests.filter(contest => contest.payoutComplete).length === 0 ? (
+          <div className="text-center py-12">
+            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">
+              No Completed Contests
+            </h3>
+            <p className="text-muted-foreground">
+              No contests have completed payouts yet
+            </p>
+          </div>
+        ) : (
+          contests
+            .filter(contest => contest.payoutComplete)
+            .map(contest => renderContestCard(contest))
+        )}
+      </TabsContent>
 
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Payout</p>
-                    <p className="font-medium">
-                      {PAYOUT_TYPE_LABELS[contest.payoutType]}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Link
-                href={`/pickem/${contest.id}`}
-                className="w-full block mb-2"
-              >
-                <Button
-                  disabled={contest.submissionDeadline <= Date.now()}
-                  className="w-full"
-                >
-                  {contest.submissionDeadline <= Date.now()
-                    ? "Submissions Closed"
-                    : "Make Your Picks"}
-                </Button>
-              </Link>
-
-              {!contest.gamesFinalized && (
-                <>
-                  <Button
-                    onClick={() => handleFetchWeekResults(contest)}
-                    disabled={fetchingResults[contest.id] || !account}
-                    variant="outline"
-                    size="sm"
-                    className="w-full mb-2"
-                  >
-                    {fetchingResults[contest.id]
-                      ? "Requesting..."
-                      : "Fetch Week Results"}
-                  </Button>
-                  <Button
-                    onClick={() => handleCalculateWinners(contest.id)}
-                    disabled={calculatingWinners[contest.id] || !account}
-                    variant="secondary"
-                    size="sm"
-                    className="w-full mb-2"
-                  >
-                    {calculatingWinners[contest.id]
-                      ? "Calculating..."
-                      : "Calculate Winners"}
-                  </Button>
-                </>
-              )}
-
-              {contest.gamesFinalized && !contest.payoutComplete && (
-                <Button
-                  onClick={() => handleClaimAllPrizes(contest.id)}
-                  disabled={claimingPrizes[contest.id] || !account}
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                >
-                  {claimingPrizes[contest.id]
-                    ? "Claiming..."
-                    : "Claim All Prizes"}
-                </Button>
-              )}
-
-              {contest.gamesFinalized && contest.payoutComplete && (
-                <div className="text-center py-3 px-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground font-medium">
-                    ✓ All prizes have been distributed
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </>
+      <TabsContent value="all" className="space-y-4">
+        {contests.map(contest => renderContestCard(contest))}
+      </TabsContent>
+    </Tabs>
   );
 }

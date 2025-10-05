@@ -33,7 +33,7 @@ export default function PickemPage() {
         className="space-y-4"
       >
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="contests">Active Contests</TabsTrigger>
+          <TabsTrigger value="contests">Pickem Contests</TabsTrigger>
           <TabsTrigger value="create">Create Contest</TabsTrigger>
           <TabsTrigger value="my-pickems">My Pick&apos;ems</TabsTrigger>
           <TabsTrigger value="debug">Debug</TabsTrigger>
