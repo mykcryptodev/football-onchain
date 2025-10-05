@@ -95,12 +95,12 @@ export default function MyPickems() {
             year: Number(contest.year),
             picks: [], // We'll need to fetch these from the contract if needed
             gameIds: contest.gameIds.map(id => id.toString()),
-            correctPicks: correctPicks,
+            correctPicks: Number(correctPicks),
             totalGames: contest.gameIds.length,
             tiebreakerPoints: Number(tiebreakerPoints),
             submissionTime: Number(submissionTime) * 1000,
             prizeWon: BigInt(0), // Calculate based on winner status
-            claimed: claimed,
+            claimed: Number(claimed) === 1,
             rank: 0, // Would need to calculate from contest winners
           });
         } catch (err) {
@@ -128,7 +128,7 @@ export default function MyPickems() {
   };
 
   const getStatusBadge = (nft: PickemNFT) => {
-    if (nft.correctPicks === 0 && nft.totalGames > 0) {
+    if (Number(nft.correctPicks) === 0 && nft.totalGames > 0) {
       return (
         <Badge variant="outline">
           <Clock className="h-3 w-3 mr-1" />
@@ -144,7 +144,7 @@ export default function MyPickems() {
         </Badge>
       );
     }
-    if (nft.prizeWon > 0) {
+    if (Number(nft.prizeWon) > 0) {
       return (
         <Badge variant="default">
           <Trophy className="h-3 w-3 mr-1" />
@@ -210,15 +210,15 @@ export default function MyPickems() {
 
   // Calculate stats
   const totalNFTs = nfts.length;
-  const totalWins = nfts.filter(nft => nft.prizeWon > 0).length;
+  const totalWins = nfts.filter(nft => Number(nft.prizeWon) > 0).length;
   const totalPrizes = nfts.reduce((sum, nft) => sum + Number(nft.prizeWon), 0);
   const avgAccuracy =
     nfts
-      .filter(nft => nft.correctPicks > 0)
+      .filter(nft => Number(nft.correctPicks) > 0)
       .reduce(
-        (sum, nft) => sum + (nft.correctPicks / nft.totalGames) * 100,
+        (sum, nft) => sum + (Number(nft.correctPicks) / nft.totalGames) * 100,
         0,
-      ) / nfts.filter(nft => nft.correctPicks > 0).length || 0;
+      ) / nfts.filter(nft => Number(nft.correctPicks) > 0).length || 0;
 
   return (
     <div className="space-y-6">
@@ -305,7 +305,7 @@ export default function MyPickems() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Performance */}
-                {nft.correctPicks > 0 && (
+                {Number(nft.correctPicks) > 0 && (
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Correct Picks</span>
@@ -314,14 +314,17 @@ export default function MyPickems() {
                       </span>
                     </div>
                     <Progress
-                      value={(nft.correctPicks / nft.totalGames) * 100}
+                      value={(Number(nft.correctPicks) / nft.totalGames) * 100}
                       className="h-2"
                     />
                     <p
-                      className={`text-sm font-medium ${getAccuracyColor((nft.correctPicks / nft.totalGames) * 100)}`}
+                      className={`text-sm font-medium ${getAccuracyColor((Number(nft.correctPicks) / nft.totalGames) * 100)}`}
                     >
-                      {((nft.correctPicks / nft.totalGames) * 100).toFixed(1)}%
-                      Accuracy
+                      {(
+                        (Number(nft.correctPicks) / nft.totalGames) *
+                        100
+                      ).toFixed(1)}
+                      % Accuracy
                     </p>
                   </div>
                 )}
@@ -342,7 +345,7 @@ export default function MyPickems() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  {nft.prizeWon > 0 && !nft.claimed && (
+                  {Number(nft.prizeWon) > 0 && !nft.claimed && (
                     <Button
                       onClick={() =>
                         handleClaimPrize(nft.tokenId, nft.contestId)
@@ -367,7 +370,7 @@ export default function MyPickems() {
 
         <TabsContent value="active" className="space-y-4">
           {nfts
-            .filter(nft => nft.correctPicks === 0)
+            .filter(nft => Number(nft.correctPicks) === 0)
             .map(nft => (
               <Card key={nft.tokenId}>
                 {/* Same card content as above */}
@@ -390,7 +393,7 @@ export default function MyPickems() {
 
         <TabsContent value="completed" className="space-y-4">
           {nfts
-            .filter(nft => nft.correctPicks > 0)
+            .filter(nft => Number(nft.correctPicks) > 0)
             .map(nft => (
               <Card key={nft.tokenId}>
                 {/* Same card content as above */}
