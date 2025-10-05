@@ -457,10 +457,9 @@ export default function PickemContestClient({
         contestId={contest.id}
         gameIds={contest.gameIds}
         gamesFinalized={contest.gamesFinalized}
-        totalEntries={contest.totalEntries}
-        year={contest.year}
         seasonType={contest.seasonType}
         weekNumber={contest.weekNumber}
+        year={contest.year}
       />
     </div>
   );

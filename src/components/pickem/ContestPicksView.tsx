@@ -53,7 +53,6 @@ interface ContestPicksViewProps {
   contestId: number;
   gameIds: string[];
   gamesFinalized: boolean;
-  totalEntries: number;
   year: number;
   seasonType: number;
   weekNumber: number;
@@ -63,7 +62,6 @@ export default function ContestPicksView({
   contestId,
   gameIds,
   gamesFinalized,
-  totalEntries,
   year,
   seasonType,
   weekNumber,
@@ -207,9 +205,9 @@ export default function ContestPicksView({
               >
                 {game.awayLogo && (
                   <img
-                    src={game.awayLogo}
                     alt={game.awayTeam}
                     className="w-5 h-5"
+                    src={game.awayLogo}
                   />
                 )}
                 <span className="text-xs whitespace-nowrap">
@@ -231,9 +229,9 @@ export default function ContestPicksView({
                 </span>
                 {game.homeLogo && (
                   <img
-                    src={game.homeLogo}
                     alt={game.homeTeam}
                     className="w-5 h-5"
+                    src={game.homeLogo}
                   />
                 )}
               </div>
@@ -369,11 +367,7 @@ export default function ContestPicksView({
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
                               <AccountName
-                                loadingComponent={
-                                  <span className="text-sm text-muted-foreground">
-                                    Loading...
-                                  </span>
-                                }
+                                className="font-medium text-sm"
                                 fallbackComponent={
                                   <AccountAddress
                                     formatFn={addr =>
@@ -381,20 +375,24 @@ export default function ContestPicksView({
                                     }
                                   />
                                 }
-                                className="font-medium text-sm"
+                                loadingComponent={
+                                  <span className="text-sm text-muted-foreground">
+                                    Loading...
+                                  </span>
+                                }
                               />
                               {isUserPick && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge className="text-xs" variant="secondary">
                                   You
                                 </Badge>
                               )}
                             </div>
                             {!isUserPick && (
                               <AccountAddress
+                                className="text-xs text-muted-foreground"
                                 formatFn={addr =>
                                   `${addr.slice(0, 6)}...${addr.slice(-4)}`
                                 }
-                                className="text-xs text-muted-foreground"
                               />
                             )}
                           </div>
