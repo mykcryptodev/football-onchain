@@ -24,9 +24,10 @@ interface ContestData {
 export default async function PickemContestPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const contestId = parseInt(params.id);
+  const { id } = await params;
+  const contestId = parseInt(id);
 
   if (isNaN(contestId)) {
     notFound();

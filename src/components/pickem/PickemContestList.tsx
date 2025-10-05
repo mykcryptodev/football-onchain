@@ -58,7 +58,6 @@ export default function PickemContestList() {
       for (let i = 0; i < nextId; i++) {
         try {
           const contest = await getContest(i);
-          console.log(`Contest ${i}:`, contest);
           if (contest && Number(contest.id) === i) {
             // Convert bigint values and format for frontend
             fetchedContests.push({

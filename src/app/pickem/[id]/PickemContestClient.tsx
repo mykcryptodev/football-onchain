@@ -14,8 +14,6 @@ import {
   Calendar,
   Clock,
   DollarSign,
-  Home,
-  Plane,
   Trophy,
   Users,
 } from "lucide-react";
@@ -49,6 +47,10 @@ interface GameInfo {
   homeRecord: string;
   awayRecord: string;
   kickoff: string;
+  homeLogo?: string;
+  awayLogo?: string;
+  homeAbbreviation?: string;
+  awayAbbreviation?: string;
 }
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
@@ -93,56 +95,27 @@ export default function PickemContestClient({
 
   const fetchGameInfo = async (gameIds: string[]) => {
     try {
-      // TODO: Fetch actual game info from oracle or cached data
-      // This will call the oracle to get game details for the contest's gameIds
+      // Use the week-games API instead of contest-games API
+      const response = await fetch(
+        `/api/week-games?year=${contest.year}&seasonType=${contest.seasonType}&week=${contest.weekNumber}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch games: ${response.statusText}`);
+      }
 
-      // Mock data for now
-      const mockGames: GameInfo[] = gameIds.map((id, index) => ({
-        gameId: id,
-        homeTeam: [
-          "Chiefs",
-          "Bills",
-          "Ravens",
-          "Dolphins",
-          "Cowboys",
-          "Eagles",
-          "49ers",
-          "Rams",
-          "Packers",
-          "Bears",
-          "Vikings",
-          "Lions",
-          "Bucs",
-          "Saints",
-          "Panthers",
-          "Falcons",
-        ][index % 16],
-        awayTeam: [
-          "Patriots",
-          "Jets",
-          "Steelers",
-          "Browns",
-          "Giants",
-          "Commanders",
-          "Seahawks",
-          "Cardinals",
-          "Falcons",
-          "Panthers",
-          "Colts",
-          "Texans",
-          "Raiders",
-          "Broncos",
-          "Chargers",
-          "Jaguars",
-        ][index % 16],
-        homeRecord: "(7-2)",
-        awayRecord: "(5-4)",
-        kickoff: new Date(
-          Date.now() + (index * 3 + 24) * 60 * 60 * 1000,
-        ).toLocaleString(),
-      }));
+      const allWeekGames: GameInfo[] = await response.json();
 
-      setGames(mockGames);
+      // Filter to only the games in this contest
+      const games: GameInfo[] = allWeekGames.filter(weekGame =>
+        gameIds.some(contestGameId => contestGameId === weekGame.gameId),
+      );
+
+      setGames(
+        games.sort(
+          (a, b) =>
+            new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+        ),
+      );
     } catch (error) {
       console.error("Error fetching game info:", error);
       toast.error("Failed to load game information");
@@ -312,7 +285,12 @@ export default function PickemContestClient({
               <div key={game.gameId} className="p-4 border rounded-lg">
                 <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
                   <span>Game {index + 1}</span>
-                  <span>{game.kickoff}</span>
+                  <span>
+                    {(() => {
+                      const kickoffDate = new Date(game.kickoff);
+                      return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+                    })()}
+                  </span>
                 </div>
 
                 <RadioGroup
@@ -334,10 +312,19 @@ export default function PickemContestClient({
                         htmlFor={`${game.gameId}-away`}
                         className="flex-1 cursor-pointer"
                       >
-                        <div className="flex items-center gap-2">
-                          <Plane className="h-4 w-4" />
-                          <span className="font-medium">{game.awayTeam}</span>
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 justify-between w-full">
+                          <img
+                            src={game.awayLogo}
+                            alt={`${game.awayTeam} logo`}
+                            className="h-6 w-6 flex-shrink-0"
+                          />
+                          <span className="font-medium sm:hidden block">
+                            {game.awayAbbreviation}
+                          </span>
+                          <span className="font-medium hidden sm:block">
+                            {game.awayTeam}
+                          </span>
+                          <span className="text-sm text-muted-foreground text-nowrap">
                             {game.awayRecord}
                           </span>
                         </div>
@@ -356,10 +343,19 @@ export default function PickemContestClient({
                         htmlFor={`${game.gameId}-home`}
                         className="flex-1 cursor-pointer"
                       >
-                        <div className="flex items-center gap-2">
-                          <Home className="h-4 w-4" />
-                          <span className="font-medium">{game.homeTeam}</span>
-                          <span className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2 justify-between w-full">
+                          <img
+                            src={game.homeLogo}
+                            alt={`${game.homeTeam} logo`}
+                            className="h-6 w-6 flex-shrink-0"
+                          />
+                          <span className="font-medium sm:hidden block">
+                            {game.homeAbbreviation}
+                          </span>
+                          <span className="font-medium hidden sm:block">
+                            {game.homeTeam}
+                          </span>
+                          <span className="text-sm text-muted-foreground text-nowrap">
                             {game.homeRecord}
                           </span>
                         </div>
@@ -451,4 +447,3 @@ export default function PickemContestClient({
     </div>
   );
 }
-
