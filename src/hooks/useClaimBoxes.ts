@@ -17,6 +17,13 @@ import { chain, contests } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
 import { client } from "@/providers/Thirdweb";
 
+interface ContestData {
+  boxCost?: {
+    amount: string;
+    currency: string;
+  };
+}
+
 /**
  * Hook for claiming boxes in contests.
  *
@@ -46,7 +53,7 @@ export function useClaimBoxes() {
     boxNumbers: number[],
     contestId: number,
     playerAddress?: string,
-    contestData?: unknown,
+    contestData?: ContestData,
     onSuccess?: () => void,
     onError?: (error: Error) => void,
   ) => {

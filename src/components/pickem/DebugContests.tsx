@@ -10,10 +10,16 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 export default function DebugContests() {
   const account = useActiveAccount();
   const { getNextContestId, getContest } = usePickemContract();
-  const [debugInfo, setDebugInfo] = useState<{
-    nextContestId: string;
-    contests: unknown[];
-  } | null>(null);
+  const [debugInfo, setDebugInfo] = useState<
+    | {
+        nextContestId: string;
+        totalContests: string;
+        contests: unknown[];
+        account: string;
+      }
+    | { error: string }
+    | null
+  >(null);
   const [loading, setLoading] = useState(false);
 
   const debugContests = async () => {
@@ -34,7 +40,7 @@ export default function DebugContests() {
           console.log(`✅ Contest ${i}:`, contest);
           console.log(`Contest ${i} id:`, contest?.id, `Expected: ${i}`);
 
-          if (contest && contest.id === i) {
+          if (contest && contest.id === BigInt(i)) {
             contests.push({
               id: Number(contest.id),
               creator: contest.creator,
@@ -47,7 +53,6 @@ export default function DebugContests() {
               totalEntries: Number(contest.totalEntries),
               submissionDeadline: Number(contest.submissionDeadline),
               gamesFinalized: contest.gamesFinalized,
-              payoutType: contest.payoutType,
               gameIds: contest.gameIds.map(id => id.toString()),
             });
           }
@@ -57,8 +62,8 @@ export default function DebugContests() {
       }
 
       setDebugInfo({
-        nextContestId: Number(nextId),
-        totalContests: contests.length,
+        nextContestId: nextId.toString(),
+        totalContests: contests.length.toString(),
         contests: contests,
         account: account.address,
       });
@@ -70,7 +75,9 @@ export default function DebugContests() {
       });
     } catch (error) {
       console.error("💥 Debug error:", error);
-      setDebugInfo({ error: error.message });
+      setDebugInfo({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
     } finally {
       setLoading(false);
     }

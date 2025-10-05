@@ -42,7 +42,7 @@ import {
   usdc,
 } from "@/constants";
 import { abi } from "@/constants/abis/contests";
-import { useTokens } from "@/hooks/useTokens";
+import { useTokens, type Token } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -142,16 +142,7 @@ export function CreateContestForm() {
   const [, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
-  const [selectedToken, setSelectedToken] = useState<{
-    address: string;
-    symbol: string;
-    decimals: number;
-    name: string;
-    priceUsd?: number;
-    chainId?: number;
-    iconUri?: string;
-    prices?: { usd?: number };
-  } | null>(null);
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const {
     tokens,
     loading: _loadingTokens,
@@ -649,10 +640,7 @@ export function CreateContestForm() {
                             >
                               <TokenIcon
                                 className="size-6 flex-shrink-0"
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                iconResolver={resolveTokenIcon(
-                                  selectedToken as any,
-                                )}
+                                iconResolver={resolveTokenIcon(selectedToken)}
                               />
                             </TokenProvider>
                             <div className="flex flex-col items-start text-left min-w-0 flex-1">
