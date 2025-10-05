@@ -766,6 +766,15 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
     // ============ View Functions ============
 
+    /**
+     * @notice Get game IDs for a specific contest
+     * @param contestId The contest ID
+     * @return gameIds Array of ESPN game IDs
+     */
+    function getContestGameIds(uint256 contestId) external view returns (uint256[] memory) {
+        return contests[contestId].gameIds;
+    }
+
     function getContest(uint256 contestId) external view returns (PickemContest memory) {
         return contests[contestId];
     }
