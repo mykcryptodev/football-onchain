@@ -4,6 +4,7 @@ import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ZERO_ADDRESS } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
 
@@ -93,11 +94,7 @@ export default function PickemContestList() {
               weekNumber: contest.weekNumber,
               year: Number(contest.year),
               entryFee: contest.entryFee,
-              currency:
-                contest.currency ===
-                "0x0000000000000000000000000000000000000000"
-                  ? "ETH"
-                  : "USDC",
+              currency: contest.currency === ZERO_ADDRESS ? "ETH" : "USDC",
               totalPrizePool: contest.totalPrizePool,
               totalEntries: Number(contest.totalEntries),
               submissionDeadline: Number(contest.submissionDeadline) * 1000, // Convert to milliseconds
@@ -304,6 +301,12 @@ export default function PickemContestList() {
             {contest.submissionDeadline <= Date.now()
               ? "Submissions Closed"
               : "Make Your Picks"}
+          </Button>
+        </Link>
+
+        <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
+          <Button className="w-full" size="sm" variant="outline">
+            View All Picks
           </Button>
         </Link>
 
