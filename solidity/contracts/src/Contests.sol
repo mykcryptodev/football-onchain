@@ -256,7 +256,7 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
 
         // Validate game state with the payout strategy
         IPayoutStrategy strategy = IPayoutStrategy(contest.payoutStrategy);
-        (bool isValid, string memory reason) = strategy.validateGameState(contest.gameId, gameScoreOracle);
+        (bool isValid,) = strategy.validateGameState(contest.gameId, gameScoreOracle);
         if (!isValid) revert RewardsNotClaimable();
 
         // Calculate total pot after treasury fee
@@ -339,14 +339,26 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
     }
 
     function fetchFreshGameScores(
-        string[] memory args,
         uint64 subscriptionId,
         uint32 gasLimit,
         bytes32 jobId,
         uint256 gameId
     ) external {
         gameScoreOracle.fetchGameScores(
-            args,
+            subscriptionId,
+            gasLimit,
+            jobId,
+            gameId
+        );
+    }
+
+    function fetchFreshScoreChanges(
+        uint64 subscriptionId,
+        uint32 gasLimit,
+        bytes32 jobId,
+        uint256 gameId
+    ) external {
+        gameScoreOracle.fetchScoreChanges(
             subscriptionId,
             gasLimit,
             jobId,
@@ -521,8 +533,9 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
      * @dev Check if a reward has been paid for a quarter (for Boxes contract compatibility)
      * This is a simplified version that checks if any payout has been made
      * In the new system, we don't track quarters specifically anymore
+     * TODO: we need to update the contest to check for unpaid winners
      */
-    function isRewardPaidForQuarter(uint256 contestId, uint8 quarter) external view returns (bool) {
+    function hasUnclaimedRewards(uint256 contestId, uint8 quarter) external pure returns (bool) {
         // For now, return false to indicate rewards are always claimable
         // The new payout system handles this differently through processPayouts()
         return false;

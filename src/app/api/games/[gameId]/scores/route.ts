@@ -17,11 +17,6 @@ export async function GET(
       );
     }
 
-    console.log(
-      "Fetching game scores for game ID:",
-      `${ESPN_BASE_URL}?event=${gameId}`,
-    );
-
     // Fetch game data from ESPN API
     const response = await fetch(`${ESPN_BASE_URL}?event=${gameId}`, {
       next: { revalidate: 30 }, // revalidate every 30 seconds

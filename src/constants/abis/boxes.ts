@@ -1,4 +1,6 @@
-export const abi = [
+import { Abi } from "thirdweb/utils";
+
+export const abi: Abi = [
   { inputs: [], stateMutability: "nonpayable", type: "constructor" },
   { inputs: [], name: "ERC721EnumerableForbiddenBatchMint", type: "error" },
   {

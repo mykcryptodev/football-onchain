@@ -54,11 +54,8 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
 
   // Function to get the owner of a specific box
   const getBoxOwner = (tokenId: number) => {
-    console.log("Looking for box owner:", { tokenId, contestId: contest?.id });
-    console.log("Available boxOwners:", boxOwners?.length, "boxes");
     if (!boxOwners) return null;
     const owner = boxOwners.find(box => box.tokenId === tokenId);
-    console.log("Found owner:", owner);
     return owner;
   };
 

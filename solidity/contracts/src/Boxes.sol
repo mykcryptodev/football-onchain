@@ -84,6 +84,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
         );
     }
 
+    // TODO: we need to update the contest to check for unpaid winners
     function _checkWinningStatus(uint256 contestId, uint256 tokenId) private view returns (bool isWinner, bool hasUnclaimedRewards) {
         ContestsManager contestsManager = contests.contestsManager();
         IContestTypes.GameScore memory scores = contests.getGameScores(contestsManager.getGameIdForContest(contestId));
@@ -100,7 +101,7 @@ contract Boxes is ERC721, ERC721Enumerable, Ownable {
 
         if (isWinner) {
             for (uint256 i = 0; i < winningQuarters.length; i++) {
-                if (!contests.isRewardPaidForQuarter(contestId, winningQuarters[i])) {
+                if (!contests.hasUnclaimedRewards(contestId, winningQuarters[i])) {
                     hasUnclaimedRewards = true;
                     break;
                 }

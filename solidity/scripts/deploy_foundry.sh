@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Football Boxes Foundry Deployment Script
-# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK] [--skip-estimation]
+# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK] [RPC_URL] [--skip-estimation]
 
 set -e
 
@@ -32,19 +32,22 @@ print_error() {
 # Check if private key is provided
 if [ -z "$1" ]; then
     print_error "Private key is required!"
-    echo "Usage: $0 <PRIVATE_KEY> [NETWORK]"
+    echo "Usage: $0 <PRIVATE_KEY> [NETWORK] [RPC_URL] [--skip-estimation]"
     echo ""
     echo "Supported networks:"
     echo "  - base-sepolia (default)"
     echo "  - base"
     echo ""
-    echo "Example:"
+    echo "Examples:"
     echo "  $0 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base-sepolia"
+    echo "  $0 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base https://mainnet.base.org"
+    echo "  $0 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef base https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY"
     exit 1
 fi
 
 PRIVATE_KEY=$1
 NETWORK=${2:-"base-sepolia"}
+CUSTOM_RPC_URL=$3
 SKIP_ESTIMATION=false
 
 # Check for --skip-estimation flag
@@ -63,23 +66,28 @@ if [[ ! $PRIVATE_KEY =~ ^0x[0-9a-fA-F]{64}$ ]]; then
     exit 1
 fi
 
-# Set RPC URLs based on network
-case $NETWORK in
-    "base-sepolia")
-        RPC_URL="https://sepolia.base.org"
-        ;;
-    "base")
-        RPC_URL="https://mainnet.base.org"
-        ;;
-    *)
-        print_error "Unsupported network: $NETWORK"
-        echo "Supported networks: base-sepolia, base"
-        exit 1
-        ;;
-esac
+# Set RPC URLs based on network or custom URL
+if [ -n "$CUSTOM_RPC_URL" ]; then
+    RPC_URL="$CUSTOM_RPC_URL"
+    print_info "Using custom RPC URL: $RPC_URL"
+else
+    case $NETWORK in
+        "base-sepolia")
+            RPC_URL="https://sepolia.base.org"
+            ;;
+        "base")
+            RPC_URL="https://mainnet.base.org"
+            ;;
+        *)
+            print_error "Unsupported network: $NETWORK"
+            echo "Supported networks: base-sepolia, base"
+            exit 1
+            ;;
+    esac
+    print_info "Using default RPC URL for $NETWORK: $RPC_URL"
+fi
 
 print_info "Starting deployment on $NETWORK..."
-print_info "RPC URL: $RPC_URL"
 
 # Change to solidity directory
 cd "$(dirname "$0")/.."

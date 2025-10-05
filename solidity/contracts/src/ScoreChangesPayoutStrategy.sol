@@ -87,7 +87,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
                     winner: winner,
                     amount: perScoreChangePayout,
                     reason: string(abi.encodePacked("Score Change #", _toString(i + 1))),
-                    quarter: change.quarter,
+                    quarter: 0, // Score changes are not quarter-specific
                     eventIndex: i
                 });
                 currentIndex++;
@@ -195,7 +195,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
         }
 
         // Check if we have score change data
-        uint8 scoreChangeCount = gameScoreOracle.getScoreChangeCount(gameId);
+        uint8 scoreChangeCount = gameScoreOracle.getTotalScoreChanges(gameId);
         if (scoreChangeCount == 0) {
             return (false, "No score changes recorded yet");
         }

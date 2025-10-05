@@ -35,19 +35,13 @@ export function useRandomNumbers() {
       setIsLoading(true);
       setError(null);
 
-      console.log("Requesting random numbers for contest:", contestId);
-
       // Get the current request price for the random number request
       const requestPrice = await estimateRequestPrice({
         contract: randomNumbersContract,
       });
 
-      // pad the request price by 500x - excess will be refunded and 500x is still very cheap
-      const paddedRequestPrice = requestPrice * BigInt(500);
-      console.log({
-        requestPrice,
-        paddedRequestPrice,
-      });
+      // pad the request price by 1000x - excess will be refunded and 1000x is still very cheap
+      const paddedRequestPrice = requestPrice * BigInt(1000);
 
       const transaction = prepareContractCall({
         contract: contestsContract,
@@ -57,16 +51,7 @@ export function useRandomNumbers() {
         value: paddedRequestPrice,
       });
 
-      // print transaction data that I can put into tenderly for simulation
-      console.log("Transaction data:", transaction);
-      console.log("Padded request price:", paddedRequestPrice);
-      console.log("Request price:", requestPrice);
-      console.log("Contest ID:", contestId);
-
       const result = sendTransaction(transaction, {
-        onSuccess: () => {
-          console.log("Random numbers request submitted successfully:", result);
-        },
         onError: error => {
           console.error("Error requesting random numbers:", error);
         },

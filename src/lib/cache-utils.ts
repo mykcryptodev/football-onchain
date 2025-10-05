@@ -12,9 +12,6 @@ export async function invalidateContestCache(
 
   const cacheKey = getContestCacheKey(contestId, chainId);
   await redis.del(cacheKey);
-  console.log(
-    `Invalidated cache for contest ${contestId} on chain ${chainId || "default"}`,
-  );
 }
 
 /**
@@ -28,9 +25,6 @@ export async function invalidateMultipleContestCaches(
 
   const cacheKeys = contestIds.map(id => getContestCacheKey(id, chainId));
   await redis.del(...cacheKeys);
-  console.log(
-    `Invalidated cache for contests: ${contestIds.join(", ")} on chain ${chainId || "default"}`,
-  );
 }
 
 /**
@@ -59,7 +53,4 @@ export async function setContestInCache(
 
   const cacheKey = getContestCacheKey(contestId, chainId);
   await redis.setex(cacheKey, 3600, data); // 1 hour TTL
-  console.log(
-    `Set cache for contest ${contestId} on chain ${chainId || "default"}`,
-  );
 }

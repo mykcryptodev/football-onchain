@@ -20,6 +20,9 @@
 # production
 /build
 
+# contract deployments
+solidity/broadcast
+
 # misc
 .DS_Store
 *.pem

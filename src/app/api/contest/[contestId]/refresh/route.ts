@@ -7,10 +7,10 @@ export const revalidate = 0;
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { contestId: string } },
+  { params }: { params: Promise<{ contestId: string }> },
 ) {
   try {
-    const { contestId } = params;
+    const { contestId } = await params;
 
     if (!contestId) {
       return NextResponse.json(
@@ -26,11 +26,6 @@ export async function POST(
     if (redis) {
       const cacheKey = getContestCacheKey(contestId, chainId);
       const deleted = await redis.del(cacheKey);
-
-      console.log(
-        `Cache invalidated for contest ${contestId} on chain ${chainId}:`,
-        deleted > 0 ? "success" : "not found",
-      );
 
       const response = NextResponse.json({
         success: true,
@@ -50,7 +45,6 @@ export async function POST(
 
       return response;
     } else {
-      console.log("Redis not configured, cache invalidation skipped");
       const response = NextResponse.json({
         success: true,
         message: "Redis not configured, cache invalidation skipped",

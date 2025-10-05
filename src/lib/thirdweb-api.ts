@@ -1,7 +1,8 @@
 import { BoxOwner } from "@/components/contest/types";
 import { chain, multicall } from "@/constants";
 import { abi as multicallAbi } from "@/constants/abis/multicall";
-import { ZERO_ADDRESS } from "thirdweb";
+import { client } from "@/providers/Thirdweb";
+import { getContract, readContract, ZERO_ADDRESS } from "thirdweb";
 
 /**
  * Get NFT ownership data using Multicall for maximum efficiency
@@ -14,18 +15,6 @@ export async function getNFTOwnershipFromThirdweb(
   const ownersMap = new Map<string, { owner: string }>();
 
   try {
-    console.log(
-      `Fetching NFT ownership using multicall for ${tokenIds.length} tokens`,
-    );
-
-    const { createThirdwebClient, getContract, readContract } = await import(
-      "thirdweb"
-    );
-
-    const client = createThirdwebClient({
-      clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
-    });
-
     // Get the multicall contract
     const multicallContract = getContract({
       client,
@@ -49,8 +38,6 @@ export async function getNFTOwnershipFromThirdweb(
       };
     });
 
-    console.log(`Executing multicall with ${calls.length} calls`);
-
     // Execute the multicall
     const result = await readContract({
       contract: multicallContract,
@@ -61,14 +48,10 @@ export async function getNFTOwnershipFromThirdweb(
 
     const [blockNumber, returnData] = result as [bigint, string[]];
 
-    console.log(`Multicall completed at block ${blockNumber}`);
-
-    // TODO: Decode the results
     // Each returnData[i] contains the encoded address result
     // You need to decode the address from the bytes
     tokenIds.forEach((tokenId, index) => {
       try {
-        // TODO: Decode the address from returnData[index]
         // The result should be a 32-byte encoded address
         const encodedOwner = returnData[index];
         // Extract the address from the encoded data (last 20 bytes)
@@ -78,15 +61,13 @@ export async function getNFTOwnershipFromThirdweb(
           ownersMap.set(tokenId, {
             owner,
           });
-          console.log(`Token ${tokenId} owned by:`, owner);
         }
       } catch (error) {
-        console.log(`Error decoding token ${tokenId}:`, error);
+        console.error(`Error decoding token ${tokenId}:`, error);
         // Token might not exist or be unowned
       }
     });
 
-    console.log(`Found ${ownersMap.size} NFT owners from multicall`);
     return ownersMap;
   } catch (error) {
     console.error("Error fetching NFT ownership from multicall:", error);
@@ -108,7 +89,6 @@ export async function getBoxOwnersFromThirdweb(
     const tokenIds = Array.from({ length: 100 }, (_, i) => contestId * 100 + i);
     const tokenIdStrings = tokenIds.map(id => id.toString());
 
-    console.log("Fetching NFT ownership from Thirdweb using multicall...");
     const ownersMap = await getNFTOwnershipFromThirdweb(
       collectionAddress,
       tokenIdStrings,
@@ -139,14 +119,6 @@ export async function getBoxOwnersFromThirdweb(
         col,
       };
     });
-
-    console.log(
-      `Returning ${results.length} box results from Thirdweb multicall`,
-    );
-    console.log(
-      "Owned boxes:",
-      results.filter(box => box.owner !== ZERO_ADDRESS).length,
-    );
 
     return results;
   } catch (error) {

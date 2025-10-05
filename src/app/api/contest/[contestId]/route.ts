@@ -42,23 +42,17 @@ export async function GET(
       );
     }
 
-    // Check Redis cache first (if configured)
+    // Check Redis cache first (if configured and not force refresh)
     let cachedContest = null;
-    if (redis) {
+    if (redis && !forceRefresh) {
       const cacheKey = getContestCacheKey(contestId, chain.id);
       cachedContest = await redis.get(cacheKey);
 
       if (cachedContest) {
-        console.log(`Cache hit for contest ${contestId} on chain ${chain.id}`);
         const parsedContest =
           typeof cachedContest === "string"
             ? JSON.parse(cachedContest)
             : cachedContest;
-        console.log(
-          "Cached contest has boxes:",
-          "boxes" in parsedContest,
-          parsedContest.boxes?.length || 0,
-        );
 
         // If cached data doesn't have boxes, invalidate cache and fetch fresh
         if (
@@ -66,9 +60,6 @@ export async function GET(
           !parsedContest.boxes ||
           parsedContest.boxes.length === 0
         ) {
-          console.log(
-            "Cached data missing boxes, invalidating cache and fetching fresh data",
-          );
           await redis.del(cacheKey);
         } else {
           // Disable Next.js caching for cached responses too
@@ -83,12 +74,12 @@ export async function GET(
           return response;
         }
       }
-
+    } else if (forceRefresh) {
       console.log(
-        `Cache miss for contest ${contestId} on chain ${chain.id}, fetching from blockchain`,
+        `Force refresh requested for contest ${contestId}, bypassing cache`,
       );
     } else {
-      console.log(
+      console.warn(
         `Redis not configured, fetching contest ${contestId} from blockchain`,
       );
     }
@@ -128,23 +119,12 @@ export async function GET(
 
     // Fetch box owners data
     let boxesData: BoxOwner[] = [];
-    console.log("Fetching box owners data...", {
-      contestId: parseInt(contestId),
-      BOXES_ADDRESS,
-      chainId: chain.id,
-    });
 
     try {
       if (BOXES_ADDRESS) {
-        console.log("Calling getBoxOwnersFromThirdweb...", { forceRefresh });
         boxesData = await getBoxOwnersFromThirdweb(
           parseInt(contestId),
           BOXES_ADDRESS,
-        );
-        console.log(
-          "getBoxOwnersFromThirdweb returned:",
-          boxesData.length,
-          "boxes",
         );
       } else {
         console.error("BOXES_ADDRESS is undefined!");
@@ -152,17 +132,6 @@ export async function GET(
     } catch (error) {
       console.error("Error fetching box owners:", error);
       // Continue without boxes data if there's an error
-    }
-
-    console.log(`Boxes data fetched: ${boxesData.length} boxes`);
-    if (boxesData.length > 0) {
-      console.log("Sample box data:", boxesData[0]);
-      console.log(
-        "Owned boxes:",
-        boxesData.filter(
-          box => box.owner !== "0x0000000000000000000000000000000000000000",
-        ).length,
-      );
     }
 
     // Format the contest data
@@ -190,32 +159,15 @@ export async function GET(
       boxes: JSON.parse(stringify(boxesData)),
     };
 
-    console.log("Final contest data structure:", {
-      ...formattedContestData,
-      boxes: `Array(${formattedContestData.boxes.length})`,
-    });
-    console.log("Boxes field exists:", "boxes" in formattedContestData);
-    console.log("Boxes data type:", typeof formattedContestData.boxes);
-    console.log("Boxes array length:", formattedContestData.boxes.length);
-
     // Cache the contest data with 1 hour TTL (if Redis is configured)
     if (redis) {
       const cacheKey = getContestCacheKey(contestId, chain.id);
-      console.log(
-        "Caching contest data with boxes:",
-        formattedContestData.boxes.length,
-      );
       await redis.setex(
         cacheKey,
         CACHE_TTL.CONTEST,
         JSON.stringify(formattedContestData),
       );
     }
-
-    console.log(
-      "About to return response with boxes:",
-      formattedContestData.boxes.length,
-    );
 
     // Disable Next.js caching to ensure fresh data
     const response = NextResponse.json(formattedContestData);

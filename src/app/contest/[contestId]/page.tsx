@@ -16,6 +16,8 @@ import {
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
+import { useFetchGameData } from "@/hooks/useFetchGameData";
+import { useProcessPayouts } from "@/hooks/useProcessPayouts";
 import { useRandomNumbers } from "@/hooks/useRandomNumbers";
 import { useParams } from "next/navigation";
 import { ZERO_ADDRESS } from "thirdweb";
@@ -30,9 +32,6 @@ export default function ContestPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingContestData, setRefreshingContestData] = useState(false);
   const [refreshingGameScores, setRefreshingGameScores] = useState(false);
-
-  console.log("contest", contest);
-  console.log("boxOwners state", boxOwners.length, boxOwners);
 
   // Fetch contest data from API
   useEffect(() => {
@@ -57,9 +56,6 @@ export default function ContestPage() {
         }
 
         const contestData = await response.json();
-        console.log("Raw API response:", contestData);
-        console.log("API response has boxes field:", "boxes" in contestData);
-        console.log("API boxes data:", contestData.boxes?.length || 0);
 
         // Convert the API response to our Contest type
         const contest: Contest = {
@@ -130,31 +126,9 @@ export default function ContestPage() {
 
         // Use real box owners data from API
         const boxOwnersData: BoxOwner[] = contestData.boxes || [];
-        console.log("Received boxes data from API:", boxOwnersData.length);
-        console.log("Raw boxes data:", contestData.boxes);
-        if (boxOwnersData.length > 0) {
-          console.log("Sample box from API:", boxOwnersData[0]);
-          console.log(
-            "Owned boxes from API:",
-            boxOwnersData.filter(
-              box => box.owner !== "0x0000000000000000000000000000000000000000",
-            ).length,
-          );
-        }
-
-        console.log("Setting contest state:", contest);
-        console.log("Setting boxOwners state:", boxOwnersData.length, "boxes");
-
         setContest(contest);
         setGameScore(gameScore);
         setBoxOwners(boxOwnersData);
-
-        console.log(
-          "State set - contest:",
-          contest?.id,
-          "boxOwners:",
-          boxOwnersData.length,
-        );
       } catch (error) {
         console.error("Error fetching contest data:", error);
         // Keep contest as null to show error state
@@ -180,16 +154,8 @@ export default function ContestPage() {
       box.owner.toLowerCase() === contests[chain.id].toLowerCase();
 
     if (!isClaimable) {
-      console.log(
-        `Box ${boxPosition} (token ${actualTokenId}) is already owned by a real user:`,
-        box?.owner,
-      );
       return; // Already claimed by a real user
     }
-
-    console.log(
-      `Box ${boxPosition} (token ${actualTokenId}) is claimable, toggling selection`,
-    );
 
     setSelectedBoxes(prev => {
       if (prev.includes(boxPosition)) {
@@ -203,11 +169,19 @@ export default function ContestPage() {
   const { handleRequestRandomNumbers, isLoading: isRequestingRandomNumbers } =
     useRandomNumbers();
 
+  const { handleClaimBoxes: claimBoxes, isLoading: isClaimingBoxes } =
+    useClaimBoxes();
+
   const {
-    handleClaimBoxes: claimBoxes,
-    isLoading: isClaimingBoxes,
-    error: claimError,
-  } = useClaimBoxes();
+    handleProcessPayouts: processPayouts,
+    isLoading: isProcessingPayouts,
+  } = useProcessPayouts();
+
+  const {
+    handleFetchGameData,
+    isLoading: isSyncingScoresOnchain,
+    error: syncScoresOnchainError,
+  } = useFetchGameData();
 
   const handleClaimBoxes = async () => {
     if (!selectedBoxes || selectedBoxes.length === 0) {
@@ -270,7 +244,6 @@ export default function ContestPage() {
       }
 
       const result = await response.json();
-      console.log("Cache invalidated:", result);
     } catch (error) {
       console.error("Error invalidating cache:", error);
       throw error;
@@ -281,6 +254,9 @@ export default function ContestPage() {
     setRefreshingContestData(true);
 
     try {
+      // First invalidate the cache and wait for it to complete
+      await invalidateContestCache();
+
       // Fetch fresh contest data with force refresh
       const response = await fetch(
         `/api/contest/${contestId}?forceRefresh=true&t=${Date.now()}`,
@@ -298,7 +274,6 @@ export default function ContestPage() {
       }
 
       const contestData = await response.json();
-      console.log("Refreshed contest data:", contestData);
 
       // Convert the API response to our Contest type
       const refreshedContest: Contest = {
@@ -327,10 +302,14 @@ export default function ContestPage() {
       // Update box owners with fresh data
       const boxOwnersData: BoxOwner[] = contestData.boxes || [];
 
+      // Update state with fresh data
       setContest(refreshedContest);
       setBoxOwners(boxOwnersData);
+
+      toast.success("Contest data refreshed successfully!");
     } catch (error) {
       console.error("Error refreshing contest data:", error);
+      toast.error("Failed to refresh contest data. Please try again.");
     } finally {
       setRefreshingContestData(false);
     }
@@ -367,9 +346,72 @@ export default function ContestPage() {
     }
   };
 
-  const handleProcessPayouts = () => {
-    // TODO: Implement payout processing logic
-    console.log("Processing payouts for contest:", contestId);
+  const handleProcessPayouts = async () => {
+    if (!contest) {
+      console.warn("No contest data available");
+      return;
+    }
+
+    try {
+      await processPayouts(
+        contest.id,
+        // onSuccess callback
+        async () => {
+          // Refresh contest data to show updated payout information
+          try {
+            await invalidateContestCache();
+            await handleRefreshContestData();
+            toast.success("Payouts processed successfully!");
+          } catch (error) {
+            console.error("Error refreshing after payout processing:", error);
+            toast.success(
+              "Payouts processed successfully! (Refresh may be delayed)",
+            );
+          }
+        },
+        // onError callback
+        error => {
+          console.error("Failed to process payouts:", error);
+          toast.error("Failed to process payouts. Please try again.");
+        },
+      );
+    } catch (error) {
+      console.error("Failed to process payouts:", error);
+      toast.error("Failed to process payouts. Please try again.");
+    }
+  };
+
+  const handleSyncScoresOnchain = async () => {
+    if (!contest) {
+      console.warn("No contest data available");
+      return;
+    }
+
+    try {
+      await handleFetchGameData(
+        contest.gameId,
+        "quarter-scores",
+        // onSuccess callback
+        async () => {
+          toast.success(
+            "Scores sync initiated successfully! This may take a few minutes to complete.",
+          );
+        },
+        // onError callback
+        error => {
+          console.error("Failed to sync scores onchain:", error);
+          toast.error(
+            error.message || "Failed to sync scores onchain. Please try again.",
+          );
+        },
+      );
+    } catch (error) {
+      console.error("Failed to sync scores onchain:", error);
+      toast.error(
+        (error as Error).message ||
+          "Failed to sync scores onchain. Please try again.",
+      );
+    }
   };
 
   const handleViewTransactionHistory = () => {
@@ -420,6 +462,7 @@ export default function ContestPage() {
           {/* Football Grid */}
           <div className="lg:col-span-2">
             <FootballGrid
+              key={`${contest.id}-${contest.boxesClaimed}-${boxOwners.length}`}
               contest={contest}
               boxOwners={boxOwners}
               gameScore={gameScore}
@@ -453,10 +496,13 @@ export default function ContestPage() {
               onRefreshContestData={handleRefreshContestData}
               onRefreshGameScores={handleRefreshGameScores}
               onProcessPayouts={handleProcessPayouts}
+              onSyncScoresOnchain={handleSyncScoresOnchain}
               onViewTransactionHistory={handleViewTransactionHistory}
               isRequestingRandomNumbers={isRequestingRandomNumbers}
               isRefreshingContestData={refreshingContestData}
               isRefreshingGameScores={refreshingGameScores}
+              isProcessingPayouts={isProcessingPayouts}
+              isSyncingScoresOnchain={isSyncingScoresOnchain}
             />
           </div>
         </div>

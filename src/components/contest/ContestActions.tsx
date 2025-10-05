@@ -10,10 +10,13 @@ interface ContestActionsProps {
   onRefreshGameScores?: () => void;
   onRefreshContestData?: () => void;
   onProcessPayouts?: () => void;
+  onSyncScoresOnchain?: () => Promise<any>;
   onViewTransactionHistory?: () => void;
   isRequestingRandomNumbers?: boolean;
   isRefreshingContestData?: boolean;
   isRefreshingGameScores?: boolean;
+  isProcessingPayouts?: boolean;
+  isSyncingScoresOnchain?: boolean;
 }
 
 export function ContestActions({
@@ -22,10 +25,13 @@ export function ContestActions({
   onRefreshGameScores,
   onRefreshContestData,
   onProcessPayouts,
+  onSyncScoresOnchain,
   onViewTransactionHistory,
   isRequestingRandomNumbers = false,
   isRefreshingContestData = false,
   isRefreshingGameScores = false,
+  isProcessingPayouts = false,
+  isSyncingScoresOnchain = false,
 }: ContestActionsProps) {
   const strategyType = getPayoutStrategyType(contest.payoutStrategy);
 
@@ -63,15 +69,26 @@ export function ContestActions({
         >
           {isRefreshingGameScores ? "Refreshing..." : "Refresh Game Scores"}
         </Button>
+        <Button
+          className="w-full"
+          variant="outline"
+          onClick={onSyncScoresOnchain}
+          disabled={isSyncingScoresOnchain}
+        >
+          {isSyncingScoresOnchain ? "Syncing..." : "Sync Scores Onchain"}
+        </Button>
         {contest.randomValuesSet && (
           <Button
             className="w-full"
             variant="default"
             onClick={onProcessPayouts}
+            disabled={isProcessingPayouts}
           >
-            {strategyType === PayoutStrategyType.SCORE_CHANGES
-              ? "Process All Payouts (Game Must Be Finished)"
-              : "Process Available Payouts"}
+            {isProcessingPayouts
+              ? "Processing..."
+              : strategyType === PayoutStrategyType.SCORE_CHANGES
+                ? "Process All Payouts (Game Must Be Finished)"
+                : "Process Available Payouts"}
           </Button>
         )}
         <Button

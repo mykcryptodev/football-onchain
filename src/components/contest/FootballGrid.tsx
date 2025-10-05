@@ -142,17 +142,6 @@ export function FootballGrid({
                 const expectedTokenId = contest.id * 100 + boxPosition; // Actual NFT token ID
                 const box = boxOwners.find(b => b.tokenId === expectedTokenId);
 
-                // Debug logging for specific box
-                if (boxPosition === 72) {
-                  console.log(`Box position 72 debug:`, {
-                    boxPosition,
-                    expectedTokenId,
-                    box,
-                    isRealUser: box ? isRealUser(box.owner) : false,
-                    boxOwnersLength: boxOwners.length,
-                  });
-                }
-
                 // Check for quarter winners
                 const isQuarterWinner =
                   gameScore &&

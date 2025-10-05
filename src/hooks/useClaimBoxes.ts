@@ -91,7 +91,6 @@ export function useClaimBoxes() {
 
           const result = sendTransaction(transaction, {
             onSuccess: () => {
-              console.log("Boxes claimed successfully with ETH:", result);
               onSuccess?.();
             },
             onError: error => {
@@ -114,24 +113,11 @@ export function useClaimBoxes() {
           chain,
         });
 
-        // Check if wallet supports EIP-5792 batching
-        // If capabilities is undefined or has a message, it means the wallet doesn't support EIP-5792
-        // Default to false (no batching) if capabilities are still loading or undefined
-        console.log("Capabilities loading:", capabilitiesLoading);
-        console.log("Capabilities:", capabilities);
-
         // Only support batching if capabilities exist AND have no error message
         const supportsBatching =
           !capabilitiesLoading && capabilities && !capabilities.message;
 
-        console.log("Wallet capabilities:", capabilities);
-        console.log("Capabilities loading:", capabilitiesLoading);
-        console.log("Supports batching:", supportsBatching);
-
         if (supportsBatching) {
-          // Wallet supports batching - use sendCalls for atomic approval + claim
-          console.log("Wallet supports batching, using atomic transaction");
-
           // Prepare approval transaction using thirdweb's ERC-20 extension
           const approvalTx = approve({
             contract: tokenContract,
@@ -163,10 +149,6 @@ export function useClaimBoxes() {
               },
               {
                 onSuccess: () => {
-                  console.log(
-                    "Boxes claimed successfully with batched ERC-20 approval:",
-                    result,
-                  );
                   onSuccess?.();
                 },
                 onError: error => {
@@ -196,8 +178,6 @@ export function useClaimBoxes() {
 
             const approvalResult = sendTransaction(approvalTx, {
               onSuccess: () => {
-                console.log("Token approval successful, proceeding with claim");
-
                 const claimTx = prepareContractCall({
                   contract: contestsContract,
                   method:
@@ -208,9 +188,6 @@ export function useClaimBoxes() {
 
                 const claimResult = sendTransaction(claimTx, {
                   onSuccess: () => {
-                    console.log(
-                      "Boxes claimed successfully with fallback sequential ERC-20 transactions",
-                    );
                     onSuccess?.();
                   },
                   onError: error => {
@@ -238,12 +215,6 @@ export function useClaimBoxes() {
             return approvalResult;
           }
         } else {
-          // Wallet doesn't support batching - do sequential transactions
-          console.log(
-            "Wallet doesn't support batching, using sequential transactions",
-          );
-          console.log("Wallet capabilities message:", capabilities?.message);
-
           // First transaction: Approve the token spending
           const approvalTx = approve({
             contract: tokenContract,
@@ -254,8 +225,6 @@ export function useClaimBoxes() {
           // Execute approval first
           const approvalResult = sendTransaction(approvalTx, {
             onSuccess: () => {
-              console.log("Token approval successful, proceeding with claim");
-
               // Second transaction: Claim the boxes
               const claimTx = prepareContractCall({
                 contract: contestsContract,
@@ -268,9 +237,6 @@ export function useClaimBoxes() {
               // Execute claim transaction
               const claimResult = sendTransaction(claimTx, {
                 onSuccess: () => {
-                  console.log(
-                    "Boxes claimed successfully with sequential ERC-20 transactions",
-                  );
                   onSuccess?.();
                 },
                 onError: error => {
