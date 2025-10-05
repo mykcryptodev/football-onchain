@@ -4,6 +4,7 @@
     "": {
       "name": "football-boxes",
       "dependencies": {
+        "@farcaster/frame-sdk": "^0.1.10",
         "@farcaster/miniapp-sdk": "^0.1.10",
         "@hookform/resolvers": "^5.2.1",
         "@radix-ui/react-avatar": "^1.1.10",
@@ -243,6 +244,8 @@
     "@ethereumjs/tx": ["@ethereumjs/tx@4.2.0", "", { "dependencies": { "@ethereumjs/common": "^3.2.0", "@ethereumjs/rlp": "^4.0.1", "@ethereumjs/util": "^8.1.0", "ethereum-cryptography": "^2.0.0" } }, "sha512-1nc6VO4jtFd172BbSnTnDQVr9IYBFl1y4xPzZdtkrkKIncBCkdbgfdRV+MiTkJYAtTxvV12GRZLqBFT1PNK6Yw=="],
 
     "@ethereumjs/util": ["@ethereumjs/util@8.1.0", "", { "dependencies": { "@ethereumjs/rlp": "^4.0.1", "ethereum-cryptography": "^2.0.0", "micro-ftch": "^0.3.1" } }, "sha512-zQ0IqbdX8FZ9aw11vP+dZkKDkS+kgIvQPHnSAXzP9pLu+Rfu3D3XEeLbicvoXJTYnhZiPmsZUxgdzXwNKxRPbA=="],
+
+    "@farcaster/frame-sdk": ["@farcaster/frame-sdk@0.1.10", "", { "dependencies": { "@farcaster/miniapp-sdk": "0.1.10", "@farcaster/quick-auth": "^0.0.6", "comlink": "^4.4.2", "eventemitter3": "^5.0.1", "ox": "^0.4.4" } }, "sha512-4CtBkzHIGg7NVUbVZfgy6UiIeSqn0rx7vmwvOJ4pNRQoLG5guPkHKv9vc3D515aCVSATvrZXRT97xjss5kuN+Q=="],
 
     "@farcaster/miniapp-core": ["@farcaster/miniapp-core@0.3.9", "", { "dependencies": { "@solana/web3.js": "^1.98.2", "ox": "^0.4.4", "zod": "^3.25.0" } }, "sha512-7k2AHYycFABUEQFHGqsuZr6P6UQOE2WO4/Qj/kQ1ydKA8QjrWxO4HjiPfnTdvqH0xOKtdavbFOV5lK5bDLkemw=="],
 

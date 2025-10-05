@@ -11,6 +11,7 @@ import {
 } from "@/lib/farcaster-metadata";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
+import { FarcasterProvider } from "@/providers/Farcaster";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({
@@ -62,8 +63,10 @@ export default function RootLayout({
           defaultTheme="system"
         >
           <ThirdwebProvider>
-            <Navigation />
-            {children}
+            <FarcasterProvider>
+              <Navigation />
+              {children}
+            </FarcasterProvider>
           </ThirdwebProvider>
           <Toaster />
         </ThemeProvider>
