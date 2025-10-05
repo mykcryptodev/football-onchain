@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import CreatePickemForm from "@/components/pickem/CreatePickemForm";
-import DebugContests from "@/components/pickem/DebugContests";
 import MyPickems from "@/components/pickem/MyPickems";
 import PickemContestList from "@/components/pickem/PickemContestList";
 import {
@@ -37,7 +36,6 @@ export default function PickemPage() {
           <TabsTrigger value="contests">Pickem Contests</TabsTrigger>
           <TabsTrigger value="create">Create Contest</TabsTrigger>
           <TabsTrigger value="my-pickems">My Pick&apos;ems</TabsTrigger>
-          <TabsTrigger value="debug">Debug</TabsTrigger>
         </TabsList>
 
         <TabsContent className="space-y-4" value="contests">
@@ -80,10 +78,6 @@ export default function PickemPage() {
               <MyPickems />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="debug">
-          <DebugContests />
         </TabsContent>
       </Tabs>
     </div>
