@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { sdk } from "@farcaster/frame-sdk";
+import { useCallback, useEffect, useState } from "react";
 import { useConnect } from "thirdweb/react";
 import { EIP1193 } from "thirdweb/wallets";
 
