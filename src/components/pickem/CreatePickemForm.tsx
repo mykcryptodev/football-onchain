@@ -12,12 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  chain,
+  chainlinkGasLimit,
+  chainlinkJobId,
+  chainlinkSubscriptionId,
+} from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
-import { AlertCircle, Trophy, Users } from "lucide-react";
+import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
+
+interface GameInfo {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  homeRecord: string;
+  awayRecord: string;
+  kickoff: string;
+  homeLogo?: string;
+  awayLogo?: string;
+}
 
 const SEASON_TYPES = [
   { value: "1", label: "Preseason" },
@@ -57,8 +74,12 @@ const CURRENCIES = [
 export default function CreatePickemForm() {
   const account = useActiveAccount();
   const router = useRouter();
-  const { createContest } = usePickemContract();
+  const { createContest, requestWeekGames, getWeekGameIds } =
+    usePickemContract();
   const [isCreating, setIsCreating] = useState(false);
+  const [games, setGames] = useState<GameInfo[]>([]);
+  const [isFetchingGames, setIsFetchingGames] = useState(false);
+  const [showGames, setShowGames] = useState(false);
   const [formData, setFormData] = useState({
     seasonType: "2",
     weekNumber: "",
@@ -69,6 +90,59 @@ export default function CreatePickemForm() {
     customDeadline: "",
   });
 
+  const fetchWeekGames = async () => {
+    if (!formData.weekNumber) {
+      toast.error("Please select a week number first");
+      return;
+    }
+
+    setIsFetchingGames(true);
+    try {
+      // First, check onchain game IDs
+      const onchainData = await getWeekGameIds({
+        year: parseInt(formData.year),
+        seasonType: parseInt(formData.seasonType),
+        weekNumber: parseInt(formData.weekNumber),
+      });
+
+      let needToRequest = onchainData.gameIds.length === 0;
+
+      if (needToRequest) {
+        // Request onchain fetch
+        await requestWeekGames({
+          year: parseInt(formData.year),
+          seasonType: parseInt(formData.seasonType),
+          weekNumber: parseInt(formData.weekNumber),
+          subscriptionId: chainlinkSubscriptionId[chain.id],
+          gasLimit: Number(chainlinkGasLimit[chain.id]),
+          jobId: chainlinkJobId[chain.id],
+        });
+        toast.info(
+          "Onchain fetch requested. This may take a few minutes to fulfill.",
+        );
+      }
+
+      // Now fetch local preview from API
+      const response = await fetch(
+        `/api/week-games?year=${formData.year}&seasonType=${formData.seasonType}&week=${formData.weekNumber}`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch games");
+      }
+      const fetchedGames: GameInfo[] = await response.json();
+      setGames(fetchedGames);
+      setShowGames(true);
+      toast.success(
+        `Fetched ${fetchedGames.length} games for the week${needToRequest ? " (onchain request sent)" : ""}`,
+      );
+    } catch (error) {
+      console.error("Error fetching games:", error);
+      toast.error("Failed to fetch week games");
+    } finally {
+      setIsFetchingGames(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!account) {
       toast.error("Please connect your wallet");
@@ -77,6 +151,11 @@ export default function CreatePickemForm() {
 
     if (!formData.weekNumber) {
       toast.error("Please select a week number");
+      return;
+    }
+
+    if (games.length === 0) {
+      toast.error("Please preview the games for this week first");
       return;
     }
 
@@ -189,6 +268,45 @@ export default function CreatePickemForm() {
         </div>
       </div>
 
+      {/* Preview Games Button */}
+      <div>
+        <Button
+          onClick={fetchWeekGames}
+          disabled={isFetchingGames || !formData.weekNumber}
+          variant="outline"
+        >
+          {isFetchingGames ? "Fetching..." : "Fetch Onchain Games & Preview"}
+        </Button>
+      </div>
+
+      {/* Games Preview */}
+      {showGames && games.length > 0 && (
+        <div className="space-y-2">
+          <Label>
+            Games for Week {formData.weekNumber} ({games.length} games)
+          </Label>
+          <div className="max-h-48 overflow-y-auto space-y-2">
+            {games.map(game => (
+              <div
+                key={game.gameId}
+                className="flex justify-between items-center p-2 border rounded"
+              >
+                <span>
+                  {game.awayTeam} @ {game.homeTeam}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  <Clock className="h-3 w-3 inline mr-1" />
+                  {new Date(game.kickoff).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Button variant="ghost" onClick={() => setShowGames(false)} size="sm">
+            Hide Games
+          </Button>
+        </div>
+      )}
+
       {/* Entry Fee Configuration */}
       <div className="space-y-4">
         <Label>Entry Fee</Label>
@@ -289,7 +407,7 @@ export default function CreatePickemForm() {
       {/* Create Button */}
       <Button
         onClick={handleCreate}
-        disabled={!account || isCreating}
+        disabled={!account || isCreating || games.length === 0}
         className="w-full"
         size="lg"
       >

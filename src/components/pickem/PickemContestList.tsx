@@ -4,10 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  chain,
+  chainlinkGasLimit,
+  chainlinkJobId,
+  chainlinkSubscriptionId,
+} from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
 
@@ -41,9 +48,24 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
 
 export default function PickemContestList() {
   const account = useActiveAccount();
-  const { getContest, getNextContestId } = usePickemContract();
+  const {
+    getContest,
+    getNextContestId,
+    requestWeekResults,
+    updateContestResults,
+    claimAllPrizes,
+  } = usePickemContract();
   const [contests, setContests] = useState<PickemContest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchingResults, setFetchingResults] = useState<
+    Record<number, boolean>
+  >({});
+  const [claimingPrizes, setClaimingPrizes] = useState<Record<number, boolean>>(
+    {},
+  );
+  const [calculatingWinners, setCalculatingWinners] = useState<
+    Record<number, boolean>
+  >({});
 
   useEffect(() => {
     fetchContests();
@@ -95,6 +117,67 @@ export default function PickemContestList() {
       console.error("Error fetching contests:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFetchWeekResults = async (contest: PickemContest) => {
+    if (!account) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    setFetchingResults(prev => ({ ...prev, [contest.id]: true }));
+
+    try {
+      await requestWeekResults({
+        year: contest.year,
+        seasonType: contest.seasonType,
+        weekNumber: contest.weekNumber,
+        subscriptionId: chainlinkSubscriptionId[chain.id],
+        gasLimit: Number(chainlinkGasLimit[chain.id]),
+        jobId: chainlinkJobId[chain.id],
+      });
+
+      toast.success(
+        "Week results fetch requested. This may take a few minutes.",
+      );
+    } catch (error) {
+      console.error("Error requesting week results:", error);
+      toast.error("Failed to request week results");
+    } finally {
+      setFetchingResults(prev => ({ ...prev, [contest.id]: false }));
+    }
+  };
+
+  const handleClaimAllPrizes = async (contestId: number) => {
+    setClaimingPrizes(prev => ({ ...prev, [contestId]: true }));
+
+    try {
+      await claimAllPrizes(contestId);
+      toast.success("All prizes claimed successfully!");
+      // Optionally refresh contests
+      await fetchContests();
+    } catch (error) {
+      console.error("Error claiming all prizes:", error);
+      toast.error("Failed to claim all prizes");
+    } finally {
+      setClaimingPrizes(prev => ({ ...prev, [contestId]: false }));
+    }
+  };
+
+  const handleCalculateWinners = async (contestId: number) => {
+    setCalculatingWinners(prev => ({ ...prev, [contestId]: true }));
+
+    try {
+      await updateContestResults(contestId);
+      toast.success("Winners calculated successfully!");
+      // Optionally refresh contests to update gamesFinalized
+      await fetchContests();
+    } catch (error) {
+      console.error("Error calculating winners:", error);
+      toast.error("Failed to calculate winners");
+    } finally {
+      setCalculatingWinners(prev => ({ ...prev, [contestId]: false }));
     }
   };
 
@@ -214,7 +297,10 @@ export default function PickemContestList() {
                 </div>
               </div>
 
-              <Link href={`/pickem/${contest.id}`} className="w-full">
+              <Link
+                href={`/pickem/${contest.id}`}
+                className="w-full block mb-2"
+              >
                 <Button
                   disabled={contest.submissionDeadline <= Date.now()}
                   className="w-full"
@@ -224,6 +310,47 @@ export default function PickemContestList() {
                     : "Make Your Picks"}
                 </Button>
               </Link>
+
+              {!contest.gamesFinalized && (
+                <>
+                  <Button
+                    onClick={() => handleFetchWeekResults(contest)}
+                    disabled={fetchingResults[contest.id] || !account}
+                    variant="outline"
+                    size="sm"
+                    className="w-full mb-2"
+                  >
+                    {fetchingResults[contest.id]
+                      ? "Requesting..."
+                      : "Fetch Week Results"}
+                  </Button>
+                  <Button
+                    onClick={() => handleCalculateWinners(contest.id)}
+                    disabled={calculatingWinners[contest.id] || !account}
+                    variant="secondary"
+                    size="sm"
+                    className="w-full mb-2"
+                  >
+                    {calculatingWinners[contest.id]
+                      ? "Calculating..."
+                      : "Calculate Winners"}
+                  </Button>
+                </>
+              )}
+
+              {contest.gamesFinalized && (
+                <Button
+                  onClick={() => handleClaimAllPrizes(contest.id)}
+                  disabled={claimingPrizes[contest.id] || !account}
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                >
+                  {claimingPrizes[contest.id]
+                    ? "Claiming..."
+                    : "Claim All Prizes"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}

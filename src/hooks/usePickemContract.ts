@@ -1,8 +1,10 @@
 "use client";
 
 import { chain, pickem, pickemNFT } from "@/constants";
+import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
+
 import { client } from "@/providers/Thirdweb";
 import {
   getContract,
@@ -338,6 +340,148 @@ export function usePickemContract() {
     }
   };
 
+  // Request week games from oracle
+  const requestWeekGames = async (params: {
+    year: number;
+    seasonType: number;
+    weekNumber: number;
+    subscriptionId: bigint;
+    gasLimit: number;
+    jobId: `0x${string}`;
+  }) => {
+    if (!account) throw new Error("No account connected");
+
+    try {
+      // First, get oracle address
+      const oracleAddress = await readContract({
+        contract: pickemContract,
+        method: "gameScoreOracle",
+        params: [],
+      });
+
+      const oracle = getContract({
+        client,
+        chain,
+        address: oracleAddress as `0x${string}`,
+        abi: oracleAbi,
+      });
+
+      const tx = prepareContractCall({
+        contract: oracle,
+        method: "fetchWeekGames",
+        params: [
+          params.subscriptionId, // Already bigint (uint64)
+          BigInt(params.gasLimit), // Convert number to bigint (uint32)
+          params.jobId, // bytes32
+          BigInt(params.year), // Already bigint (uint256)
+          BigInt(params.seasonType), // Convert number to bigint (uint8)
+          BigInt(params.weekNumber), // Convert number to bigint (uint8)
+        ],
+      });
+
+      const result = await sendTx(tx);
+      const receipt = await waitForReceipt({
+        client,
+        chain,
+        transactionHash: result.transactionHash,
+      });
+
+      return receipt;
+    } catch (error) {
+      console.error("Error requesting week games:", error);
+      throw error;
+    }
+  };
+
+  // Get week game IDs from oracle
+  const getWeekGameIds = async (params: {
+    year: number;
+    seasonType: number;
+    weekNumber: number;
+  }) => {
+    try {
+      const oracleAddress = await readContract({
+        contract: pickemContract,
+        method: "gameScoreOracle",
+        params: [],
+      });
+
+      const oracle = getContract({
+        client,
+        chain,
+        address: oracleAddress as `0x${string}`,
+        abi: oracleAbi,
+      });
+
+      const result = await readContract({
+        contract: oracle,
+        method: "getWeekGames",
+        params: [BigInt(params.year), params.seasonType, params.weekNumber],
+      });
+
+      return {
+        gameIds: result[0] as bigint[],
+        submissionDeadline: Number(result[1]),
+      };
+    } catch (error) {
+      console.error("Error getting week game IDs:", error);
+      throw error;
+    }
+  };
+
+  // Request week results from oracle
+  const requestWeekResults = async (params: {
+    year: number;
+    seasonType: number;
+    weekNumber: number;
+    subscriptionId: bigint;
+    gasLimit: number;
+    jobId: `0x${string}`;
+  }) => {
+    if (!account) throw new Error("No account connected");
+
+    try {
+      // First, get oracle address
+      const oracleAddress = await readContract({
+        contract: pickemContract,
+        method: "gameScoreOracle",
+        params: [],
+      });
+
+      const oracle = getContract({
+        client,
+        chain,
+        address: oracleAddress as `0x${string}`,
+        abi: oracleAbi,
+      });
+
+      const tx = prepareContractCall({
+        contract: oracle,
+        method: "fetchWeekResults",
+        params: [
+          params.subscriptionId,
+          params.gasLimit,
+          params.jobId,
+          BigInt(params.year),
+          params.seasonType,
+          params.weekNumber,
+        ],
+      });
+
+      const result = await sendTx(tx);
+      const receipt = await waitForReceipt({
+        client,
+        chain,
+        transactionHash: result.transactionHash,
+      });
+
+      return receipt;
+    } catch (error) {
+      console.error("Error requesting week results:", error);
+      throw error;
+    }
+  };
+
   return {
     createContest,
     submitPredictions,
@@ -353,5 +497,8 @@ export function usePickemContract() {
     getNFTPrediction,
     getUserNFTBalance,
     getUserNFTByIndex,
+    requestWeekGames,
+    getWeekGameIds,
+    requestWeekResults,
   };
 }

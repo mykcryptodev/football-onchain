@@ -36,6 +36,7 @@ interface PickemNFT {
   prizeWon: bigint;
   claimed: boolean;
   rank?: number;
+  contest?: any; // Full contest object
 }
 
 export default function MyPickems() {
@@ -47,10 +48,15 @@ export default function MyPickems() {
     getContest,
     claimPrize,
     getUserContests,
+    getContestWinners,
+    updateContestResults,
   } = usePickemContract();
   const [nfts, setNfts] = useState<PickemNFT[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContest, setSelectedContest] = useState<number | null>(null);
+
+  // Add state for finalizing
+  const [finalizing, setFinalizing] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (account?.address) {
@@ -88,10 +94,10 @@ export default function MyPickems() {
           const contest = await getContest(Number(contestId));
 
           userNFTs.push({
-            tokenId: tokenId,
+            tokenId: Number(tokenId),
             contestId: Number(contestId),
-            seasonType: contest.seasonType,
-            weekNumber: contest.weekNumber,
+            seasonType: Number(contest.seasonType),
+            weekNumber: Number(contest.weekNumber),
             year: Number(contest.year),
             picks: [], // We'll need to fetch these from the contract if needed
             gameIds: contest.gameIds.map(id => id.toString()),
@@ -102,6 +108,7 @@ export default function MyPickems() {
             prizeWon: BigInt(0), // Calculate based on winner status
             claimed: Number(claimed) === 1,
             rank: 0, // Would need to calculate from contest winners
+            contest, // Store full contest object
           });
         } catch (err) {
           console.error(`Error fetching NFT ${i}:`, err);
@@ -124,6 +131,22 @@ export default function MyPickems() {
     } catch (error) {
       console.error("Error claiming prize:", error);
       toast.error("Failed to claim prize");
+    }
+  };
+
+  // Add function
+  const handleFinalizeContest = async (contestId: number) => {
+    setFinalizing(prev => ({ ...prev, [contestId]: true }));
+
+    try {
+      await updateContestResults(contestId);
+      toast.success("Contest finalized and winners calculated!");
+      await fetchUserNFTs(); // Refresh to show prizes
+    } catch (error) {
+      console.error("Error finalizing contest:", error);
+      toast.error("Failed to finalize contest");
+    } finally {
+      setFinalizing(prev => ({ ...prev, [contestId]: false }));
     }
   };
 
@@ -345,22 +368,29 @@ export default function MyPickems() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  {Number(nft.prizeWon) > 0 && !nft.claimed && (
-                    <Button
-                      onClick={() =>
-                        handleClaimPrize(nft.tokenId, nft.contestId)
-                      }
-                      className="flex-1"
-                    >
-                      Claim {formatEther(nft.prizeWon)} ETH
-                    </Button>
-                  )}
+                  <Button
+                    onClick={() => handleClaimPrize(nft.tokenId, nft.contestId)}
+                    className="flex-1"
+                  >
+                    Distribute Prizes
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => setSelectedContest(nft.contestId)}
                     className="flex-1"
                   >
                     View Leaderboard
+                  </Button>
+                  <Button
+                    onClick={() => handleFinalizeContest(nft.contestId)}
+                    disabled={finalizing[nft.contestId] || !account}
+                    variant="secondary"
+                    size="sm"
+                    className="w-full mt-2"
+                  >
+                    {finalizing[nft.contestId]
+                      ? "Finalizing..."
+                      : "Finalize Contest & Distribute Prizes"}
                   </Button>
                 </div>
               </CardContent>
