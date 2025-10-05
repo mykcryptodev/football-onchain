@@ -17,13 +17,19 @@ import {
   chainlinkGasLimit,
   chainlinkJobId,
   chainlinkSubscriptionId,
+  usdc,
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { useTokens } from "@/hooks/useTokens";
+import { resolveTokenIcon } from "@/lib/utils";
+import { client } from "@/providers/Thirdweb";
 import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useActiveAccount } from "thirdweb/react";
+import { ZERO_ADDRESS } from "thirdweb";
+import { TokenIcon, TokenProvider, useActiveAccount } from "thirdweb/react";
+import { TokenPicker } from "../contest/TokenPicker";
 
 interface GameInfo {
   gameId: string;
@@ -58,19 +64,6 @@ const PAYOUT_TYPES = [
   },
 ];
 
-const CURRENCIES = [
-  {
-    value: "ETH",
-    label: "ETH",
-    address: "0x0000000000000000000000000000000000000000",
-  },
-  {
-    value: "USDC",
-    label: "USDC",
-    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  }, // Update with actual address
-];
-
 export default function CreatePickemForm() {
   const account = useActiveAccount();
   const router = useRouter();
@@ -80,15 +73,55 @@ export default function CreatePickemForm() {
   const [games, setGames] = useState<GameInfo[]>([]);
   const [isFetchingGames, setIsFetchingGames] = useState(false);
   const [showGames, setShowGames] = useState(false);
+  const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<any>(null);
+  const [usdEstimation, setUsdEstimation] = useState<string>("");
+  const { tokens, loading: loadingTokens, fetchTokens } = useTokens();
   const [formData, setFormData] = useState({
     seasonType: "2",
     weekNumber: "",
     year: new Date().getFullYear().toString(),
     entryFee: "0.01",
-    currency: "ETH",
     payoutType: "0",
     customDeadline: "",
   });
+
+  // Fetch tokens on component mount
+  useEffect(() => {
+    fetchTokens().catch(error => {
+      console.error("Error fetching tokens:", error);
+      toast.error("Error fetching tokens");
+    });
+  }, [fetchTokens]);
+
+  // Set default currency to USDC when tokens are loaded
+  useEffect(() => {
+    if (tokens.length > 0 && !selectedToken) {
+      const usdcToken = tokens.find(
+        token => token.address.toLowerCase() === usdc[chain.id].toLowerCase(),
+      );
+      if (usdcToken) {
+        setSelectedToken(usdcToken);
+      }
+    }
+  }, [tokens, selectedToken]);
+
+  // Calculate USD estimation when entry fee or currency changes
+  useEffect(() => {
+    if (!formData.entryFee || !selectedToken) {
+      setUsdEstimation("");
+      return;
+    }
+
+    const fee = parseFloat(formData.entryFee);
+    if (isNaN(fee) || fee <= 0) {
+      setUsdEstimation("");
+      return;
+    }
+
+    const usdValue = fee * selectedToken.priceUsd;
+    setUsdEstimation(`≈ $${usdValue.toFixed(2)} USD`);
+  }, [formData.entryFee, selectedToken]);
 
   const fetchWeekGames = async () => {
     if (!formData.weekNumber) {
@@ -159,13 +192,16 @@ export default function CreatePickemForm() {
       return;
     }
 
+    if (!selectedToken) {
+      toast.error("Please select a valid currency");
+      return;
+    }
+
     setIsCreating(true);
     try {
-      // Convert currency to address
+      // Get currency address (use zero address for native ETH)
       const currencyAddress =
-        formData.currency === "ETH"
-          ? "0x0000000000000000000000000000000000000000"
-          : CURRENCIES.find(c => c.value === formData.currency)?.address || "";
+        selectedToken.symbol === "ETH" ? ZERO_ADDRESS : selectedToken.address;
 
       // Convert custom deadline to timestamp if provided
       const customDeadline = formData.customDeadline
@@ -323,26 +359,45 @@ export default function CreatePickemForm() {
               placeholder="0.01"
             />
           </div>
-          <Select
-            value={formData.currency}
-            onValueChange={value =>
-              setFormData({ ...formData, currency: value })
-            }
+          <Button
+            type="button"
+            variant="outline"
+            className="w-48 justify-start"
+            onClick={() => setTokenPickerOpen(true)}
           >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CURRENCIES.map(currency => (
-                <SelectItem key={currency.value} value={currency.value}>
-                  {currency.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {selectedToken ? (
+              <div className="flex items-center gap-2">
+                <TokenProvider
+                  address={selectedToken.address}
+                  client={client}
+                  chain={chain}
+                >
+                  <TokenIcon
+                    className="size-6 flex-shrink-0"
+                    iconResolver={resolveTokenIcon(selectedToken)}
+                  />
+                </TokenProvider>
+                <div className="flex flex-col items-start text-left min-w-0 flex-1">
+                  <span className="font-medium text-sm">
+                    {selectedToken.symbol}
+                  </span>
+                  <span className="text-muted-foreground text-xs truncate">
+                    {selectedToken.name}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">Select currency</span>
+            )}
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           Participants will pay this amount to submit their predictions
+          {usdEstimation && (
+            <span className="ml-2 font-medium text-blue-600">
+              {usdEstimation}
+            </span>
+          )}
         </p>
       </div>
 
@@ -422,6 +477,16 @@ export default function CreatePickemForm() {
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Token Picker Modal */}
+      <TokenPicker
+        open={tokenPickerOpen}
+        onOpenChange={setTokenPickerOpen}
+        onTokenSelect={token => {
+          setSelectedToken(token);
+        }}
+        selectedTokenAddress={selectedToken?.address}
+      />
     </div>
   );
 }
