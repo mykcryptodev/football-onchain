@@ -35,12 +35,17 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "return bytes}"
         "return hexToUint8Array(encodedResult);";
 
-    string public constant WEEK_GAMES_SOURCE =
+    string public constant WEEK_GAMES_SOURCE = 
         "const y=args[0],s=args[1],w=args[2];"
         "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
-        "const e=r.data?.events||[];let d=[BigInt(e.length),999999999n];"
-        "e.forEach(v=>d.push(BigInt(v.id)));"
-        "const x='0x'+d.map(n=>n.toString(16).padStart(64,'0')).join('');"
+        "const e=r.data?.events||[];let p=[BigInt(e.length)];"
+        "for(let i=0;i<e.length;i+=3){"
+        "let v=0n;"
+        "if(i<e.length)v|=BigInt(e[i].id)<<170n;"
+        "if(i+1<e.length)v|=BigInt(e[i+1].id)<<85n;"
+        "if(i+2<e.length)v|=BigInt(e[i+2].id);"
+        "p.push(v);}"
+        "const x='0x'+p.map(n=>n.toString(16).padStart(64,'0')).join('');"
         "const b=new Uint8Array(x.length/2-1);for(let i=2;i<x.length;i+=2)b[i/2-1]=parseInt(x.substr(i,2),16);return b;";
 
     string public constant WEEK_RESULTS_SOURCE =
@@ -527,26 +532,54 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 weekId,
         bytes memory response
     ) internal {
-        // Extract data: [gameCount, earliestKickoff, gameId1, gameId2, ...]
+        // Extract data: [gameCount, packed3GameIds, packed3GameIds, ...]
         uint256 gameCount = _bytesToUint256(response, 0);
-        uint256 earliestKickoff = _bytesToUint256(response, 1);
-
+        
         // Create storage reference for gas efficiency
         WeekGames storage wg = weekGames[weekId];
-
+        
         // Extract year, season, week from weekId for storage
         wg.year = weekId >> 16;
         wg.seasonType = uint8((weekId >> 8) & 0xFF);
         wg.weekNumber = uint8(weekId & 0xFF);
-        wg.earliestKickoff = earliestKickoff;
+        wg.earliestKickoff = 0; // Not used anymore
         wg.isFinalized = true;
-
-        // Store game IDs
+        
+        // Store game IDs (unpacking from packed format - 3 IDs per uint256)
         delete wg.gameIds; // Clear existing array
-        for (uint256 i = 0; i < gameCount && i < 20; i++) { // Limit to 20 games max for gas
-            wg.gameIds.push(_bytesToUint256(response, uint8(2 + i)));
+        uint256 packedIndex = 1;
+        uint256 gamesProcessed = 0;
+        
+        // Process packed uint256s, each containing up to 3 game IDs
+        while (gamesProcessed < gameCount && gamesProcessed < 21) { // Max 21 games
+            uint256 packed = _bytesToUint256(response, uint8(packedIndex));
+            packedIndex++;
+            
+            // Extract first ID (bits 170-254, 85 bits)
+            uint256 gameId = (packed >> 170) & ((1 << 85) - 1);
+            if (gameId > 0 && gamesProcessed < gameCount) {
+                wg.gameIds.push(gameId);
+                gamesProcessed++;
+            }
+            
+            // Extract second ID (bits 85-169, 85 bits)
+            gameId = (packed >> 85) & ((1 << 85) - 1);
+            if (gameId > 0 && gamesProcessed < gameCount) {
+                wg.gameIds.push(gameId);
+                gamesProcessed++;
+            }
+            
+            // Extract third ID (bits 0-84, 85 bits)
+            gameId = packed & ((1 << 85) - 1);
+            if (gameId > 0 && gamesProcessed < gameCount) {
+                wg.gameIds.push(gameId);
+                gamesProcessed++;
+            }
+            
+            // Break if we've processed all available packed data
+            if (packedIndex > 7) break; // Max 7 packed uint256s in 256 bytes
         }
-
+        
         emit WeekGamesUpdated(weekId, uint8(gameCount));
     }
 
@@ -685,16 +718,25 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
      * @param seasonType The season type
      * @param weekNumber The week number
      * @return gameIds Array of ESPN game IDs
-     * @return earliestKickoff Earliest kickoff timestamp
+     * @return submissionDeadline Default submission deadline (current time + 7 days)
      */
     function getWeekGames(
         uint256 year,
         uint8 seasonType,
         uint8 weekNumber
-    ) external view returns (uint256[] memory gameIds, uint256 earliestKickoff) {
+    ) external view returns (uint256[] memory gameIds, uint256 submissionDeadline) {
         uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
         WeekGames memory wg = weekGames[weekId];
-        return (wg.gameIds, wg.earliestKickoff);
+        
+        // If games haven't been fetched yet, return empty
+        if (!wg.isFinalized) {
+            return (new uint256[](0), 0);
+        }
+        
+        // Return games and a default submission deadline (7 days from now)
+        // Contest creators can override this if needed
+        submissionDeadline = block.timestamp + 7 days;
+        return (wg.gameIds, submissionDeadline);
     }
 
     /**

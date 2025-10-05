@@ -161,6 +161,26 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // pickemNFT will be set via setPickemNFT after deployment
     }
 
+    // ============ Oracle Interaction ============
+
+    /**
+     * @notice Request to fetch games for a specific week from oracle
+     * @dev Must be called before creating a contest for a week
+     * @param year The year
+     * @param seasonType 1=preseason, 2=regular, 3=postseason
+     * @param weekNumber Week number
+     */
+    function requestWeekGames(
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) external {
+        // This would typically require Chainlink subscription parameters
+        // For now, it's a placeholder that contest creators would call
+        // In production, this would call gameScoreOracle.fetchWeekGames()
+        revert("Not implemented - use oracle directly");
+    }
+
     // ============ Contest Creation ============
 
     /**
@@ -171,6 +191,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
      * @param currency Token address for entry fee (address(0) for ETH)
      * @param entryFee Cost to submit predictions
      * @param payoutType 0=winner-take-all, 1=top3, 2=top5
+     * @param customDeadline Optional custom submission deadline (0 to use oracle default)
      */
     function createContest(
         uint8 seasonType,
@@ -178,7 +199,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint256 year,
         address currency,
         uint256 entryFee,
-        uint8 payoutType
+        uint8 payoutType,
+        uint256 customDeadline
     ) external returns (uint256 contestId) {
         // Validate inputs
         if (seasonType < 1 || seasonType > 3) revert InvalidSeasonType();
@@ -186,9 +208,12 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         if (entryFee == 0) revert InvalidEntryFee();
 
         // Fetch games from oracle for this week
-        (uint256[] memory gameIds, uint256 submissionDeadline) = gameScoreOracle.getWeekGames(year, seasonType, weekNumber);
+        (uint256[] memory gameIds, uint256 defaultDeadline) = gameScoreOracle.getWeekGames(year, seasonType, weekNumber);
         if (gameIds.length == 0) revert NoGamesProvided();
         if (gameIds.length > MAX_GAMES_PER_WEEK) revert TooManyGames();
+        
+        // Use custom deadline if provided, otherwise use oracle default
+        uint256 submissionDeadline = customDeadline > 0 ? customDeadline : defaultDeadline;
 
         contestId = nextContestId++;
 
