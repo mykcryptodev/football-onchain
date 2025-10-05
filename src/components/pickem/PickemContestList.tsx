@@ -30,6 +30,7 @@ interface PickemContest {
   totalEntries: number;
   submissionDeadline: number;
   gamesFinalized: boolean;
+  payoutComplete: boolean;
   payoutType: number;
   gameIds: string[];
 }
@@ -98,6 +99,7 @@ export default function PickemContestList() {
               totalEntries: Number(contest.totalEntries),
               submissionDeadline: Number(contest.submissionDeadline) * 1000, // Convert to milliseconds
               gamesFinalized: contest.gamesFinalized,
+              payoutComplete: contest.payoutComplete,
               payoutType: contest.payoutStructure.payoutType,
               gameIds: contest.gameIds.map(id => id.toString()),
             });
@@ -338,7 +340,7 @@ export default function PickemContestList() {
                 </>
               )}
 
-              {contest.gamesFinalized && (
+              {contest.gamesFinalized && !contest.payoutComplete && (
                 <Button
                   onClick={() => handleClaimAllPrizes(contest.id)}
                   disabled={claimingPrizes[contest.id] || !account}
@@ -350,6 +352,14 @@ export default function PickemContestList() {
                     ? "Claiming..."
                     : "Claim All Prizes"}
                 </Button>
+              )}
+
+              {contest.gamesFinalized && contest.payoutComplete && (
+                <div className="text-center py-3 px-4 bg-muted rounded-lg">
+                  <p className="text-sm text-muted-foreground font-medium">
+                    ✓ All prizes have been distributed
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>

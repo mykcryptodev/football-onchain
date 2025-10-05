@@ -93,6 +93,22 @@ export default function MyPickems() {
           // Get contest details to get more info
           const contest = await getContest(Number(contestId));
 
+          // Fetch winners to determine eligibility and rank
+          const winners = await getContestWinners(Number(contestId));
+          const isWinner = winners.includes(BigInt(tokenId));
+          let prizeWon = BigInt(0);
+          let rank = 0;
+
+          if (isWinner && contest.totalPrizePool > BigInt(0)) {
+            // Simple calculation: for now, assume equal split among winners for tiered; adjust based on payoutType
+            const numWinners = winners.length;
+            const treasuryFee =
+              (contest.totalPrizePool * BigInt(500)) / BigInt(10000); // 5% example; use actual TREASURY_FEE
+            const netPool = contest.totalPrizePool - treasuryFee;
+            prizeWon = netPool / BigInt(numWinners);
+            rank = winners.indexOf(BigInt(tokenId)) + 1; // Approximate rank
+          }
+
           userNFTs.push({
             tokenId: Number(tokenId),
             contestId: Number(contestId),
@@ -105,9 +121,9 @@ export default function MyPickems() {
             totalGames: contest.gameIds.length,
             tiebreakerPoints: Number(tiebreakerPoints),
             submissionTime: Number(submissionTime) * 1000,
-            prizeWon: BigInt(0), // Calculate based on winner status
+            prizeWon,
             claimed: Number(claimed) === 1,
-            rank: 0, // Would need to calculate from contest winners
+            rank,
             contest, // Store full contest object
           });
         } catch (err) {
@@ -151,30 +167,47 @@ export default function MyPickems() {
   };
 
   const getStatusBadge = (nft: PickemNFT) => {
-    if (Number(nft.correctPicks) === 0 && nft.totalGames > 0) {
+    // Check if contest games are finalized first
+    if (!nft.contest.gamesFinalized) {
       return (
         <Badge variant="outline">
           <Clock className="h-3 w-3 mr-1" />
-          In Progress
+          Pending Results
         </Badge>
       );
     }
+
+    // If this specific NFT's prize was claimed
     if (nft.claimed) {
       return (
         <Badge variant="secondary">
           <CheckCircle className="h-3 w-3 mr-1" />
-          Claimed
+          Prize Claimed
         </Badge>
       );
     }
-    if (Number(nft.prizeWon) > 0) {
+
+    // If contest payout is complete (all prizes distributed)
+    if (nft.contest.payoutComplete) {
+      return (
+        <Badge variant="secondary">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Payout Complete
+        </Badge>
+      );
+    }
+
+    // If eligible for prize but not yet claimed
+    if (nft.prizeWon > BigInt(0)) {
       return (
         <Badge variant="default">
           <Trophy className="h-3 w-3 mr-1" />
-          Winner
+          Winner - Claim Available
         </Badge>
       );
     }
+
+    // No prize won
     return (
       <Badge variant="outline">
         <XCircle className="h-3 w-3 mr-1" />
@@ -320,7 +353,10 @@ export default function MyPickems() {
                       Week {nft.weekNumber} - {nft.year}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      NFT #{nft.tokenId} • Contest #{nft.contestId}
+                      NFT #{nft.tokenId} • Contest #{nft.contestId} •{" "}
+                      {!nft.contest.gamesFinalized
+                        ? "Pending Finalization"
+                        : "Finalized"}
                     </p>
                   </div>
                   {getStatusBadge(nft)}
@@ -358,39 +394,79 @@ export default function MyPickems() {
                     <p className="text-muted-foreground">Tiebreaker</p>
                     <p className="font-medium">{nft.tiebreakerPoints} points</p>
                   </div>
-                  {nft.rank && (
+                  {nft.rank && nft.rank > 0 && (
                     <div>
-                      <p className="text-muted-foreground">Final Rank</p>
+                      <p className="text-muted-foreground">Rank</p>
                       <p className="font-medium">#{nft.rank}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleClaimPrize(nft.tokenId, nft.contestId)}
-                    className="flex-1"
-                  >
-                    Distribute Prizes
-                  </Button>
+                <div className="space-y-2">
+                  {/* Show finalize button only if games not finalized */}
+                  {!nft.contest.gamesFinalized && (
+                    <Button
+                      onClick={() => handleFinalizeContest(nft.contestId)}
+                      disabled={finalizing[nft.contestId] || !account}
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                    >
+                      {finalizing[nft.contestId]
+                        ? "Finalizing..."
+                        : "Finalize Contest & Calculate Winners"}
+                    </Button>
+                  )}
+
+                  {/* Claim section - show different states */}
+                  {nft.contest.gamesFinalized && (
+                    <>
+                      {nft.contest.payoutComplete ? (
+                        // All prizes distributed
+                        <div className="text-center py-3 px-4 bg-muted rounded-lg">
+                          <CheckCircle className="h-5 w-5 mx-auto text-green-500 mb-1" />
+                          <p className="text-sm text-muted-foreground">
+                            All prizes distributed
+                          </p>
+                        </div>
+                      ) : nft.claimed ? (
+                        // This NFT claimed
+                        <Button disabled className="w-full" variant="secondary">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Prize Claimed
+                        </Button>
+                      ) : nft.prizeWon > BigInt(0) ? (
+                        // Eligible to claim
+                        <Button
+                          onClick={() =>
+                            handleClaimPrize(nft.tokenId, nft.contestId)
+                          }
+                          className="w-full"
+                          variant="default"
+                        >
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Claim Prize ({formatEther(nft.prizeWon)} ETH)
+                        </Button>
+                      ) : (
+                        // Not a winner
+                        <div className="text-center py-3 px-4 bg-muted rounded-lg">
+                          <XCircle className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                          <p className="text-sm text-muted-foreground">
+                            No prize for this entry
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Always show leaderboard button */}
                   <Button
                     variant="outline"
                     onClick={() => setSelectedContest(nft.contestId)}
-                    className="flex-1"
+                    className="w-full"
                   >
                     View Leaderboard
-                  </Button>
-                  <Button
-                    onClick={() => handleFinalizeContest(nft.contestId)}
-                    disabled={finalizing[nft.contestId] || !account}
-                    variant="secondary"
-                    size="sm"
-                    className="w-full mt-2"
-                  >
-                    {finalizing[nft.contestId]
-                      ? "Finalizing..."
-                      : "Finalize Contest & Distribute Prizes"}
                   </Button>
                 </div>
               </CardContent>
