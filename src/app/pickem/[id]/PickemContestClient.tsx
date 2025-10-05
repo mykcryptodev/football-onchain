@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
 
+import ContestPicksView from "@/components/pickem/ContestPicksView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -450,6 +451,17 @@ export default function PickemContestClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* All Participants' Picks */}
+      <ContestPicksView
+        contestId={contest.id}
+        gameIds={contest.gameIds}
+        gamesFinalized={contest.gamesFinalized}
+        totalEntries={contest.totalEntries}
+        year={contest.year}
+        seasonType={contest.seasonType}
+        weekNumber={contest.weekNumber}
+      />
     </div>
   );
 }

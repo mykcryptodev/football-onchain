@@ -475,6 +475,66 @@ export function usePickemContract() {
     }
   };
 
+  // Get user picks for a token
+  const getUserPicks = async (tokenId: number, gameIds: bigint[]) => {
+    try {
+      const result = await readContract({
+        contract: pickemContract,
+        method: "getUserPicks",
+        params: [BigInt(tokenId), gameIds],
+      });
+      return result;
+    } catch (error) {
+      console.error("Error getting user picks:", error);
+      throw error;
+    }
+  };
+
+  // Get total NFT supply
+  const getTotalNFTSupply = async () => {
+    try {
+      const result = await readContract({
+        contract: pickemNFTContract,
+        method: "totalSupply",
+        params: [],
+      });
+      return Number(result);
+    } catch (error) {
+      console.error("Error getting total supply:", error);
+      throw error;
+    }
+  };
+
+  // Get NFT owner by token ID
+  const getNFTOwner = async (tokenId: number) => {
+    try {
+      const result = await readContract({
+        contract: pickemNFTContract,
+        method: "ownerOf",
+        params: [BigInt(tokenId)],
+      });
+      return result as string;
+    } catch (error) {
+      console.error("Error getting NFT owner:", error);
+      throw error;
+    }
+  };
+
+  // Get NFT token by index
+  const getTokenByIndex = async (index: number) => {
+    try {
+      const result = await readContract({
+        contract: pickemNFTContract,
+        method: "tokenByIndex",
+        params: [BigInt(index)],
+      });
+      return Number(result);
+    } catch (error) {
+      console.error("Error getting token by index:", error);
+      throw error;
+    }
+  };
+
   return {
     createContest,
     submitPredictions,
@@ -493,5 +553,9 @@ export function usePickemContract() {
     requestWeekGames,
     getWeekGameIds,
     requestWeekResults,
+    getUserPicks,
+    getTotalNFTSupply,
+    getNFTOwner,
+    getTokenByIndex,
   };
 }
