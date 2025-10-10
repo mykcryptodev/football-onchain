@@ -31,6 +31,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint256 submissionDeadline; // First game kickoff time
         bool gamesFinalized; // True when all games are complete
         bool payoutComplete; // True when prizes have been distributed
+        uint256 payoutDeadline; // 24 hours after games finalized - when payouts can start
         PayoutStructure payoutStructure;
     }
 
@@ -45,6 +46,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint256 submissionTime;
         uint256 tiebreakerPoints; // Total points prediction for tiebreaker game
         uint8 correctPicks; // Calculated after games complete
+        bool scoreCalculated; // Whether score has been calculated
         bool claimed; // Whether user has claimed their prize
         mapping(uint256 => uint8) picks; // gameId => 0=away, 1=home, 2=not picked
     }
@@ -54,6 +56,13 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint8 winner; // 0=away, 1=home, 2=tie/not finished
         uint256 totalPoints; // For tiebreaker
         bool isFinalized;
+    }
+
+    struct LeaderboardEntry {
+        uint256 tokenId;
+        uint8 score;
+        uint256 tiebreakerPoints;
+        uint256 submissionTime;
     }
 
     // ============ State Variables ============
@@ -80,12 +89,15 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // Maximum games per week (safety limit)
     uint256 public constant MAX_GAMES_PER_WEEK = 16;
 
+    // Score calculation period (24 hours)
+    uint256 public constant SCORE_CALCULATION_PERIOD = 24 hours;
+
     // Mappings
     mapping(uint256 => PickemContest) public contests;
     mapping(uint256 => UserPrediction) public predictions; // tokenId => prediction
     mapping(uint256 => mapping(address => uint256[])) public userTokens; // contestId => user => array of tokenIds
     mapping(uint256 => mapping(uint256 => GameResult)) public gameResults; // contestId => gameId => result
-    mapping(uint256 => uint256[]) public contestWinners; // contestId => array of winning tokenIds
+    mapping(uint256 => LeaderboardEntry[]) public contestLeaderboard; // contestId => top N entries (sorted)
     mapping(address => uint256[]) public userContests; // user => contestIds they've entered
 
     // ============ Events ============
@@ -106,10 +118,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
     event GamesFinalized(uint256 indexed contestId);
 
-    event WinnersCalculated(
+    event LeaderboardUpdated(
         uint256 indexed contestId,
-        uint256[] winnerTokenIds,
-        uint8 maxCorrectPicks
+        uint256 indexed tokenId,
+        uint8 score,
+        uint256 position
     );
 
     event PrizeClaimed(
@@ -123,6 +136,17 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint256 indexed gameId,
         uint8 winner,
         uint256 totalPoints
+    );
+
+    event ScoreCalculated(
+        uint256 indexed contestId,
+        uint256 indexed tokenId,
+        uint8 correctPicks
+    );
+
+    event PayoutPeriodStarted(
+        uint256 indexed contestId,
+        uint256 deadline
     );
 
     // ============ Errors ============
@@ -146,6 +170,10 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error PayoutAlreadyComplete();
     error NoWinners();
     error GamesNotFetched();
+    error ScoreAlreadyCalculated();
+    error ScoreNotCalculated();
+    error InvalidTokenId();
+    error PayoutPeriodNotStarted();
 
     // ============ Constructor ============
 
@@ -159,26 +187,6 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         treasury = _treasury;
         gameScoreOracle = GameScoreOracle(_gameScoreOracle);
         // pickemNFT will be set via setPickemNFT after deployment
-    }
-
-    // ============ Oracle Interaction ============
-
-    /**
-     * @notice Request to fetch games for a specific week from oracle
-     * @dev Must be called before creating a contest for a week
-     * @param year The year
-     * @param seasonType 1=preseason, 2=regular, 3=postseason
-     * @param weekNumber Week number
-     */
-    function requestWeekGames(
-        uint256 year,
-        uint8 seasonType,
-        uint8 weekNumber
-    ) external {
-        // This would typically require Chainlink subscription parameters
-        // For now, it's a placeholder that contest creators would call
-        // In production, this would call gameScoreOracle.fetchWeekGames()
-        revert("Not implemented - use oracle directly");
     }
 
     // ============ Contest Creation ============
@@ -386,10 +394,9 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Mark contest as finalized in storage only if not already finalized
         if (!contests[contestId].gamesFinalized) {
             contests[contestId].gamesFinalized = true;
+            contests[contestId].payoutDeadline = block.timestamp + SCORE_CALCULATION_PERIOD;
             emit GamesFinalized(contestId);
-
-            // Calculate winners automatically
-            _calculateWinners(contestId);
+            emit PayoutPeriodStarted(contestId, contests[contestId].payoutDeadline);
         }
     }
 
@@ -436,147 +443,250 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Only write to storage if state changes
         if (allFinalized && !contestStorage.gamesFinalized) {
             contestStorage.gamesFinalized = true;
+            contestStorage.payoutDeadline = block.timestamp + SCORE_CALCULATION_PERIOD;
             emit GamesFinalized(contestId);
-
-            // Calculate winners automatically
-            _calculateWinners(contestId);
+            emit PayoutPeriodStarted(contestId, contestStorage.payoutDeadline);
         }
     }
 
     /**
-     * @notice Calculate winners for a finalized contest
+     * @notice Calculate score for a specific prediction (permissionless)
+     * @param tokenId The token ID to calculate score for
      */
-    function _calculateWinners(uint256 contestId) internal {
-        // Load contest struct to memory for read-only operations
-        PickemContest storage contestStorage = contests[contestId];
-        if (!contestStorage.gamesFinalized) revert ContestNotFinalized();
+    function calculateScore(uint256 tokenId) external {
+        if (tokenId >= nextTokenId) revert InvalidTokenId();
 
-        // Copy needed fields to memory
-        uint256 totalEntries = contestStorage.totalEntries;
-        PayoutStructure memory payoutStructure = contestStorage.payoutStructure;
+        // Load prediction to storage pointer for minimal reads
+        UserPrediction storage predictionStorage = predictions[tokenId];
 
-        uint256[] memory tokenIds = new uint256[](totalEntries);
-        uint256[] memory scores = new uint256[](totalEntries);
-        uint256[] memory tiebreakers = new uint256[](totalEntries);
+        // Read scoreCalculated once and revert early if already calculated
+        if (predictionStorage.scoreCalculated) revert ScoreAlreadyCalculated();
 
-        uint256 maxScore = 0;
-        uint256 entryCount = 0;
+        // Read contestId to memory
+        uint256 contestId = predictionStorage.contestId;
 
-        // Iterate through all tokens to find predictions for this contest
-        for (uint256 tokenId = 0; tokenId < nextTokenId; tokenId++) {
+        // Check if contest is finalized (single storage read)
+        if (!contests[contestId].gamesFinalized) revert ContestNotFinalized();
+
+        // Calculate score (view function, no storage writes)
+        uint8 correctPicks = _calculateScore(contestId, tokenId);
+
+        // Write to storage - mark as calculated
+        predictionStorage.correctPicks = correctPicks;
+        predictionStorage.scoreCalculated = true;
+
+        // Update NFT score if contract is set
+        if (address(pickemNFT) != address(0)) {
+            pickemNFT.updateScore(tokenId, correctPicks);
+        }
+
+        emit ScoreCalculated(contestId, tokenId, correctPicks);
+
+        // Update leaderboard if score qualifies for top N
+        _updateLeaderboard(
+            contestId,
+            tokenId,
+            correctPicks,
+            predictionStorage.tiebreakerPoints,
+            predictionStorage.submissionTime
+        );
+    }
+
+    /**
+     * @notice Calculate scores for multiple predictions in batch (permissionless)
+     * @param tokenIds Array of token IDs to calculate scores for
+     */
+    function calculateScoresBatch(uint256[] calldata tokenIds) external {
+        // Cache to avoid repeated storage reads for same contest
+        uint256 cachedContestId = type(uint256).max;
+        bool cachedGamesFinalized;
+
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 tokenId = tokenIds[i];
+
+            if (tokenId >= nextTokenId) revert InvalidTokenId();
+
+            // Get storage pointer but minimize reads
             UserPrediction storage predictionStorage = predictions[tokenId];
-            if (predictionStorage.contestId != contestId) continue;
 
-            // Calculate and store score for this prediction
+            // Read scoreCalculated once - skip if already done
+            if (predictionStorage.scoreCalculated) continue;
+
+            // Read contestId to memory
+            uint256 contestId = predictionStorage.contestId;
+
+            // Only read contest finalization status if different from cached contest
+            if (contestId != cachedContestId) {
+                cachedContestId = contestId;
+                cachedGamesFinalized = contests[contestId].gamesFinalized;
+            }
+
+            // Skip if contest not finalized
+            if (!cachedGamesFinalized) continue;
+
+            // Calculate score (view function, no storage writes)
             uint8 correctPicks = _calculateScore(contestId, tokenId);
 
-            // Only write to storage once per prediction
+            // Read tiebreaker data to memory once
+            uint256 tiebreakerPoints = predictionStorage.tiebreakerPoints;
+            uint256 submissionTime = predictionStorage.submissionTime;
+
+            // Write to storage - two SSTOREs per iteration
             predictionStorage.correctPicks = correctPicks;
+            predictionStorage.scoreCalculated = true;
 
             // Update NFT score if contract is set
             if (address(pickemNFT) != address(0)) {
                 pickemNFT.updateScore(tokenId, correctPicks);
             }
 
-            tokenIds[entryCount] = tokenId;
-            scores[entryCount] = correctPicks;
-            tiebreakers[entryCount] = predictionStorage.tiebreakerPoints;
+            emit ScoreCalculated(contestId, tokenId, correctPicks);
 
-            if (correctPicks > maxScore) {
-                maxScore = correctPicks;
+            // Update leaderboard if score qualifies for top N
+            _updateLeaderboard(contestId, tokenId, correctPicks, tiebreakerPoints, submissionTime);
+        }
+    }
+
+    /**
+     * @notice Update leaderboard with a new score (internal helper)
+     * @dev Maintains a sorted leaderboard of top N entries where N = payout positions
+     * @param contestId The contest ID
+     * @param tokenId The token ID that scored
+     * @param score The score achieved
+     * @param tiebreakerPoints Tiebreaker prediction
+     * @param submissionTime When the prediction was submitted
+     */
+    function _updateLeaderboard(
+        uint256 contestId,
+        uint256 tokenId,
+        uint8 score,
+        uint256 tiebreakerPoints,
+        uint256 submissionTime
+    ) internal {
+        // Get leaderboard storage reference and load to memory
+        LeaderboardEntry[] storage leaderboard = contestLeaderboard[contestId];
+
+        // Get max entries needed from payout structure
+        uint256 maxEntries = contests[contestId].payoutStructure.payoutPercentages.length;
+
+        // Create new entry
+        LeaderboardEntry memory newEntry = LeaderboardEntry({
+            tokenId: tokenId,
+            score: score,
+            tiebreakerPoints: tiebreakerPoints,
+            submissionTime: submissionTime
+        });
+
+        uint256 insertPos;
+
+        // If leaderboard is empty or not full, try to add
+        if (leaderboard.length < maxEntries) {
+            // Find insertion position
+            insertPos = leaderboard.length;
+            for (uint256 i = 0; i < leaderboard.length; i++) {
+                if (_isEntryBetter(newEntry, leaderboard[i], contestId)) {
+                    insertPos = i;
+                    break;
+                }
             }
 
-            entryCount++;
+            // Insert entry
+            leaderboard.push(newEntry);
+
+            // Shift entries down if needed
+            for (uint256 i = leaderboard.length - 1; i > insertPos; i--) {
+                leaderboard[i] = leaderboard[i - 1];
+            }
+            leaderboard[insertPos] = newEntry;
+
+            emit LeaderboardUpdated(contestId, tokenId, score, insertPos);
+            return;
         }
 
-        // Find winners (those with max score)
-        uint256[] memory winners = new uint256[](entryCount);
-        uint256 winnerCount = 0;
+        // Leaderboard is full - check if new entry beats the worst entry
+        LeaderboardEntry memory worstEntry = leaderboard[leaderboard.length - 1];
 
-        for (uint256 i = 0; i < entryCount; i++) {
-            if (scores[i] == maxScore) {
-                winners[winnerCount] = tokenIds[i];
-                winnerCount++;
+        if (!_isEntryBetter(newEntry, worstEntry, contestId)) {
+            // New entry doesn't make the cut
+            return;
+        }
+
+        // Find insertion position
+        insertPos = leaderboard.length - 1;
+        for (uint256 i = 0; i < leaderboard.length - 1; i++) {
+            if (_isEntryBetter(newEntry, leaderboard[i], contestId)) {
+                insertPos = i;
+                break;
             }
         }
 
-        // Apply tiebreaker if needed
-        if (winnerCount > 1) {
-            _applyTiebreaker(contestId, winners, winnerCount);
+        // Shift entries down and insert
+        for (uint256 i = leaderboard.length - 1; i > insertPos; i--) {
+            leaderboard[i] = leaderboard[i - 1];
         }
+        leaderboard[insertPos] = newEntry;
 
-        // Store only the needed winners based on payout structure
-        uint256 winnersNeeded = payoutStructure.payoutPercentages.length;
-        uint256[] memory finalWinners = new uint256[](winnersNeeded < winnerCount ? winnersNeeded : winnerCount);
+        emit LeaderboardUpdated(contestId, tokenId, score, insertPos);
+    }
 
-        for (uint256 i = 0; i < finalWinners.length; i++) {
-            finalWinners[i] = winners[i];
-        }
+    /**
+     * @notice Compare two leaderboard entries to determine which is better
+     * @dev Returns true if entryA is better than entryB
+     */
+    function _isEntryBetter(
+        LeaderboardEntry memory entryA,
+        LeaderboardEntry memory entryB,
+        uint256 contestId
+    ) internal view returns (bool) {
+        // Higher score is better
+        if (entryA.score > entryB.score) return true;
+        if (entryA.score < entryB.score) return false;
 
-        // Only write to storage once at the end
-        contestWinners[contestId] = finalWinners;
+        // Same score - use tiebreaker (closer to actual total points)
+        uint256[] memory gameIds = contests[contestId].gameIds;
+        uint256 tiebreakerGameId = gameIds[gameIds.length - 1];
+        uint256 actualTotalPoints = gameResults[contestId][tiebreakerGameId].totalPoints;
 
-        emit WinnersCalculated(contestId, finalWinners, uint8(maxScore));
+        uint256 diffA = actualTotalPoints > entryA.tiebreakerPoints
+            ? actualTotalPoints - entryA.tiebreakerPoints
+            : entryA.tiebreakerPoints - actualTotalPoints;
+
+        uint256 diffB = actualTotalPoints > entryB.tiebreakerPoints
+            ? actualTotalPoints - entryB.tiebreakerPoints
+            : entryB.tiebreakerPoints - actualTotalPoints;
+
+        // Closer tiebreaker is better
+        if (diffA < diffB) return true;
+        if (diffA > diffB) return false;
+
+        // Same tiebreaker - earlier submission wins
+        return entryA.submissionTime < entryB.submissionTime;
     }
 
     /**
      * @notice Helper function to calculate score for a prediction
+     * @dev Optimized to minimize storage reads
      */
     function _calculateScore(uint256 contestId, uint256 tokenId) internal view returns (uint8) {
+        // Get storage pointers
         UserPrediction storage predictionStorage = predictions[tokenId];
-        PickemContest storage contestStorage = contests[contestId];
+
+        // Load gameIds array to memory once
+        uint256[] memory gameIds = contests[contestId].gameIds;
         uint8 correctPicks = 0;
 
-        // Calculate correct picks
-        for (uint256 i = 0; i < contestStorage.gameIds.length; i++) {
-            uint256 gameId = contestStorage.gameIds[i];
+        // Iterate through games - each gameResult is loaded to memory once
+        for (uint256 i = 0; i < gameIds.length; i++) {
+            uint256 gameId = gameIds[i];
             GameResult memory result = gameResults[contestId][gameId];
 
+            // Only need to read pick from storage once per game
             if (result.isFinalized && predictionStorage.picks[gameId] == result.winner) {
                 correctPicks++;
             }
         }
 
         return correctPicks;
-    }
-
-    /**
-     * @notice Helper function to apply tiebreaker logic
-     */
-    function _applyTiebreaker(
-        uint256 contestId,
-        uint256[] memory winners,
-        uint256 winnerCount
-    ) internal view {
-        PickemContest storage contestStorage = contests[contestId];
-        uint256[] memory gameIds = contestStorage.gameIds;
-
-        // Get tiebreaker game's total points
-        uint256 tiebreakerGameId = gameIds[gameIds.length - 1]; // Last game as tiebreaker
-        uint256 actualTotalPoints = gameResults[contestId][tiebreakerGameId].totalPoints;
-
-        // Sort winners by closest tiebreaker prediction
-        for (uint256 i = 0; i < winnerCount - 1; i++) {
-            for (uint256 j = i + 1; j < winnerCount; j++) {
-                UserPrediction storage predI = predictions[winners[i]];
-                UserPrediction storage predJ = predictions[winners[j]];
-
-                uint256 diffI = actualTotalPoints > predI.tiebreakerPoints
-                    ? actualTotalPoints - predI.tiebreakerPoints
-                    : predI.tiebreakerPoints - actualTotalPoints;
-
-                uint256 diffJ = actualTotalPoints > predJ.tiebreakerPoints
-                    ? actualTotalPoints - predJ.tiebreakerPoints
-                    : predJ.tiebreakerPoints - actualTotalPoints;
-
-                // If j is closer, swap
-                if (diffJ < diffI || (diffJ == diffI && predJ.submissionTime < predI.submissionTime)) {
-                    uint256 temp = winners[i];
-                    winners[i] = winners[j];
-                    winners[j] = temp;
-                }
-            }
-        }
     }
 
     // ============ Prize Claims ============
@@ -591,6 +701,9 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         PickemContest memory contestMem = contests[contestId];
         if (!contestMem.gamesFinalized) revert ContestNotFinalized();
 
+        // Check if payout period has started (24 hours after finalization)
+        if (block.timestamp < contestMem.payoutDeadline) revert PayoutPeriodNotStarted();
+
         // Verify the caller owns this token
         uint256[] memory userTokenList = userTokens[contestId][msg.sender];
         bool ownsToken = false;
@@ -602,16 +715,16 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         }
         if (!ownsToken) revert NoPrizeToClain();
 
-        // Check if already claimed (can't copy to memory due to mapping)
+        // Check if already claimed
         UserPrediction storage predictionStorage = predictions[tokenId];
         if (predictionStorage.claimed) revert AlreadyClaimed();
 
-        // Check if user is a winner
-        uint256[] memory winners = contestWinners[contestId];
+        // Check leaderboard to see if this token won
+        LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
         uint256 winnerIndex = type(uint256).max;
 
-        for (uint256 i = 0; i < winners.length; i++) {
-            if (winners[i] == tokenId) {
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            if (leaderboard[i].tokenId == tokenId) {
                 winnerIndex = i;
                 break;
             }
@@ -629,7 +742,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         if (prizeAmount == 0) revert NoPrizeToClain();
 
-        // Mark as claimed in storage (only this field needs to be updated)
+        // Mark as claimed in storage
         predictions[tokenId].claimed = true;
 
         // Mark NFT as claimed if contract is set
@@ -649,8 +762,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // If all prizes claimed, send treasury fee
         bool allClaimed = true;
-        for (uint256 i = 0; i < winners.length; i++) {
-            if (!predictions[winners[i]].claimed) {
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            if (!predictions[leaderboard[i].tokenId].claimed) {
                 allClaimed = false;
                 break;
             }
@@ -679,27 +792,30 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         PickemContest memory contestMem = contests[contestId];
         if (!contestMem.gamesFinalized) revert ContestNotFinalized();
 
+        // Check if payout period has started (24 hours after finalization)
+        if (block.timestamp < contestMem.payoutDeadline) revert PayoutPeriodNotStarted();
+
         // Get all user's tokens for this contest
         uint256[] memory userTokenList = userTokens[contestId][msg.sender];
         if (userTokenList.length == 0) revert NoPrizeToClain();
 
-        // Get contest winners
-        uint256[] memory winners = contestWinners[contestId];
+        // Get contest leaderboard
+        LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
 
         uint256 totalPrizeAmount = 0;
         uint256[] memory winningTokens = new uint256[](userTokenList.length);
         uint256 winningTokenCount = 0;
 
-        // Check each user token to see if it's a winner
+        // Check each user token to see if it's on the leaderboard
         for (uint256 i = 0; i < userTokenList.length; i++) {
             uint256 tokenId = userTokenList[i];
 
             // Skip if already claimed
             if (predictions[tokenId].claimed) continue;
 
-            // Check if this token is a winner
-            for (uint256 j = 0; j < winners.length; j++) {
-                if (winners[j] == tokenId) {
+            // Check if this token is on the leaderboard
+            for (uint256 j = 0; j < leaderboard.length; j++) {
+                if (leaderboard[j].tokenId == tokenId) {
                     // Calculate prize for this winning position
                     uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
                     uint256 prizeAmount = 0;
@@ -722,7 +838,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
                         }
                     }
 
-                    break; // Found this token in winners, move to next token
+                    break; // Found this token on leaderboard, move to next token
                 }
             }
         }
@@ -744,8 +860,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // Check if all prizes have been claimed to send treasury fee
         bool allClaimed = true;
-        for (uint256 i = 0; i < winners.length; i++) {
-            if (!predictions[winners[i]].claimed) {
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            if (!predictions[leaderboard[i].tokenId].claimed) {
                 allClaimed = false;
                 break;
             }
@@ -785,6 +901,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         uint256 submissionTime,
         uint256 tiebreakerPoints,
         uint8 correctPicks,
+        bool scoreCalculated,
         bool claimed
     ) {
         UserPrediction storage pred = predictions[tokenId];
@@ -794,6 +911,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             pred.submissionTime,
             pred.tiebreakerPoints,
             pred.correctPicks,
+            pred.scoreCalculated,
             pred.claimed
         );
     }
@@ -810,7 +928,18 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     }
 
     function getContestWinners(uint256 contestId) external view returns (uint256[] memory) {
-        return contestWinners[contestId];
+        LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
+        uint256[] memory winners = new uint256[](leaderboard.length);
+
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            winners[i] = leaderboard[i].tokenId;
+        }
+
+        return winners;
+    }
+
+    function getContestLeaderboard(uint256 contestId) external view returns (LeaderboardEntry[] memory) {
+        return contestLeaderboard[contestId];
     }
 
     function getUserContests(address user) external view returns (uint256[] memory) {
