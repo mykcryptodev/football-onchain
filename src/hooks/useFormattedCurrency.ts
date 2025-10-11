@@ -1,10 +1,11 @@
-import { chain } from "@/constants";
-import { client } from "@/providers/Thirdweb";
 import { useEffect, useState } from "react";
 import { getContract, ZERO_ADDRESS } from "thirdweb";
 import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
 import { toTokens } from "thirdweb/utils";
 import { erc20Abi, formatEther, isAddressEqual } from "viem";
+
+import { chain } from "@/constants";
+import { client } from "@/providers/Thirdweb";
 
 interface UseFormattedCurrencyOptions {
   amount: bigint | string | number;
