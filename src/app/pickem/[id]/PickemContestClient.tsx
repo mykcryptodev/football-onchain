@@ -187,9 +187,11 @@ export default function PickemContestClient({
 
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
     const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
 
     if (days > 0) return `${days}d ${hours}h`;
-    return `${hours}h remaining`;
+    if (hours > 0) return `${hours}h remaining`;
+    return `${minutes}m remaining`;
   };
 
   const getPickedCount = () => {
