@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
+import { useHaptics } from "@/hooks/useHaptics";
 import { usePickemContract } from "@/hooks/usePickemContract";
 
 interface ContestData {
@@ -98,6 +99,7 @@ export default function PickemContestClient({
   const router = useRouter();
   const account = useActiveAccount();
   const { submitPredictions } = usePickemContract();
+  const { selectionChanged } = useHaptics();
 
   const [games, setGames] = useState<GameInfo[]>([]);
   const [picks, setPicks] = useState<Record<string, number>>({});
@@ -425,9 +427,10 @@ export default function PickemContestClient({
                               ? "border-primary bg-primary/10"
                               : ""
                           }`}
-                          onClick={() =>
-                            setPicks({ ...picks, [game.gameId]: 0 })
-                          }
+                          onClick={() => {
+                            selectionChanged();
+                            setPicks({ ...picks, [game.gameId]: 0 });
+                          }}
                         >
                           <RadioGroupItem
                             className="mt-1"
@@ -495,9 +498,10 @@ export default function PickemContestClient({
                               ? "border-primary bg-primary/10"
                               : ""
                           }`}
-                          onClick={() =>
-                            setPicks({ ...picks, [game.gameId]: 1 })
-                          }
+                          onClick={() => {
+                            selectionChanged();
+                            setPicks({ ...picks, [game.gameId]: 1 });
+                          }}
                         >
                           <RadioGroupItem
                             className="mt-1"
