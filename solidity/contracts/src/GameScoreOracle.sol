@@ -51,12 +51,17 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     string public constant WEEK_RESULTS_SOURCE =
         "const y=args[0],s=args[1],w=args[2];"
         "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
-        "const e=r.data?.events||[];let p=0n,c=0;"
+        "const e=r.data?.events||[];let p=0n,c=0,latestGame=null,latestDate=0;"
         "for(let i=0;i<e.length;i++){const v=e[i],m=v.competitions[0].competitors;"
         "const h=m.find(t=>t.homeAway==='home'),a=m.find(t=>t.homeAway==='away');"
-        "if(v.status.type.completed&&h&&a){if(+h.score>+a.score)p|=(1n<<BigInt(i));c++;}}"
+        "if(v.status.type.completed&&h&&a){if(+h.score>+a.score)p|=(1n<<BigInt(i));c++;}"
+        "const d=new Date(v.date).getTime();if(d>latestDate){latestDate=d;latestGame=v.id;}}"
+        "let totalPoints=0n,tiebreakerGameId=0n;"
+        "if(latestGame){tiebreakerGameId=BigInt(latestGame);const g=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${latestGame}`});"
+        "const comp=g.data?.header?.competitions?.[0]?.competitors||[];"
+        "for(let i=0;i<comp.length;i++){totalPoints+=BigInt(parseInt(comp[i].score||'0'));}}"
         "const allComplete=c===e.length?1n:0n;"
-        "const x='0x'+[allComplete,BigInt(c),p].map(n=>n.toString(16).padStart(64,'0')).join('');"
+        "const x='0x'+[allComplete,BigInt(c),p,totalPoints,tiebreakerGameId].map(n=>n.toString(16).padStart(64,'0')).join('');"
         "const b=new Uint8Array(x.length/2-1);for(let i=2;i<x.length;i+=2)b[i/2-1]=parseInt(x.substr(i,2),16);return b;";
 
     string public constant SCORE_CHANGES_SOURCE =
@@ -103,6 +108,8 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 packedResults;  // Packed winner data: bit 0 = game 0 winner (0=away, 1=home), etc
         uint8 gamesCount;       // Number of games with results
         bool isFinalized;       // True when all games are complete
+        uint256 tiebreakerTotalPoints; // Total points scored in the latest game (for tiebreaker)
+        uint256 tiebreakerGameId; // ESPN game ID of the latest game used for tiebreaker
     }
 
     struct GameScore {
@@ -576,7 +583,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 weekId,
         bytes memory response
     ) internal {
-        // Extract data: [allCompleted, gameCount, packedResults]
+        // Extract data: [allCompleted, gameCount, packedResults, tiebreakerTotalPoints, tiebreakerGameId]
         uint256 allCompleted = _bytesToUint256(response, 0);
 
         // If not all games are completed, exit early without storing
@@ -587,12 +594,16 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
 
         uint256 gameCount = _bytesToUint256(response, 1);
         uint256 packedResults = _bytesToUint256(response, 2);
+        uint256 tiebreakerTotalPoints = _bytesToUint256(response, 3);
+        uint256 tiebreakerGameId = _bytesToUint256(response, 4);
 
         // Store results in single operation
         WeekResults storage wr = weekResults[weekId];
         wr.weekId = weekId;
         wr.gamesCount = uint8(gameCount);
         wr.packedResults = packedResults;
+        wr.tiebreakerTotalPoints = tiebreakerTotalPoints;
+        wr.tiebreakerGameId = tiebreakerGameId;
         wr.isFinalized = true;
 
         emit WeekResultsUpdated(weekId, uint8(gameCount), true);

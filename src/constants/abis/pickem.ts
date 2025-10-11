@@ -374,6 +374,7 @@ export const abi = [
       { internalType: "bool", name: "gamesFinalized", type: "bool" },
       { internalType: "bool", name: "payoutComplete", type: "bool" },
       { internalType: "uint256", name: "payoutDeadline", type: "uint256" },
+      { internalType: "uint256", name: "tiebreakerGameId", type: "uint256" },
       {
         components: [
           { internalType: "uint8", name: "payoutType", type: "uint8" },
@@ -454,6 +455,11 @@ export const abi = [
           { internalType: "bool", name: "gamesFinalized", type: "bool" },
           { internalType: "bool", name: "payoutComplete", type: "bool" },
           { internalType: "uint256", name: "payoutDeadline", type: "uint256" },
+          {
+            internalType: "uint256",
+            name: "tiebreakerGameId",
+            type: "uint256",
+          },
           {
             components: [
               { internalType: "uint8", name: "payoutType", type: "uint8" },

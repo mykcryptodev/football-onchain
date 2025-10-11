@@ -32,6 +32,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         bool gamesFinalized; // True when all games are complete
         bool payoutComplete; // True when prizes have been distributed
         uint256 payoutDeadline; // 24 hours after games finalized - when payouts can start
+        uint256 tiebreakerGameId; // ESPN game ID used for tiebreaker (latest game)
         PayoutStructure payoutStructure;
     }
 
@@ -381,8 +382,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             contestMem.weekNumber
         );
 
-        // Check if week results are finalized in the oracle
-        (, , , bool isFinalized) = gameScoreOracle.weekResults(weekId);
+        // Check if week results are finalized in the oracle and get tiebreaker data
+        (, , , bool isFinalized, uint256 tiebreakerTotalPoints, uint256 tiebreakerGameId) = gameScoreOracle.weekResults(weekId);
         if (!isFinalized) revert WeekResultsNotFinalized();
 
         // Get results from oracle
@@ -399,11 +400,14 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Update results for each game in storage
         for (uint256 i = 0; i < contestMem.gameIds.length; i++) {
             uint256 gameId = contestMem.gameIds[i];
+            // For the tiebreaker game, store the actual total points
+            uint256 totalPoints = (gameId == tiebreakerGameId) ? tiebreakerTotalPoints : 0;
+
             // Prepare GameResult in memory, then write to storage
             GameResult memory resultMem = GameResult({
                 gameId: gameId,
                 winner: winners[i],
-                totalPoints: 0, // Not used for pick'em
+                totalPoints: totalPoints,
                 isFinalized: true
             });
             gameResults[contestId][gameId] = resultMem;
@@ -413,6 +417,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         if (!contests[contestId].gamesFinalized) {
             contests[contestId].gamesFinalized = true;
             contests[contestId].payoutDeadline = block.timestamp + SCORE_CALCULATION_PERIOD;
+            contests[contestId].tiebreakerGameId = tiebreakerGameId;
             emit GamesFinalized(contestId);
             emit PayoutPeriodStarted(contestId, contests[contestId].payoutDeadline);
         }
@@ -612,8 +617,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         if (entryA.score < entryB.score) return false;
 
         // Same score - use tiebreaker (closer to actual total points)
-        uint256[] memory gameIds = contests[contestId].gameIds;
-        uint256 tiebreakerGameId = gameIds[gameIds.length - 1];
+        uint256 tiebreakerGameId = contests[contestId].tiebreakerGameId;
         uint256 actualTotalPoints = gameResults[contestId][tiebreakerGameId].totalPoints;
 
         uint256 diffA = actualTotalPoints > entryA.tiebreakerPoints
