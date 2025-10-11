@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
@@ -213,6 +213,13 @@ export default function PickemContestClient({
   };
 
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
+
+  const lastGame = useMemo(() => {
+    // get the game with the latest start time
+    return games.sort(
+      (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+    )[0];
+  }, [games]);
 
   return (
     <div className="container mx-auto py-5 space-y-6">
@@ -428,7 +435,9 @@ export default function PickemContestClient({
                   onChange={e => setTiebreakerPoints(e.target.value)}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Guess the total points scored in the highest-scoring game
+                  Guess the total points scored in the{" "}
+                  {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
+                  game
                 </p>
               </div>
 
