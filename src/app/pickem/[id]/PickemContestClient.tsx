@@ -54,6 +54,23 @@ interface GameInfo {
   awayLogo?: string;
   homeAbbreviation?: string;
   awayAbbreviation?: string;
+  odds?: {
+    details?: string;
+    overUnder?: number;
+    spread?: number;
+    homeTeamOdds?: {
+      favorite: boolean;
+      underdog: boolean;
+      moneyLine?: number;
+      spreadOdds?: number;
+    };
+    awayTeamOdds?: {
+      favorite: boolean;
+      underdog: boolean;
+      moneyLine?: number;
+      spreadOdds?: number;
+    };
+  };
 }
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
@@ -212,12 +229,17 @@ export default function PickemContestClient({
     toast.success("Random picks generated!");
   };
 
+  const formatMoneyLine = (moneyLine: number | undefined) => {
+    if (!moneyLine) return "";
+    return moneyLine > 0 ? `+${moneyLine}` : `${moneyLine}`;
+  };
+
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
 
   const lastGame = useMemo(() => {
     // get the game with the latest start time
-    return games.sort(
-      (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+    return [...games].sort(
+      (a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime(),
     )[0];
   }, [games]);
 
@@ -358,21 +380,39 @@ export default function PickemContestClient({
                           className="flex-1 cursor-pointer"
                           htmlFor={`${game.gameId}-away`}
                         >
-                          <div className="flex items-center gap-2 justify-between w-full">
-                            <img
-                              alt={`${game.awayTeam} logo`}
-                              className="h-6 w-6 flex-shrink-0"
-                              src={game.awayLogo}
-                            />
-                            <span className="font-medium sm:hidden block">
-                              {game.awayAbbreviation}
-                            </span>
-                            <span className="font-medium hidden sm:block">
-                              {game.awayTeam}
-                            </span>
-                            <span className="text-sm text-muted-foreground text-nowrap">
-                              {game.awayRecord}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 justify-between w-full">
+                              <img
+                                alt={`${game.awayTeam} logo`}
+                                className="h-6 w-6 flex-shrink-0"
+                                src={game.awayLogo}
+                              />
+                              <span className="font-medium sm:hidden block">
+                                {game.awayAbbreviation}
+                              </span>
+                              <span className="font-medium hidden sm:block">
+                                {game.awayTeam}
+                              </span>
+                              <span className="text-sm text-muted-foreground text-nowrap">
+                                {game.awayRecord}
+                              </span>
+                            </div>
+                            {game.odds?.awayTeamOdds &&
+                              game.odds.awayTeamOdds.moneyLine && (
+                                <div className="flex items-center gap-2 text-xs ml-8">
+                                  <Badge
+                                    className={`text-[10px] px-1.5 py-0 h-4 ${
+                                      game.odds.awayTeamOdds.favorite
+                                        ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                        : "bg-red-100 hover:bg-red-200 text-red-700"
+                                    }`}
+                                  >
+                                    {formatMoneyLine(
+                                      game.odds.awayTeamOdds.moneyLine,
+                                    )}
+                                  </Badge>
+                                </div>
+                              )}
                           </div>
                         </Label>
                       </div>
@@ -390,21 +430,39 @@ export default function PickemContestClient({
                           className="flex-1 cursor-pointer"
                           htmlFor={`${game.gameId}-home`}
                         >
-                          <div className="flex items-center gap-2 justify-between w-full">
-                            <img
-                              alt={`${game.homeTeam} logo`}
-                              className="h-6 w-6 flex-shrink-0"
-                              src={game.homeLogo}
-                            />
-                            <span className="font-medium sm:hidden block">
-                              {game.homeAbbreviation}
-                            </span>
-                            <span className="font-medium hidden sm:block">
-                              {game.homeTeam}
-                            </span>
-                            <span className="text-sm text-muted-foreground text-nowrap">
-                              {game.homeRecord}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 justify-between w-full">
+                              <img
+                                alt={`${game.homeTeam} logo`}
+                                className="h-6 w-6 flex-shrink-0"
+                                src={game.homeLogo}
+                              />
+                              <span className="font-medium sm:hidden block">
+                                {game.homeAbbreviation}
+                              </span>
+                              <span className="font-medium hidden sm:block">
+                                {game.homeTeam}
+                              </span>
+                              <span className="text-sm text-muted-foreground text-nowrap">
+                                {game.homeRecord}
+                              </span>
+                            </div>
+                            {game.odds?.homeTeamOdds &&
+                              game.odds.homeTeamOdds.moneyLine && (
+                                <div className="flex items-center gap-2 text-xs ml-8">
+                                  <Badge
+                                    className={`text-[10px] px-1.5 py-0 h-4 ${
+                                      game.odds.homeTeamOdds.favorite
+                                        ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                        : "bg-red-100 hover:bg-red-200 text-red-700"
+                                    }`}
+                                  >
+                                    {formatMoneyLine(
+                                      game.odds.homeTeamOdds.moneyLine,
+                                    )}
+                                  </Badge>
+                                </div>
+                              )}
                           </div>
                         </Label>
                       </div>

@@ -4,6 +4,8 @@ interface GameInfo {
   gameId: string;
   homeTeam: string;
   awayTeam: string;
+  homeAbbreviation?: string;
+  awayAbbreviation?: string;
   homeRecord: string;
   awayRecord: string;
   kickoff: string;
@@ -12,6 +14,23 @@ interface GameInfo {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  odds?: {
+    details?: string;
+    overUnder?: number;
+    spread?: number;
+    homeTeamOdds?: {
+      favorite: boolean;
+      underdog: boolean;
+      moneyLine?: number;
+      spreadOdds?: number;
+    };
+    awayTeamOdds?: {
+      favorite: boolean;
+      underdog: boolean;
+      moneyLine?: number;
+      spreadOdds?: number;
+    };
+  };
 }
 
 interface ESPNTeam {
@@ -92,6 +111,27 @@ interface ESPNGame {
         shortDetail: string;
       };
     };
+    odds?: Array<{
+      provider: {
+        id: string;
+        name: string;
+      };
+      details?: string;
+      overUnder?: number;
+      spread?: number;
+      homeTeamOdds?: {
+        favorite: boolean;
+        underdog: boolean;
+        moneyLine?: number;
+        spreadOdds?: number;
+      };
+      awayTeamOdds?: {
+        favorite: boolean;
+        underdog: boolean;
+        moneyLine?: number;
+        spreadOdds?: number;
+      };
+    }>;
   }>;
 }
 
@@ -190,6 +230,32 @@ export async function GET(request: NextRequest) {
         };
       }
 
+      // Extract odds if available (use the first odds provider, typically ESPN BET)
+      const primaryOdds = competition.odds?.[0];
+      const oddsData = primaryOdds
+        ? {
+            details: primaryOdds.details,
+            overUnder: primaryOdds.overUnder,
+            spread: primaryOdds.spread,
+            homeTeamOdds: primaryOdds.homeTeamOdds
+              ? {
+                  favorite: primaryOdds.homeTeamOdds.favorite,
+                  underdog: primaryOdds.homeTeamOdds.underdog,
+                  moneyLine: primaryOdds.homeTeamOdds.moneyLine,
+                  spreadOdds: primaryOdds.homeTeamOdds.spreadOdds,
+                }
+              : undefined,
+            awayTeamOdds: primaryOdds.awayTeamOdds
+              ? {
+                  favorite: primaryOdds.awayTeamOdds.favorite,
+                  underdog: primaryOdds.awayTeamOdds.underdog,
+                  moneyLine: primaryOdds.awayTeamOdds.moneyLine,
+                  spreadOdds: primaryOdds.awayTeamOdds.spreadOdds,
+                }
+              : undefined,
+          }
+        : undefined;
+
       return {
         gameId: event.id,
         homeTeam: homeTeam.team.displayName,
@@ -204,6 +270,7 @@ export async function GET(request: NextRequest) {
         homeScore: homeTeam.score ? parseInt(homeTeam.score) : undefined,
         awayScore: awayTeam.score ? parseInt(awayTeam.score) : undefined,
         status: competition.status.type.name,
+        odds: oddsData,
       };
     });
 
