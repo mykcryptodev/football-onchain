@@ -31,7 +31,7 @@ export const abi = [
   { inputs: [], name: "InvalidTokenId", type: "error" },
   { inputs: [], name: "InvalidWeekNumber", type: "error" },
   { inputs: [], name: "NoGamesProvided", type: "error" },
-  { inputs: [], name: "NoPrizeToClain", type: "error" },
+  { inputs: [], name: "NoPrizeToClaim", type: "error" },
   { inputs: [], name: "NoWinners", type: "error" },
   { inputs: [], name: "NotAuthorized", type: "error" },
   { inputs: [], name: "PayoutAlreadyComplete", type: "error" },

@@ -32,30 +32,30 @@ export function useFormattedCurrency({
         setIsLoading(true);
         setError(null);
 
-        // Handle native ETH (zero address or "ETH")
-        if (
-          currencyAddress === "ETH" ||
-          isAddressEqual(ZERO_ADDRESS, currencyAddress as `0x${string}`)
-        ) {
+        if (isAddressEqual(ZERO_ADDRESS, currencyAddress as `0x${string}`)) {
           const formatted = `${formatEther(BigInt(amount))} ETH`;
           if (isMounted) {
             setFormattedValue(formatted);
           }
-        } else {
-          // Handle ERC20 tokens
-          const contract = getContract({
-            client,
-            chain,
-            address: currencyAddress as `0x${string}`,
-            abi: erc20Abi,
-          });
+          return; // Exit early for native token
+        }
 
-          const metadata = await getCurrencyMetadata({ contract });
-          const formatted = `${toTokens(BigInt(amount), metadata.decimals)} ${metadata.symbol}`;
+        // Handle ERC20 tokens - fetch metadata from the contract
+        const contract = getContract({
+          client,
+          chain,
+          address: currencyAddress as `0x${string}`,
+          abi: erc20Abi,
+        });
 
-          if (isMounted) {
-            setFormattedValue(formatted);
-          }
+        const metadata = await getCurrencyMetadata({ contract });
+        const amountFormatted = Number(
+          toTokens(BigInt(amount), metadata.decimals),
+        );
+        const formatted = `${amountFormatted.toLocaleString()} ${metadata.symbol}`;
+
+        if (isMounted) {
+          setFormattedValue(formatted);
         }
       } catch (err) {
         console.error("Error formatting currency:", err);

@@ -61,10 +61,7 @@ export default async function PickemContestPage({
       weekNumber: contestData.weekNumber,
       year: Number(contestData.year),
       entryFee: contestData.entryFee,
-      currency:
-        contestData.currency === "0x0000000000000000000000000000000000000000"
-          ? "ETH"
-          : "USDC",
+      currency: contestData.currency,
       totalPrizePool: contestData.totalPrizePool,
       totalEntries: Number(contestData.totalEntries),
       submissionDeadline: Number(contestData.submissionDeadline) * 1000,

@@ -4,16 +4,19 @@ import {
   getContract,
   prepareContractCall,
   readContract,
+  toUnits,
   waitForReceipt,
+  ZERO_ADDRESS,
 } from "thirdweb";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
-import { parseEther } from "viem";
 
 import { chain, pickem, pickemNFT } from "@/constants";
 import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
 import { client } from "@/providers/Thirdweb";
+import { decimals } from "thirdweb/extensions/erc20";
+import { isAddressEqual } from "viem";
 
 export function usePickemContract() {
   const account = useActiveAccount();
@@ -45,6 +48,18 @@ export function usePickemContract() {
   }) => {
     if (!account) throw new Error("No account connected");
 
+    let currencyDecimals = 18;
+    try {
+      const tokenContract = getContract({
+        client,
+        chain,
+        address: params.currency,
+      });
+      currencyDecimals = await decimals({ contract: tokenContract });
+    } catch (error) {
+      console.error("Error getting currency decimals:", error);
+    }
+
     try {
       const tx = prepareContractCall({
         contract: pickemContract,
@@ -54,7 +69,7 @@ export function usePickemContract() {
           params.weekNumber,
           BigInt(params.year),
           params.currency,
-          parseEther(params.entryFee),
+          toUnits(params.entryFee, currencyDecimals),
           params.payoutType,
           BigInt(params.customDeadline || 0),
         ],
@@ -85,10 +100,12 @@ export function usePickemContract() {
     if (!account) throw new Error("No account connected");
 
     try {
-      const value =
-        params.currency === "0x0000000000000000000000000000000000000000"
-          ? parseEther(params.entryFee)
-          : BigInt(0);
+      const value = isAddressEqual(
+        params.currency as `0x${string}`,
+        ZERO_ADDRESS,
+      )
+        ? toUnits(params.entryFee, 18)
+        : BigInt(0);
 
       const tx = prepareContractCall({
         contract: pickemContract,

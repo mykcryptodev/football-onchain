@@ -164,10 +164,7 @@ export default function PickemContestClient({
         picks: picksArray,
         tiebreakerPoints: Number(tiebreakerPoints),
         entryFee: formatEther(contest.entryFee),
-        currency:
-          contest.currency === "ETH"
-            ? "0x0000000000000000000000000000000000000000"
-            : "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC address
+        currency: contest.currency,
       });
 
       toast.success("Your picks have been submitted!");

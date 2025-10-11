@@ -4,9 +4,7 @@ import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ZERO_ADDRESS } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +17,7 @@ import {
   chainlinkJobId,
   chainlinkSubscriptionId,
 } from "@/constants";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 
 interface PickemContest {
@@ -49,6 +48,23 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
   1: "Top 3",
   2: "Top 5",
 };
+
+// Helper component to format currency using the hook
+function FormattedCurrency({
+  amount,
+  currencyAddress,
+}: {
+  amount: bigint;
+  currencyAddress: string;
+}) {
+  const { formattedValue, isLoading } = useFormattedCurrency({
+    amount,
+    currencyAddress,
+  });
+
+  if (isLoading) return <span>...</span>;
+  return <span>{formattedValue}</span>;
+}
 
 export default function PickemContestList() {
   const account = useActiveAccount();
@@ -99,7 +115,7 @@ export default function PickemContestList() {
               weekNumber: contest.weekNumber,
               year: Number(contest.year),
               entryFee: contest.entryFee,
-              currency: contest.currency === ZERO_ADDRESS ? "ETH" : "USDC",
+              currency: contest.currency,
               totalPrizePool: contest.totalPrizePool,
               totalEntries: Number(contest.totalEntries),
               submissionDeadline: Number(contest.submissionDeadline) * 1000, // Convert to milliseconds
@@ -305,9 +321,10 @@ export default function PickemContestList() {
             <div>
               <p className="text-sm text-muted-foreground">Entry Fee</p>
               <p className="font-medium">
-                {contest.currency === "ETH"
-                  ? `${formatEther(contest.entryFee)} ETH`
-                  : `${Number(contest.entryFee) / 1e6} USDC`}
+                <FormattedCurrency
+                  amount={contest.entryFee}
+                  currencyAddress={contest.currency}
+                />
               </p>
             </div>
           </div>
@@ -317,9 +334,10 @@ export default function PickemContestList() {
             <div>
               <p className="text-sm text-muted-foreground">Prize Pool</p>
               <p className="font-medium">
-                {contest.currency === "ETH"
-                  ? `${formatEther(contest.totalPrizePool)} ETH`
-                  : `${Number(contest.totalPrizePool) / 1e6} USDC`}
+                <FormattedCurrency
+                  amount={contest.totalPrizePool}
+                  currencyAddress={contest.currency}
+                />
               </p>
             </div>
           </div>

@@ -163,7 +163,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error InvalidPredictions();
     error InsufficientPayment();
     error ContestNotFinalized();
-    error NoPrizeToClain();
+    error NoPrizeToClaim();
     error AlreadyClaimed();
     error TransferFailed();
     error NotAuthorized();
@@ -686,7 +686,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             }
         }
 
-        if (winnerIndex == type(uint256).max) revert NoPrizeToClain();
+        if (winnerIndex == type(uint256).max) revert NoPrizeToClaim();
 
         // Calculate prize amount
         uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
@@ -696,7 +696,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             prizeAmount = totalPrizePoolAfterFee * contestMem.payoutStructure.payoutPercentages[winnerIndex] / PERCENT_DENOMINATOR;
         }
 
-        if (prizeAmount == 0) revert NoPrizeToClain();
+        if (prizeAmount == 0) revert NoPrizeToClaim();
 
         // Mark as claimed in storage
         predictions[tokenId].claimed = true;
@@ -756,7 +756,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
 
         // Get contest leaderboard
         LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
-        if (leaderboard.length == 0) revert NoPrizeToClain();
+        if (leaderboard.length == 0) revert NoPrizeToClaim();
 
         uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
 
