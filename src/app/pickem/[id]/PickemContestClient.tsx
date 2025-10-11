@@ -430,9 +430,9 @@ export default function PickemContestClient({
                           }
                         >
                           <RadioGroupItem
+                            className="mt-1"
                             id={`${game.gameId}-away`}
                             value="0"
-                            className="mt-1"
                           />
                           <Label
                             className="flex-1 cursor-pointer"
@@ -500,9 +500,9 @@ export default function PickemContestClient({
                           }
                         >
                           <RadioGroupItem
+                            className="mt-1"
                             id={`${game.gameId}-home`}
                             value="1"
-                            className="mt-1"
                           />
                           <Label
                             className="flex-1 cursor-pointer"
