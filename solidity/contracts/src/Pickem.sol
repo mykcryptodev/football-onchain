@@ -89,8 +89,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // Maximum games per week (safety limit)
     uint256 public constant MAX_GAMES_PER_WEEK = 16;
 
-    // Score calculation period (24 hours)
-    uint256 public constant SCORE_CALCULATION_PERIOD = 24 hours;
+    // Score calculation period (24 hours) // TODO: Change to 24 hours when going live
+    uint256 public constant SCORE_CALCULATION_PERIOD = 2 minutes;
 
     // Mappings
     mapping(uint256 => PickemContest) public contests;
@@ -98,6 +98,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     mapping(uint256 => mapping(address => uint256[])) public userTokens; // contestId => user => array of tokenIds
     mapping(uint256 => mapping(uint256 => GameResult)) public gameResults; // contestId => gameId => result
     mapping(uint256 => LeaderboardEntry[]) public contestLeaderboard; // contestId => top N entries (sorted)
+    mapping(uint256 => uint256[]) public contestTokenIds; // contestId => array of all tokenIds
     mapping(address => uint256[]) public userContests; // user => contestIds they've entered
 
     // ============ Events ============
@@ -174,6 +175,9 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error ScoreNotCalculated();
     error InvalidTokenId();
     error PayoutPeriodNotStarted();
+    error InvalidTreasury();
+    error InvalidGameScoreOracle();
+    error InvalidNFTContract();
 
     // ============ Constructor ============
 
@@ -181,12 +185,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         address _treasury,
         address _gameScoreOracle
     ) ConfirmedOwner(msg.sender) {
-        require(_treasury != address(0), "Invalid treasury");
-        require(_gameScoreOracle != address(0), "Invalid oracle");
+        if (_treasury == address(0)) revert InvalidTreasury();
+        if (_gameScoreOracle == address(0)) revert InvalidGameScoreOracle();
 
         treasury = _treasury;
         gameScoreOracle = GameScoreOracle(_gameScoreOracle);
-        // pickemNFT will be set via setPickemNFT after deployment
     }
 
     // ============ Contest Creation ============
@@ -348,6 +351,9 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Track user's token for this contest
         userTokens[contestId][msg.sender].push(tokenId);
 
+        // Track all token IDs for this contest
+        contestTokenIds[contestId].push(tokenId);
+
         // Only add to userContests if this is the user's first entry in this contest
         if (userTokens[contestId][msg.sender].length == 1) {
             userContests[msg.sender].push(contestId);
@@ -397,55 +403,6 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             contests[contestId].payoutDeadline = block.timestamp + SCORE_CALCULATION_PERIOD;
             emit GamesFinalized(contestId);
             emit PayoutPeriodStarted(contestId, contests[contestId].payoutDeadline);
-        }
-    }
-
-    /**
-     * @notice Update game results for a contest (can be called by oracle or admin)
-     * @param contestId The contest to update
-     * @param gameId The game ID to update
-     * @param winner 0=away, 1=home
-     * @param totalPoints Total points scored in the game
-     */
-    function updateGameResult(
-        uint256 contestId,
-        uint256 gameId,
-        uint8 winner,
-        uint256 totalPoints
-    ) external onlyOwner {
-        // Load contest struct to memory for read-only operations
-        PickemContest storage contestStorage = contests[contestId];
-        if (contestStorage.id != contestId) revert ContestDoesNotExist();
-
-        // Prepare GameResult in memory, then write to storage at the end
-        GameResult memory resultMem = GameResult({
-            gameId: gameId,
-            winner: winner,
-            totalPoints: totalPoints,
-            isFinalized: true
-        });
-
-        // Write the finalized result to storage in one operation
-        gameResults[contestId][gameId] = resultMem;
-
-        emit GameResultUpdated(contestId, gameId, winner, totalPoints);
-
-        // Check if all games are finalized using memory for efficiency
-        bool allFinalized = true;
-        uint256[] memory gameIds = contestStorage.gameIds;
-        for (uint256 i = 0; i < gameIds.length; i++) {
-            if (!gameResults[contestId][gameIds[i]].isFinalized) {
-                allFinalized = false;
-                break;
-            }
-        }
-
-        // Only write to storage if state changes
-        if (allFinalized && !contestStorage.gamesFinalized) {
-            contestStorage.gamesFinalized = true;
-            contestStorage.payoutDeadline = block.timestamp + SCORE_CALCULATION_PERIOD;
-            emit GamesFinalized(contestId);
-            emit PayoutPeriodStarted(contestId, contestStorage.payoutDeadline);
         }
     }
 
@@ -937,20 +894,29 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         return userTokens[contestId][user];
     }
 
+    /**
+     * @notice Get all token IDs for a specific contest
+     * @param contestId The contest ID
+     * @return Array of all token IDs for the contest
+     */
+    function getContestTokenIds(uint256 contestId) external view returns (uint256[] memory) {
+        return contestTokenIds[contestId];
+    }
+
     // ============ Admin Functions ============
 
     function setTreasury(address _treasury) external onlyOwner {
-        require(_treasury != address(0), "Invalid treasury");
+        if (_treasury == address(0)) revert InvalidTreasury();
         treasury = _treasury;
     }
 
     function setGameScoreOracle(address _oracle) external onlyOwner {
-        require(_oracle != address(0), "Invalid oracle");
+        if (_oracle == address(0)) revert InvalidGameScoreOracle();
         gameScoreOracle = GameScoreOracle(_oracle);
     }
 
     function setPickemNFT(address _pickemNFT) external onlyOwner {
-        require(_pickemNFT != address(0), "Invalid NFT contract");
+        if (_pickemNFT == address(0)) revert InvalidNFTContract();
         pickemNFT = IPickemNFT(_pickemNFT);
     }
 

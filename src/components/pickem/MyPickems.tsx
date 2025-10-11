@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertTriangle,
   CheckCircle,
   Clock,
   DollarSign,
@@ -13,6 +14,7 @@ import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -20,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { usePickemNFT } from "@/hooks/usePickemNFT";
 
 import PickemLeaderboard from "./PickemLeaderboard";
 
@@ -49,6 +52,8 @@ interface PickemNFT {
   claimed: boolean;
   rank?: number;
   contest?: Contest;
+  originalPredictor: string; // Original predictor from predictions
+  currentOwner: string; // Current NFT owner from pickemNFT.ownerOf()
 }
 
 export default function MyPickems() {
@@ -62,12 +67,14 @@ export default function MyPickems() {
     getContestWinners,
     updateContestResults,
   } = usePickemContract();
+  const { getNFTOwner } = usePickemNFT();
   const [nfts, setNfts] = useState<PickemNFT[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContest, setSelectedContest] = useState<number | null>(null);
 
   // Add state for finalizing
   const [finalizing, setFinalizing] = useState<Record<number, boolean>>({});
+  const [batchClaiming, setBatchClaiming] = useState(false);
 
   useEffect(() => {
     if (account?.address) {
@@ -97,12 +104,15 @@ export default function MyPickems() {
           // Note: Solidity auto-generated getters don't return arrays from structs
           const [
             contestId,
-            ,
+            predictor,
             submissionTime,
             tiebreakerPoints,
             correctPicks,
             claimed,
           ] = predictionData;
+
+          // Get current NFT owner
+          const currentOwner = await getNFTOwner(Number(tokenId));
 
           // Get contest details to get more info
           const contest = await getContest(Number(contestId));
@@ -139,6 +149,8 @@ export default function MyPickems() {
             claimed: Boolean(claimed),
             rank,
             contest, // Store full contest object
+            originalPredictor: predictor,
+            currentOwner,
           });
         } catch (err) {
           console.error(`Error fetching NFT ${i}:`, err);
@@ -161,6 +173,61 @@ export default function MyPickems() {
     } catch (error) {
       console.error("Error claiming prize:", error);
       toast.error("Failed to claim prize");
+    }
+  };
+
+  const handleBatchClaimPrizes = async () => {
+    setBatchClaiming(true);
+
+    try {
+      // Filter NFTs that are unclaimed winners
+      const unclaimedWinners = nfts.filter(
+        nft =>
+          nft.prizeWon > BigInt(0) &&
+          !nft.claimed &&
+          nft.contest?.gamesFinalized &&
+          !nft.contest?.payoutComplete,
+      );
+
+      if (unclaimedWinners.length === 0) {
+        toast.error("No unclaimed prizes to claim");
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // Claim each prize sequentially
+      for (const nft of unclaimedWinners) {
+        try {
+          await claimPrize(nft.contestId, nft.tokenId);
+          successCount++;
+          toast.success(
+            `Claimed prize for NFT #${nft.tokenId} (${successCount}/${unclaimedWinners.length})`,
+          );
+        } catch (error) {
+          console.error(`Error claiming prize for NFT ${nft.tokenId}:`, error);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(
+          `Successfully claimed ${successCount} prize${successCount > 1 ? "s" : ""}!`,
+        );
+        await fetchUserNFTs(); // Refresh the list
+      }
+
+      if (failCount > 0) {
+        toast.error(
+          `Failed to claim ${failCount} prize${failCount > 1 ? "s" : ""}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error in batch claiming:", error);
+      toast.error("Failed to claim prizes");
+    } finally {
+      setBatchClaiming(false);
     }
   };
 
@@ -293,6 +360,19 @@ export default function MyPickems() {
         ) / finalizedNFTs.length
       : 0;
 
+  // Count unclaimed prizes
+  const unclaimedWinners = nfts.filter(
+    nft =>
+      nft.prizeWon > BigInt(0) &&
+      !nft.claimed &&
+      nft.contest?.gamesFinalized &&
+      !nft.contest?.payoutComplete,
+  );
+  const unclaimedPrizesTotal = unclaimedWinners.reduce(
+    (sum, nft) => sum + nft.prizeWon,
+    BigInt(0),
+  );
+
   return (
     <div className="space-y-6">
       {/* Stats Overview */}
@@ -351,6 +431,44 @@ export default function MyPickems() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Batch Claiming Section */}
+      {unclaimedWinners.length > 0 && (
+        <Card className="border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  Unclaimed Prizes Available
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You have {unclaimedWinners.length} unclaimed prize
+                  {unclaimedWinners.length > 1 ? "s" : ""} worth{" "}
+                  {formatEther(unclaimedPrizesTotal)} ETH
+                </p>
+              </div>
+              <Button
+                onClick={handleBatchClaimPrizes}
+                disabled={batchClaiming}
+                className="w-full sm:w-auto"
+              >
+                {batchClaiming ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Claiming...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Claim All Prizes
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* NFT List */}
       <Tabs className="space-y-4" defaultValue="all">
@@ -455,16 +573,34 @@ export default function MyPickems() {
                         </Button>
                       ) : nft.prizeWon > BigInt(0) ? (
                         // Eligible to claim
-                        <Button
-                          className="w-full"
-                          variant="default"
-                          onClick={() =>
-                            handleClaimPrize(nft.tokenId, nft.contestId)
-                          }
-                        >
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          Claim Prize ({formatEther(nft.prizeWon)} ETH)
-                        </Button>
+                        <div className="space-y-3">
+                          {/* Warning if NFT was transferred */}
+                          {account?.address &&
+                            nft.currentOwner.toLowerCase() !==
+                              account.address.toLowerCase() && (
+                              <Alert variant="destructive">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription>
+                                  This NFT is owned by{" "}
+                                  <span className="font-mono">
+                                    {nft.currentOwner.slice(0, 6)}...
+                                    {nft.currentOwner.slice(-4)}
+                                  </span>
+                                  . The prize will be sent to them, not you.
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          <Button
+                            className="w-full"
+                            variant="default"
+                            onClick={() =>
+                              handleClaimPrize(nft.tokenId, nft.contestId)
+                            }
+                          >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Claim Prize ({formatEther(nft.prizeWon)} ETH)
+                          </Button>
+                        </div>
                       ) : (
                         // Not a winner
                         <div className="text-center py-3 px-4 bg-muted rounded-lg">

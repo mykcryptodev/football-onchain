@@ -28,17 +28,21 @@ export const abi = [
   { inputs: [], name: "InvalidPayoutStructure", type: "error" },
   { inputs: [], name: "InvalidPredictions", type: "error" },
   { inputs: [], name: "InvalidSeasonType", type: "error" },
+  { inputs: [], name: "InvalidTokenId", type: "error" },
   { inputs: [], name: "InvalidWeekNumber", type: "error" },
   { inputs: [], name: "NoGamesProvided", type: "error" },
   { inputs: [], name: "NoPrizeToClain", type: "error" },
   { inputs: [], name: "NoWinners", type: "error" },
   { inputs: [], name: "NotAuthorized", type: "error" },
   { inputs: [], name: "PayoutAlreadyComplete", type: "error" },
+  { inputs: [], name: "PayoutPeriodNotStarted", type: "error" },
   {
     inputs: [{ internalType: "address", name: "token", type: "address" }],
     name: "SafeERC20FailedOperation",
     type: "error",
   },
+  { inputs: [], name: "ScoreAlreadyCalculated", type: "error" },
+  { inputs: [], name: "ScoreNotCalculated", type: "error" },
   { inputs: [], name: "SubmissionDeadlinePassed", type: "error" },
   { inputs: [], name: "TooManyGames", type: "error" },
   { inputs: [], name: "TransferFailed", type: "error" },
@@ -121,6 +125,32 @@ export const abi = [
   {
     anonymous: false,
     inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "contestId",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+      { indexed: false, internalType: "uint8", name: "score", type: "uint8" },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "position",
+        type: "uint256",
+      },
+    ],
+    name: "LeaderboardUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
       { indexed: true, internalType: "address", name: "from", type: "address" },
       { indexed: true, internalType: "address", name: "to", type: "address" },
     ],
@@ -134,6 +164,25 @@ export const abi = [
       { indexed: true, internalType: "address", name: "to", type: "address" },
     ],
     name: "OwnershipTransferred",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "contestId",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "deadline",
+        type: "uint256",
+      },
+    ],
+    name: "PayoutPeriodStarted",
     type: "event",
   },
   {
@@ -196,19 +245,19 @@ export const abi = [
         type: "uint256",
       },
       {
-        indexed: false,
-        internalType: "uint256[]",
-        name: "winnerTokenIds",
-        type: "uint256[]",
+        indexed: true,
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
       },
       {
         indexed: false,
         internalType: "uint8",
-        name: "maxCorrectPicks",
+        name: "correctPicks",
         type: "uint8",
       },
     ],
-    name: "WinnersCalculated",
+    name: "ScoreCalculated",
     type: "event",
   },
   {
@@ -227,6 +276,13 @@ export const abi = [
   },
   {
     inputs: [],
+    name: "SCORE_CALCULATION_PERIOD",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "TREASURY_FEE",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
@@ -235,6 +291,22 @@ export const abi = [
   {
     inputs: [],
     name: "acceptOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
+    name: "calculateScore",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256[]", name: "tokenIds", type: "uint256[]" },
+    ],
+    name: "calculateScoresBatch",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -261,8 +333,13 @@ export const abi = [
       { internalType: "uint256", name: "", type: "uint256" },
       { internalType: "uint256", name: "", type: "uint256" },
     ],
-    name: "contestWinners",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    name: "contestLeaderboard",
+    outputs: [
+      { internalType: "uint256", name: "tokenId", type: "uint256" },
+      { internalType: "uint8", name: "score", type: "uint8" },
+      { internalType: "uint256", name: "tiebreakerPoints", type: "uint256" },
+      { internalType: "uint256", name: "submissionTime", type: "uint256" },
+    ],
     stateMutability: "view",
     type: "function",
   },
@@ -282,6 +359,7 @@ export const abi = [
       { internalType: "uint256", name: "submissionDeadline", type: "uint256" },
       { internalType: "bool", name: "gamesFinalized", type: "bool" },
       { internalType: "bool", name: "payoutComplete", type: "bool" },
+      { internalType: "uint256", name: "payoutDeadline", type: "uint256" },
       {
         components: [
           { internalType: "uint8", name: "payoutType", type: "uint8" },
@@ -361,6 +439,7 @@ export const abi = [
           },
           { internalType: "bool", name: "gamesFinalized", type: "bool" },
           { internalType: "bool", name: "payoutComplete", type: "bool" },
+          { internalType: "uint256", name: "payoutDeadline", type: "uint256" },
           {
             components: [
               { internalType: "uint8", name: "payoutType", type: "uint8" },
@@ -392,7 +471,37 @@ export const abi = [
   },
   {
     inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "getContestLeaderboard",
+    outputs: [
+      {
+        components: [
+          { internalType: "uint256", name: "tokenId", type: "uint256" },
+          { internalType: "uint8", name: "score", type: "uint8" },
+          {
+            internalType: "uint256",
+            name: "tiebreakerPoints",
+            type: "uint256",
+          },
+          { internalType: "uint256", name: "submissionTime", type: "uint256" },
+        ],
+        internalType: "struct Pickem.LeaderboardEntry[]",
+        name: "",
+        type: "tuple[]",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
     name: "getContestWinners",
+    outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
+    name: "getContestTokenIds",
     outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
     stateMutability: "view",
     type: "function",
@@ -423,6 +532,7 @@ export const abi = [
       { internalType: "uint256", name: "submissionTime", type: "uint256" },
       { internalType: "uint256", name: "tiebreakerPoints", type: "uint256" },
       { internalType: "uint8", name: "correctPicks", type: "uint8" },
+      { internalType: "bool", name: "scoreCalculated", type: "bool" },
       { internalType: "bool", name: "claimed", type: "bool" },
     ],
     stateMutability: "view",
@@ -489,20 +599,10 @@ export const abi = [
       { internalType: "uint256", name: "submissionTime", type: "uint256" },
       { internalType: "uint256", name: "tiebreakerPoints", type: "uint256" },
       { internalType: "uint8", name: "correctPicks", type: "uint8" },
+      { internalType: "bool", name: "scoreCalculated", type: "bool" },
       { internalType: "bool", name: "claimed", type: "bool" },
     ],
     stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint256", name: "year", type: "uint256" },
-      { internalType: "uint8", name: "seasonType", type: "uint8" },
-      { internalType: "uint8", name: "weekNumber", type: "uint8" },
-    ],
-    name: "requestWeekGames",
-    outputs: [],
-    stateMutability: "nonpayable",
     type: "function",
   },
   {

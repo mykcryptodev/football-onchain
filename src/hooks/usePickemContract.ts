@@ -190,6 +190,21 @@ export function usePickemContract() {
     }
   };
 
+  // Get contest leaderboard
+  const getContestLeaderboard = async (contestId: number) => {
+    try {
+      const result = await readContract({
+        contract: pickemContract,
+        method: "getContestLeaderboard",
+        params: [BigInt(contestId)],
+      });
+      return result;
+    } catch (error) {
+      console.error("Error getting contest leaderboard:", error);
+      throw error;
+    }
+  };
+
   // Claim prize for a token
   const claimPrize = async (contestId: number, tokenId: number) => {
     if (!account) throw new Error("No account connected");
@@ -236,6 +251,56 @@ export function usePickemContract() {
       return receipt;
     } catch (error) {
       console.error("Error claiming all prizes:", error);
+      throw error;
+    }
+  };
+
+  // Calculate score for a single token
+  const calculateScore = async (tokenId: number) => {
+    if (!account) throw new Error("No account connected");
+
+    try {
+      const tx = prepareContractCall({
+        contract: pickemContract,
+        method: "calculateScore",
+        params: [BigInt(tokenId)],
+      });
+
+      const result = await sendTx(tx);
+      const receipt = await waitForReceipt({
+        client,
+        chain,
+        transactionHash: result.transactionHash,
+      });
+
+      return receipt;
+    } catch (error) {
+      console.error("Error calculating score:", error);
+      throw error;
+    }
+  };
+
+  // Calculate scores for multiple tokens in batch
+  const calculateScoresBatch = async (tokenIds: number[]) => {
+    if (!account) throw new Error("No account connected");
+
+    try {
+      const tx = prepareContractCall({
+        contract: pickemContract,
+        method: "calculateScoresBatch",
+        params: [tokenIds.map(id => BigInt(id))],
+      });
+
+      const result = await sendTx(tx);
+      const receipt = await waitForReceipt({
+        client,
+        chain,
+        transactionHash: result.transactionHash,
+      });
+
+      return receipt;
+    } catch (error) {
+      console.error("Error calculating scores batch:", error);
       throw error;
     }
   };
@@ -535,6 +600,21 @@ export function usePickemContract() {
     }
   };
 
+  // Get all token IDs for a contest
+  const getContestTokenIds = async (contestId: number) => {
+    try {
+      const result = await readContract({
+        contract: pickemContract,
+        method: "getContestTokenIds",
+        params: [BigInt(contestId)],
+      });
+      return (result as bigint[]).map(id => Number(id));
+    } catch (error) {
+      console.error("Error getting contest token IDs:", error);
+      throw error;
+    }
+  };
+
   return {
     createContest,
     submitPredictions,
@@ -543,8 +623,12 @@ export function usePickemContract() {
     getUserTokens,
     getNextContestId,
     getContestWinners,
+    getContestLeaderboard,
+    getContestTokenIds,
     claimPrize,
     claimAllPrizes,
+    calculateScore,
+    calculateScoresBatch,
     updateContestResults,
     getNFTMetadata,
     getNFTPrediction,

@@ -58,6 +58,8 @@ export default function PickemContestList() {
     requestWeekResults,
     updateContestResults,
     claimAllPrizes,
+    calculateScoresBatch,
+    getContestTokenIds,
   } = usePickemContract();
   const [contests, setContests] = useState<PickemContest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,10 @@ export default function PickemContestList() {
   const [claimingPrizes, setClaimingPrizes] = useState<Record<number, boolean>>(
     {},
   );
-  const [calculatingWinners, setCalculatingWinners] = useState<
+  const [finalizingGames, setFinalizingGames] = useState<
+    Record<number, boolean>
+  >({});
+  const [calculatingScores, setCalculatingScores] = useState<
     Record<number, boolean>
   >({});
 
@@ -156,30 +161,75 @@ export default function PickemContestList() {
 
     try {
       await claimAllPrizes(contestId);
-      toast.success("All prizes claimed successfully!");
+      toast.success("All prizes distributed to winners!");
       // Optionally refresh contests
       await fetchContests();
     } catch (error) {
-      console.error("Error claiming all prizes:", error);
-      toast.error("Failed to claim all prizes");
+      console.error("Error distributing prizes:", error);
+      toast.error("Failed to distribute prizes");
     } finally {
       setClaimingPrizes(prev => ({ ...prev, [contestId]: false }));
     }
   };
 
-  const handleCalculateWinners = async (contestId: number) => {
-    setCalculatingWinners(prev => ({ ...prev, [contestId]: true }));
+  const handleFinalizeGames = async (contestId: number) => {
+    setFinalizingGames(prev => ({ ...prev, [contestId]: true }));
 
     try {
       await updateContestResults(contestId);
-      toast.success("Winners calculated successfully!");
-      // Optionally refresh contests to update gamesFinalized
+      toast.success("Game results finalized! Now you can calculate scores.");
       await fetchContests();
     } catch (error) {
-      console.error("Error calculating winners:", error);
-      toast.error("Failed to calculate winners");
+      console.error("Error finalizing games:", error);
+      toast.error("Failed to finalize game results");
     } finally {
-      setCalculatingWinners(prev => ({ ...prev, [contestId]: false }));
+      setFinalizingGames(prev => ({ ...prev, [contestId]: false }));
+    }
+  };
+
+  const handleCalculateScores = async (contestId: number) => {
+    setCalculatingScores(prev => ({ ...prev, [contestId]: true }));
+
+    try {
+      // Get all token IDs for this contest (single efficient call)
+      const contestTokenIds = await getContestTokenIds(contestId);
+
+      if (contestTokenIds.length === 0) {
+        toast.info("No entries found for this contest");
+        return;
+      }
+
+      toast.info(
+        `Found ${contestTokenIds.length} entries. Calculating scores...`,
+      );
+
+      // Calculate scores in batches to avoid gas issues
+      const BATCH_SIZE = 50;
+      const numBatches = Math.ceil(contestTokenIds.length / BATCH_SIZE);
+
+      for (let i = 0; i < numBatches; i++) {
+        const start = i * BATCH_SIZE;
+        const end = Math.min(start + BATCH_SIZE, contestTokenIds.length);
+        const batch = contestTokenIds.slice(start, end);
+
+        try {
+          await calculateScoresBatch(batch);
+          toast.success(
+            `Calculated scores for batch ${i + 1}/${numBatches} (${batch.length} entries)`,
+          );
+        } catch (error) {
+          console.error(`Error calculating batch ${i + 1}:`, error);
+          toast.error(`Failed to calculate batch ${i + 1}/${numBatches}`);
+        }
+      }
+
+      toast.success("All scores calculated and leaderboard updated!");
+      await fetchContests();
+    } catch (error) {
+      console.error("Error calculating scores:", error);
+      toast.error("Failed to calculate scores");
+    } finally {
+      setCalculatingScores(prev => ({ ...prev, [contestId]: false }));
     }
   };
 
@@ -325,28 +375,41 @@ export default function PickemContestList() {
             </Button>
             <Button
               className="w-full mb-2"
-              disabled={calculatingWinners[contest.id] || !account}
+              disabled={finalizingGames[contest.id] || !account}
               size="sm"
               variant="secondary"
-              onClick={() => handleCalculateWinners(contest.id)}
+              onClick={() => handleFinalizeGames(contest.id)}
             >
-              {calculatingWinners[contest.id]
+              {finalizingGames[contest.id] ? "Finalizing..." : "Finalize Games"}
+            </Button>
+            <Button
+              className="w-full mb-2"
+              disabled={calculatingScores[contest.id] || !account}
+              size="sm"
+              variant="default"
+              onClick={() => handleCalculateScores(contest.id)}
+            >
+              {calculatingScores[contest.id]
                 ? "Calculating..."
-                : "Calculate Winners"}
+                : "Calculate Scores"}
             </Button>
           </>
         )}
 
         {contest.gamesFinalized && !contest.payoutComplete && (
-          <Button
-            className="w-full"
-            disabled={claimingPrizes[contest.id] || !account}
-            size="sm"
-            variant="secondary"
-            onClick={() => handleClaimAllPrizes(contest.id)}
-          >
-            {claimingPrizes[contest.id] ? "Claiming..." : "Claim All Prizes"}
-          </Button>
+          <div className="flex gap-2 items-center w-full">
+            <Button
+              className="flex-1"
+              disabled={claimingPrizes[contest.id] || !account}
+              size="sm"
+              variant="secondary"
+              onClick={() => handleClaimAllPrizes(contest.id)}
+            >
+              {claimingPrizes[contest.id]
+                ? "Distributing..."
+                : "Distribute All Prizes"}
+            </Button>
+          </div>
         )}
 
         {contest.gamesFinalized && contest.payoutComplete && (

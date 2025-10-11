@@ -14,10 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePickemContract } from "@/hooks/usePickemContract";
+import { usePickemNFT } from "@/hooks/usePickemNFT";
 
 interface LeaderboardEntry {
   tokenId: number;
   address: string;
+  originalPredictor: string;
   correctPicks: number;
   totalGames: number;
   tiebreakerPoints: number;
@@ -36,9 +39,13 @@ export default function PickemLeaderboard({
   onClose,
 }: PickemLeaderboardProps) {
   const account = useActiveAccount();
+  const { getContest, getContestLeaderboard, getNFTPrediction } =
+    usePickemContract();
+  const { getNFTOwner } = usePickemNFT();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
+  const [totalGames, setTotalGames] = useState(0);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -47,65 +54,58 @@ export default function PickemLeaderboard({
 
   const fetchLeaderboard = async () => {
     try {
-      // TODO: Fetch actual leaderboard data from blockchain
-      // This will call the contract to get all entries and calculate rankings
+      // Fetch contest data
+      const contest = await getContest(contestId);
+      setPrizePool(contest.totalPrizePool);
+      setTotalGames(contest.gameIds.length);
 
-      // Mock data for now
-      const mockEntries: LeaderboardEntry[] = [
-        {
-          tokenId: 5,
-          address: "0x1234...5678",
-          correctPicks: 12,
-          totalGames: 14,
-          tiebreakerPoints: 48,
-          submissionTime: Date.now() - 72 * 60 * 60 * 1000,
-          rank: 1,
-          prize: BigInt("140000000000000000"), // 0.14 ETH (70% of pool)
-        },
-        {
-          tokenId: 2,
-          address: account?.address || "0xYour...Address",
-          correctPicks: 11,
-          totalGames: 14,
-          tiebreakerPoints: 52,
-          submissionTime: Date.now() - 70 * 60 * 60 * 1000,
-          rank: 2,
-          prize: BigInt("40000000000000000"), // 0.04 ETH (20% of pool)
-        },
-        {
-          tokenId: 8,
-          address: "0x9876...4321",
-          correctPicks: 11,
-          totalGames: 14,
-          tiebreakerPoints: 55,
-          submissionTime: Date.now() - 71 * 60 * 60 * 1000,
-          rank: 3,
-          prize: BigInt("20000000000000000"), // 0.02 ETH (10% of pool)
-        },
-        {
-          tokenId: 12,
-          address: "0xABCD...EF01",
-          correctPicks: 10,
-          totalGames: 14,
-          tiebreakerPoints: 45,
-          submissionTime: Date.now() - 68 * 60 * 60 * 1000,
-          rank: 4,
-          prize: BigInt(0),
-        },
-        {
-          tokenId: 15,
-          address: "0x5555...6666",
-          correctPicks: 10,
-          totalGames: 14,
-          tiebreakerPoints: 50,
-          submissionTime: Date.now() - 69 * 60 * 60 * 1000,
-          rank: 5,
-          prize: BigInt(0),
-        },
-      ];
+      // Fetch leaderboard entries
+      const leaderboard = await getContestLeaderboard(contestId);
 
-      setEntries(mockEntries);
-      setPrizePool(BigInt("200000000000000000")); // 0.2 ETH total pool
+      // Calculate prize pool after treasury fee (2%)
+      const TREASURY_FEE = 20; // 2%
+      const PERCENT_DENOMINATOR = 1000;
+      const treasuryFee =
+        (contest.totalPrizePool * BigInt(TREASURY_FEE)) /
+        BigInt(PERCENT_DENOMINATOR);
+      const netPool = contest.totalPrizePool - treasuryFee;
+
+      // Process each leaderboard entry
+      const processedEntries: LeaderboardEntry[] = [];
+
+      for (let i = 0; i < leaderboard.length; i++) {
+        const entry = leaderboard[i];
+        const tokenId = Number(entry.tokenId);
+
+        // Get current owner and original predictor
+        const currentOwner = await getNFTOwner(tokenId);
+        const predictionData = await getNFTPrediction(BigInt(tokenId));
+        const originalPredictor = predictionData[1]; // predictor is second element
+
+        // Calculate prize amount based on position
+        let prizeAmount = BigInt(0);
+        if (
+          contest.payoutStructure.payoutPercentages &&
+          i < contest.payoutStructure.payoutPercentages.length
+        ) {
+          const percentage = contest.payoutStructure.payoutPercentages[i];
+          prizeAmount = (netPool * percentage) / BigInt(PERCENT_DENOMINATOR);
+        }
+
+        processedEntries.push({
+          tokenId,
+          address: currentOwner,
+          originalPredictor,
+          correctPicks: Number(entry.score),
+          totalGames: contest.gameIds.length,
+          tiebreakerPoints: Number(entry.tiebreakerPoints),
+          submissionTime: Number(entry.submissionTime) * 1000,
+          rank: i + 1,
+          prize: prizeAmount,
+        });
+      }
+
+      setEntries(processedEntries);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
     } finally {
@@ -208,9 +208,17 @@ export default function PickemLeaderboard({
                           )}
                           {getRankBadge(entry.rank)}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          NFT #{entry.tokenId}
-                        </p>
+                        <div className="text-sm text-muted-foreground">
+                          <p>NFT #{entry.tokenId}</p>
+                          {entry.address.toLowerCase() !==
+                            entry.originalPredictor.toLowerCase() && (
+                            <p className="text-xs text-orange-500 dark:text-orange-400">
+                              Transferred from{" "}
+                              {entry.originalPredictor.slice(0, 6)}...
+                              {entry.originalPredictor.slice(-4)}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
