@@ -461,6 +461,13 @@ export default function PickemContestClient({
                                   {game.awayRecord}
                                 </div>
                               </div>
+                              {gameFinished && winner === "away" && (
+                                <div className="flex items-center gap-2 text-xs justify-end">
+                                  <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
+                                    W
+                                  </Badge>
+                                </div>
+                              )}
                               {!gameFinished &&
                                 game.odds?.awayTeamOdds &&
                                 game.odds.awayTeamOdds.moneyLine && (
@@ -520,23 +527,17 @@ export default function PickemContestClient({
                                     {game.homeTeam}
                                   </div>
                                 </div>
-                                {gameFinished ? (
-                                  <div className="flex items-center gap-2">
-                                    {winner === "home" && (
-                                      <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0 h-5">
-                                        W
-                                      </Badge>
-                                    )}
-                                    <span className="text-sm text-muted-foreground text-nowrap">
-                                      {game.homeRecord}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground text-nowrap">
-                                    {game.homeRecord}
-                                  </span>
-                                )}
+                                <div className="text-sm text-muted-foreground text-nowrap">
+                                  {game.homeRecord}
+                                </div>
                               </div>
+                              {gameFinished && winner === "home" && (
+                                <div className="flex items-center gap-2 text-xs justify-end">
+                                  <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
+                                    Won {game.homeScore} - {game.awayScore}
+                                  </Badge>
+                                </div>
+                              )}
                               {!gameFinished &&
                                 game.odds?.homeTeamOdds &&
                                 game.odds.homeTeamOdds.moneyLine && (
