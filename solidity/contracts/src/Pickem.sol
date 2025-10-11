@@ -90,7 +90,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     uint256 public constant MAX_GAMES_PER_WEEK = 16;
 
     // Score calculation period (24 hours)
-    uint256 public constant SCORE_CALCULATION_PERIOD = 24 hours;
+    uint256 public constant SCORE_CALCULATION_PERIOD = 2 minutes;
 
     // Mappings
     mapping(uint256 => PickemContest) public contests;
@@ -178,6 +178,7 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     error InvalidTreasury();
     error InvalidGameScoreOracle();
     error InvalidNFTContract();
+    error WeekResultsNotFinalized();
 
     // ============ Constructor ============
 
@@ -372,6 +373,17 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Load contest to memory for read-only operations
         PickemContest memory contestMem = contests[contestId];
         if (contestMem.id != contestId) revert ContestDoesNotExist();
+
+        // Calculate weekId using oracle's helper function to check if results are finalized
+        uint256 weekId = gameScoreOracle.calculateWeekId(
+            contestMem.year,
+            contestMem.seasonType,
+            contestMem.weekNumber
+        );
+
+        // Check if week results are finalized in the oracle
+        (, , , bool isFinalized) = gameScoreOracle.weekResults(weekId);
+        if (!isFinalized) revert WeekResultsNotFinalized();
 
         // Get results from oracle
         uint8[] memory winners = gameScoreOracle.getWeekResults(

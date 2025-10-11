@@ -55,7 +55,8 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "for(let i=0;i<e.length;i++){const v=e[i],m=v.competitions[0].competitors;"
         "const h=m.find(t=>t.homeAway==='home'),a=m.find(t=>t.homeAway==='away');"
         "if(v.status.type.completed&&h&&a){if(+h.score>+a.score)p|=(1n<<BigInt(i));c++;}}"
-        "const x='0x'+[BigInt(c),p].map(n=>n.toString(16).padStart(64,'0')).join('');"
+        "const allComplete=c===e.length?1n:0n;"
+        "const x='0x'+[allComplete,BigInt(c),p].map(n=>n.toString(16).padStart(64,'0')).join('');"
         "const b=new Uint8Array(x.length/2-1);for(let i=2;i<x.length;i+=2)b[i/2-1]=parseInt(x.substr(i,2),16);return b;";
 
     string public constant SCORE_CHANGES_SOURCE =
@@ -94,7 +95,6 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 year;
         uint256[] packedGameIds; // Packed game IDs (3 per uint256)
         uint8 gamesCount;       // Number of games
-        uint256 earliestKickoff; // Earliest game kickoff time
         bool isFinalized;       // True when data has been fetched
     }
 
@@ -155,7 +155,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     event WeekGamesRequested(uint256 indexed weekId, bytes32 requestId); // someone requested games for a week
     event WeekGamesUpdated(uint256 indexed weekId, uint8 gameCount); // week games were updated
     event WeekResultsRequested(uint256 indexed weekId, bytes32 requestId); // someone requested results for a week
-    event WeekResultsUpdated(uint256 indexed weekId, uint8 gameCount); // week results were updated
+    event WeekResultsUpdated(uint256 indexed weekId, uint8 gameCount, bool allGamesCompleted); // week results were updated
 
     ////////////////////////////////////
     ///////////    ERRORS    ///////////
@@ -164,6 +164,8 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     error CooldownNotMet();
     error GameNotCompleted();
     error ScoreChangesAlreadyStored();
+    error WeekResultsAlreadyFinalized();
+    error WeekGamesAlreadyFinalized();
 
     constructor(
         address router_
@@ -544,7 +546,6 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         wg.seasonType = uint8((weekId >> 8) & 0xFF);
         wg.weekNumber = uint8(weekId & 0xFF);
         wg.gamesCount = uint8(gameCount);
-        wg.earliestKickoff = 0; // Not used anymore
         wg.isFinalized = true;
 
         // Store packed game IDs directly (much more gas efficient!)
@@ -575,9 +576,17 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 weekId,
         bytes memory response
     ) internal {
-        // Extract data: [gameCount, packedResults]
-        uint256 gameCount = _bytesToUint256(response, 0);
-        uint256 packedResults = _bytesToUint256(response, 1);
+        // Extract data: [allCompleted, gameCount, packedResults]
+        uint256 allCompleted = _bytesToUint256(response, 0);
+
+        // If not all games are completed, exit early without storing
+        if (allCompleted == 0) {
+            emit WeekResultsUpdated(weekId, uint8(0), false);
+            return;
+        }
+
+        uint256 gameCount = _bytesToUint256(response, 1);
+        uint256 packedResults = _bytesToUint256(response, 2);
 
         // Store results in single operation
         WeekResults storage wr = weekResults[weekId];
@@ -586,7 +595,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         wr.packedResults = packedResults;
         wr.isFinalized = true;
 
-        emit WeekResultsUpdated(weekId, uint8(gameCount));
+        emit WeekResultsUpdated(weekId, uint8(gameCount), true);
     }
 
     function timeUntilQuarterScoresCooldownExpires(uint256 gameId) external view returns (uint256) {
@@ -608,6 +617,21 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     }
 
     /**
+     * @notice Calculate week ID from year, season type, and week number
+     * @param year The year (e.g., 2024)
+     * @param seasonType 1=preseason, 2=regular, 3=postseason
+     * @param weekNumber Week number
+     * @return weekId The composite week identifier
+     */
+    function calculateWeekId(
+        uint256 year,
+        uint8 seasonType,
+        uint8 weekNumber
+    ) public pure returns (uint256 weekId) {
+        return (year << 16) | (uint256(seasonType) << 8) | uint256(weekNumber);
+    }
+
+    /**
      * @notice Fetch all games for a specific NFL week
      * @param subscriptionId Billing ID
      * @param gasLimit Gas limit for the request
@@ -625,7 +649,12 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 weekNumber
     ) external returns (bytes32 requestId) {
         // Create week ID
-        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        uint256 weekId = calculateWeekId(year, seasonType, weekNumber);
+
+        // Revert if games for this week have already been finalized
+        if (weekGames[weekId].isFinalized) {
+            revert WeekGamesAlreadyFinalized();
+        }
 
         // Create a chainlink request
         FunctionsRequest.Request memory req;
@@ -670,7 +699,12 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 weekNumber
     ) external returns (bytes32 requestId) {
         // Create week ID
-        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        uint256 weekId = calculateWeekId(year, seasonType, weekNumber);
+
+        // Revert if results for this week have already been finalized
+        if (weekResults[weekId].isFinalized) {
+            revert WeekResultsAlreadyFinalized();
+        }
 
         // Create a chainlink request
         FunctionsRequest.Request memory req;
@@ -710,7 +744,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 seasonType,
         uint8 weekNumber
     ) external view returns (uint256[] memory gameIds, uint256 submissionDeadline) {
-        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        uint256 weekId = calculateWeekId(year, seasonType, weekNumber);
         WeekGames memory wg = weekGames[weekId];
 
         // If games haven't been fetched yet, return empty
@@ -765,7 +799,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint8 seasonType,
         uint8 weekNumber
     ) external view returns (uint8[] memory winners) {
-        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+        uint256 weekId = calculateWeekId(year, seasonType, weekNumber);
         WeekResults memory wr = weekResults[weekId];
         WeekGames memory wg = weekGames[weekId];
 
