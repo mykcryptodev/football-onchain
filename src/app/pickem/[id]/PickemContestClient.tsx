@@ -54,6 +54,9 @@ interface GameInfo {
   awayLogo?: string;
   homeAbbreviation?: string;
   awayAbbreviation?: string;
+  homeScore?: number;
+  awayScore?: number;
+  status?: string;
   odds?: {
     details?: string;
     overUnder?: number;
@@ -156,6 +159,36 @@ export default function PickemContestClient({
     fetchGameInfo(contest.gameIds);
   }, [contest, fetchGameInfo]);
 
+  // Pre-select winners for finished games
+  useEffect(() => {
+    if (games.length === 0) return;
+
+    setPicks(currentPicks => {
+      const updatedPicks: Record<string, number> = { ...currentPicks };
+      let hasChanges = false;
+
+      games.forEach(game => {
+        // Check if game is finished
+        if (
+          game.status === "STATUS_FINAL" &&
+          game.homeScore !== undefined &&
+          game.awayScore !== undefined
+        ) {
+          // Determine winner (1 = home, 0 = away)
+          const winner = game.homeScore > game.awayScore ? 1 : 0;
+
+          // Only update if not already set
+          if (updatedPicks[game.gameId] === -1) {
+            updatedPicks[game.gameId] = winner;
+            hasChanges = true;
+          }
+        }
+      });
+
+      return hasChanges ? updatedPicks : currentPicks;
+    });
+  }, [games]);
+
   const handleSubmit = async () => {
     if (!contest || !account) return;
 
@@ -232,6 +265,21 @@ export default function PickemContestClient({
   const formatMoneyLine = (moneyLine: number | undefined) => {
     if (!moneyLine) return "";
     return moneyLine > 0 ? `+${moneyLine}` : `${moneyLine}`;
+  };
+
+  const isGameFinished = (game: GameInfo) => {
+    return (
+      game.status === "STATUS_FINAL" &&
+      game.homeScore !== undefined &&
+      game.awayScore !== undefined
+    );
+  };
+
+  const getWinner = (game: GameInfo): "home" | "away" | null => {
+    if (!isGameFinished(game)) return null;
+    if (game.homeScore! > game.awayScore!) return "home";
+    if (game.awayScore! > game.homeScore!) return "away";
+    return null; // tie (unlikely in NFL)
   };
 
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
@@ -348,128 +396,166 @@ export default function PickemContestClient({
               </div>
             </CardHeader>
             <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-              {games.map((game, index) => (
-                <div key={game.gameId} className="p-4 border rounded-lg">
-                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
-                    <span>Game {index + 1}</span>
-                    <span>
-                      {(() => {
-                        const kickoffDate = new Date(game.kickoff);
-                        return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-                      })()}
-                    </span>
-                  </div>
+              {games.map((game, index) => {
+                const gameFinished = isGameFinished(game);
+                const winner = getWinner(game);
 
-                  <RadioGroup
-                    value={picks[game.gameId]?.toString()}
-                    onValueChange={(value: string) =>
-                      setPicks({ ...picks, [game.gameId]: parseInt(value) })
-                    }
-                  >
-                    <div className="grid grid-cols-2 gap-3">
-                      <div
-                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                          picks[game.gameId] === 0
-                            ? "border-primary bg-primary/10"
-                            : ""
-                        }`}
-                        onClick={() => setPicks({ ...picks, [game.gameId]: 0 })}
-                      >
-                        <RadioGroupItem id={`${game.gameId}-away`} value="0" />
-                        <Label
-                          className="flex-1 cursor-pointer"
-                          htmlFor={`${game.gameId}-away`}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 justify-between w-full">
-                              <img
-                                alt={`${game.awayTeam} logo`}
-                                className="h-6 w-6 flex-shrink-0"
-                                src={game.awayLogo}
-                              />
-                              <span className="font-medium sm:hidden block">
-                                {game.awayAbbreviation}
-                              </span>
-                              <span className="font-medium hidden sm:block">
-                                {game.awayTeam}
-                              </span>
-                              <span className="text-sm text-muted-foreground text-nowrap">
-                                {game.awayRecord}
-                              </span>
-                            </div>
-                            {game.odds?.awayTeamOdds &&
-                              game.odds.awayTeamOdds.moneyLine && (
-                                <div className="flex items-center gap-2 text-xs ml-8">
-                                  <Badge
-                                    className={`text-[10px] px-1.5 py-0 h-4 ${
-                                      game.odds.awayTeamOdds.favorite
-                                        ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                        : "bg-red-100 hover:bg-red-200 text-red-700"
-                                    }`}
-                                  >
-                                    {formatMoneyLine(
-                                      game.odds.awayTeamOdds.moneyLine,
-                                    )}
-                                  </Badge>
-                                </div>
-                              )}
-                          </div>
-                        </Label>
-                      </div>
-
-                      <div
-                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                          picks[game.gameId] === 1
-                            ? "border-primary bg-primary/10"
-                            : ""
-                        }`}
-                        onClick={() => setPicks({ ...picks, [game.gameId]: 1 })}
-                      >
-                        <RadioGroupItem id={`${game.gameId}-home`} value="1" />
-                        <Label
-                          className="flex-1 cursor-pointer"
-                          htmlFor={`${game.gameId}-home`}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 justify-between w-full">
-                              <img
-                                alt={`${game.homeTeam} logo`}
-                                className="h-6 w-6 flex-shrink-0"
-                                src={game.homeLogo}
-                              />
-                              <span className="font-medium sm:hidden block">
-                                {game.homeAbbreviation}
-                              </span>
-                              <span className="font-medium hidden sm:block">
-                                {game.homeTeam}
-                              </span>
-                              <span className="text-sm text-muted-foreground text-nowrap">
-                                {game.homeRecord}
-                              </span>
-                            </div>
-                            {game.odds?.homeTeamOdds &&
-                              game.odds.homeTeamOdds.moneyLine && (
-                                <div className="flex items-center gap-2 text-xs ml-8">
-                                  <Badge
-                                    className={`text-[10px] px-1.5 py-0 h-4 ${
-                                      game.odds.homeTeamOdds.favorite
-                                        ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                        : "bg-red-100 hover:bg-red-200 text-red-700"
-                                    }`}
-                                  >
-                                    {formatMoneyLine(
-                                      game.odds.homeTeamOdds.moneyLine,
-                                    )}
-                                  </Badge>
-                                </div>
-                              )}
-                          </div>
-                        </Label>
-                      </div>
+                return (
+                  <div key={game.gameId} className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
+                      <span>Game {index + 1}</span>
+                      <span>
+                        {(() => {
+                          const kickoffDate = new Date(game.kickoff);
+                          return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+                        })()}
+                      </span>
                     </div>
-                  </RadioGroup>
-                </div>
-              ))}
+
+                    <RadioGroup
+                      value={picks[game.gameId]?.toString()}
+                      onValueChange={(value: string) =>
+                        setPicks({ ...picks, [game.gameId]: parseInt(value) })
+                      }
+                    >
+                      <div className="grid grid-cols-2 gap-3">
+                        <div
+                          className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                            picks[game.gameId] === 0
+                              ? "border-primary bg-primary/10"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setPicks({ ...picks, [game.gameId]: 0 })
+                          }
+                        >
+                          <RadioGroupItem
+                            id={`${game.gameId}-away`}
+                            value="0"
+                          />
+                          <Label
+                            className="flex-1 cursor-pointer"
+                            htmlFor={`${game.gameId}-away`}
+                          >
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2 justify-between w-full">
+                                <img
+                                  alt={`${game.awayTeam} logo`}
+                                  className="h-6 w-6 flex-shrink-0"
+                                  src={game.awayLogo}
+                                />
+                                <span
+                                  className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                >
+                                  {game.awayAbbreviation}
+                                </span>
+                                <span
+                                  className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                >
+                                  {game.awayTeam}
+                                </span>
+                                <span className="text-sm text-muted-foreground text-nowrap">
+                                  {game.awayRecord}
+                                </span>
+                              </div>
+                              {!gameFinished &&
+                                game.odds?.awayTeamOdds &&
+                                game.odds.awayTeamOdds.moneyLine && (
+                                  <div className="flex items-center gap-2 text-xs ml-8">
+                                    <Badge
+                                      className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
+                                        game.odds.awayTeamOdds.favorite
+                                          ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                          : "bg-red-100 hover:bg-red-200 text-red-700"
+                                      }`}
+                                    >
+                                      {formatMoneyLine(
+                                        game.odds.awayTeamOdds.moneyLine,
+                                      )}
+                                    </Badge>
+                                  </div>
+                                )}
+                            </div>
+                          </Label>
+                        </div>
+
+                        <div
+                          className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                            picks[game.gameId] === 1
+                              ? "border-primary bg-primary/10"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setPicks({ ...picks, [game.gameId]: 1 })
+                          }
+                        >
+                          <RadioGroupItem
+                            id={`${game.gameId}-home`}
+                            value="1"
+                          />
+                          <Label
+                            className="flex-1 cursor-pointer"
+                            htmlFor={`${game.gameId}-home`}
+                          >
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2 justify-between w-full">
+                                <img
+                                  alt={`${game.homeTeam} logo`}
+                                  className="h-6 w-6 flex-shrink-0"
+                                  src={game.homeLogo}
+                                />
+                                <span
+                                  className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                >
+                                  {game.homeAbbreviation}
+                                </span>
+                                <span
+                                  className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                >
+                                  {game.homeTeam}
+                                </span>
+                                {gameFinished ? (
+                                  <div className="flex items-center gap-2">
+                                    {winner === "home" && (
+                                      <Badge className="bg-green-100 text-green-700 text-xs px-1.5 py-0 h-5">
+                                        W
+                                      </Badge>
+                                    )}
+                                    <span className="text-sm text-muted-foreground text-nowrap">
+                                      {game.homeRecord}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground text-nowrap">
+                                    {game.homeRecord}
+                                  </span>
+                                )}
+                              </div>
+                              {!gameFinished &&
+                                game.odds?.homeTeamOdds &&
+                                game.odds.homeTeamOdds.moneyLine && (
+                                  <div className="flex items-center gap-2 text-xs ml-8">
+                                    <Badge
+                                      className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
+                                        game.odds.homeTeamOdds.favorite
+                                          ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                          : "bg-red-100 hover:bg-red-200 text-red-700"
+                                      }`}
+                                    >
+                                      {formatMoneyLine(
+                                        game.odds.homeTeamOdds.moneyLine,
+                                      )}
+                                    </Badge>
+                                  </div>
+                                )}
+                            </div>
+                          </Label>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         )}
