@@ -188,15 +188,24 @@ export default function PickemContestClient({
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
+    <div className="container mx-auto py-5 space-y-6">
+      <div className="flex items-center gap-4 px-2">
         <Link href="/pickem">
           <Button size="sm" variant="outline">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
         </Link>
+        <Badge
+          className="ml-auto"
+          variant={isSubmissionClosed ? "secondary" : "default"}
+        >
+          <Clock className="h-3 w-3 mr-1" />
+          {getTimeRemaining(contest.submissionDeadline)}
+        </Badge>
+      </div>
+      {/* Header */}
+      <div className="flex items-center gap-4 px-2">
         <div>
           <h1 className="text-3xl font-bold">
             {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
@@ -205,13 +214,6 @@ export default function PickemContestClient({
             {contest.year} Season • Contest #{contest.id}
           </p>
         </div>
-        <Badge
-          className="ml-auto"
-          variant={isSubmissionClosed ? "secondary" : "default"}
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          {getTimeRemaining(contest.submissionDeadline)}
-        </Badge>
       </div>
 
       {/* Contest Info */}
