@@ -6,6 +6,7 @@ import {
   Calendar,
   Clock,
   DollarSign,
+  Shuffle,
   Trophy,
   Users,
 } from "lucide-react";
@@ -14,7 +15,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -159,11 +159,13 @@ export default function PickemContestClient({
       // Convert picks to array format expected by contract
       const picksArray = contest.gameIds.map(id => picks[id]);
 
+      // Don't format the entry fee - pass the raw bigint value as string
+      // submitPredictions will handle the decimal conversion internally
       await submitPredictions({
         contestId: contest.id,
         picks: picksArray,
         tiebreakerPoints: Number(tiebreakerPoints),
-        entryFee: formatEther(contest.entryFee),
+        entryFee: contest.entryFee.toString(),
         currency: contest.currency,
       });
 
@@ -192,6 +194,20 @@ export default function PickemContestClient({
 
   const getPickedCount = () => {
     return Object.values(picks).filter(pick => pick !== -1).length;
+  };
+
+  const pickAtRandom = () => {
+    const randomPicks: Record<string, number> = {};
+    contest.gameIds.forEach(id => {
+      randomPicks[id] = Math.random() < 0.5 ? 0 : 1;
+    });
+    setPicks(randomPicks);
+
+    // Also generate a random tiebreaker between 20-70 points
+    const randomTiebreaker = Math.floor(Math.random() * 51) + 20; // 20-70
+    setTiebreakerPoints(randomTiebreaker.toString());
+
+    toast.success("Random picks generated!");
   };
 
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
@@ -273,11 +289,8 @@ export default function PickemContestClient({
         {!isSubmissionClosed && (
           <Card>
             <CardHeader>
-              <CardTitle>Games ({games.length})</CardTitle>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Picks Made: {getPickedCount()} / {games.length}
-                </span>
+                <CardTitle>Games ({games.length})</CardTitle>
                 <Badge
                   variant={
                     getPickedCount() === games.length ? "default" : "secondary"
@@ -287,6 +300,20 @@ export default function PickemContestClient({
                     ? "Ready to Submit"
                     : "Incomplete"}
                 </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Picks Made: {getPickedCount()} / {games.length}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={pickAtRandom}
+                  disabled={submitting || isSubmissionClosed}
+                >
+                  <Shuffle className="h-4 w-4 mr-2" />
+                  Pick Em Randomly
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 max-h-96 overflow-y-auto">

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  encode,
   getContract,
   prepareContractCall,
   readContract,
@@ -8,7 +9,16 @@ import {
   waitForReceipt,
   ZERO_ADDRESS,
 } from "thirdweb";
-import { useActiveAccount, useSendTransaction } from "thirdweb/react";
+import { allowance, approve } from "thirdweb/extensions/erc20";
+import {
+  useActiveAccount,
+  useActiveWallet,
+  useSendTransaction,
+} from "thirdweb/react";
+
+// Import sendCalls from the wallets module
+import { useCapabilities } from "thirdweb/react";
+import { sendCalls as walletSendCalls } from "thirdweb/wallets/eip5792";
 
 import { chain, pickem, pickemNFT } from "@/constants";
 import { abi as oracleAbi } from "@/constants/abis/oracle";
@@ -20,6 +30,11 @@ import { isAddressEqual } from "viem";
 
 export function usePickemContract() {
   const account = useActiveAccount();
+  const wallet = useActiveWallet();
+  const { data: capabilities, isLoading: capabilitiesLoading } =
+    useCapabilities({
+      chainId: chain.id,
+    });
   const { mutateAsync: sendTx } = useSendTransaction();
 
   const pickemContract = getContract({
@@ -41,8 +56,8 @@ export function usePickemContract() {
     seasonType: number;
     weekNumber: number;
     year: number;
-    currency: string; // address or "0x0000000000000000000000000000000000000000" for ETH
-    entryFee: string; // in ether units
+    currency: string;
+    entryFee: string;
     payoutType: number;
     customDeadline?: number;
   }) => {
@@ -94,20 +109,76 @@ export function usePickemContract() {
     contestId: number;
     picks: number[]; // Array of 0s and 1s
     tiebreakerPoints: number;
-    entryFee: string; // in ETH
+    entryFee: string; // in base units (wei for native, smallest unit for ERC20)
     currency: string;
   }) => {
     if (!account) throw new Error("No account connected");
+    if (!wallet) throw new Error("No wallet connected");
 
     try {
-      const value = isAddressEqual(
+      const isNativeToken = isAddressEqual(
         params.currency as `0x${string}`,
         ZERO_ADDRESS,
-      )
-        ? toUnits(params.entryFee, 18)
-        : BigInt(0);
+      );
 
-      const tx = prepareContractCall({
+      // Check wallet capabilities for batching support using the useCapabilities hook
+      // According to EIP-5792, if capabilities.message exists, it means there was an error
+      const hasError = capabilities && "message" in capabilities;
+
+      const supportsBatching =
+        !capabilitiesLoading &&
+        capabilities &&
+        !hasError &&
+        // Check if the current chain supports atomicBatch
+        (capabilities as any)[chain.id]?.atomicBatch?.supported === true;
+
+      if (capabilitiesLoading) {
+        console.log("Loading wallet capabilities...");
+      } else if (hasError) {
+        console.log(
+          `Wallet capabilities error: ${(capabilities as any).message}. Will send transactions separately if approval needed.`,
+        );
+      } else if (supportsBatching) {
+        console.log(
+          `Wallet supports batching on chain ${chain.id}, will batch transactions if approval needed`,
+        );
+      } else {
+        console.log(
+          `Wallet does not support batching on chain ${chain.id}, will send transactions separately if approval needed`,
+        );
+      }
+
+      // Entry fee is already in base units (wei/smallest unit), just convert string to BigInt
+      const entryFeeInWei = BigInt(params.entryFee);
+
+      // Get token contract and decimals for ERC20 tokens
+      let tokenDecimals = 18;
+      let tokenContract;
+
+      if (!isNativeToken) {
+        tokenContract = getContract({
+          client,
+          chain,
+          address: params.currency,
+        });
+
+        try {
+          tokenDecimals = await decimals({ contract: tokenContract });
+        } catch (error) {
+          console.error("Error getting token decimals:", error);
+        }
+      }
+
+      const humanReadableAmount =
+        Number(entryFeeInWei) / Math.pow(10, tokenDecimals);
+      console.log(
+        `Entry fee: ${entryFeeInWei.toString()} base units = ${humanReadableAmount} tokens (${tokenDecimals} decimals)`,
+      );
+
+      const value = isNativeToken ? entryFeeInWei : BigInt(0);
+
+      // Prepare the main transaction
+      const mainTransaction = prepareContractCall({
         contract: pickemContract,
         method: "submitPredictions",
         params: [
@@ -118,14 +189,115 @@ export function usePickemContract() {
         value,
       });
 
-      const result = await sendTx(tx);
-      const receipt = await waitForReceipt({
-        client,
-        chain,
-        transactionHash: result.transactionHash,
-      });
+      // For ERC20 tokens, manually check if approval is needed
+      let needsApproval = false;
+      let approveTransaction;
 
-      return receipt;
+      if (!isNativeToken && entryFeeInWei > BigInt(0) && tokenContract) {
+        // Check current allowance
+        const currentAllowance = await allowance({
+          contract: tokenContract,
+          owner: account.address,
+          spender: pickem[chain.id],
+        });
+
+        const humanReadableAllowance =
+          Number(currentAllowance) / Math.pow(10, tokenDecimals);
+        console.log(
+          `Current allowance: ${currentAllowance.toString()} base units = ${humanReadableAllowance} tokens`,
+        );
+        console.log(
+          `Entry fee needed: ${entryFeeInWei.toString()} base units = ${humanReadableAmount} tokens`,
+        );
+
+        // If allowance is insufficient, prepare approval transaction
+        if (currentAllowance < entryFeeInWei) {
+          needsApproval = true;
+          console.log(
+            `⚠️ Approval needed! Will approve ${humanReadableAmount} tokens (${entryFeeInWei.toString()} base units)`,
+          );
+
+          approveTransaction = approve({
+            contract: tokenContract,
+            spender: pickem[chain.id],
+            amountWei: entryFeeInWei,
+          });
+        } else {
+          console.log(
+            `✅ Sufficient allowance already exists (${humanReadableAllowance} >= ${humanReadableAmount})`,
+          );
+        }
+      }
+
+      // Handle based on wallet capabilities
+      if (supportsBatching && needsApproval) {
+        // Wallet supports batching - send both transactions together
+        const calls: any[] = [
+          {
+            to: tokenContract!.address,
+            data: await encode(approveTransaction!),
+            value: BigInt(0),
+            chain,
+            client,
+          },
+          {
+            to: pickemContract.address,
+            data: await encode(mainTransaction),
+            value,
+            chain,
+            client,
+          },
+        ];
+
+        const bundleId = await walletSendCalls({
+          wallet,
+          calls,
+        });
+
+        return { bundleId, batched: true };
+      } else if (!supportsBatching && needsApproval) {
+        // Wallet doesn't support batching - send approval first, then main transaction
+        console.log(
+          "Wallet doesn't support batching, sending transactions separately",
+        );
+
+        // Send approval transaction
+        const approvalResult = await sendTx(approveTransaction!);
+        const approvalReceipt = await waitForReceipt({
+          client,
+          chain,
+          transactionHash: approvalResult.transactionHash,
+        });
+
+        console.log(
+          "Approval transaction confirmed:",
+          approvalReceipt.transactionHash,
+        );
+
+        // Send main transaction
+        const mainResult = await sendTx(mainTransaction);
+        const mainReceipt = await waitForReceipt({
+          client,
+          chain,
+          transactionHash: mainResult.transactionHash,
+        });
+
+        return {
+          receipt: mainReceipt,
+          approvalReceipt,
+          batched: false,
+        };
+      } else {
+        // No approval needed - send main transaction only
+        const result = await sendTx(mainTransaction);
+        const receipt = await waitForReceipt({
+          client,
+          chain,
+          transactionHash: result.transactionHash,
+        });
+
+        return { receipt, batched: false };
+      }
     } catch (error) {
       console.error("Error submitting predictions:", error);
       throw error;
