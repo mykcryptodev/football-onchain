@@ -343,23 +343,23 @@ export default function PickemContestList() {
           </div>
         </div>
 
-        <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
-          <Button
-            className="w-full"
-            disabled={contest.submissionDeadline <= Date.now()}
-          >
-            {contest.submissionDeadline <= Date.now()
-              ? "Submissions Closed"
-              : "Make Your Picks"}
-          </Button>
-        </Link>
-
+        {contest.submissionDeadline > Date.now() && (
+          <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
+            <Button
+              className="w-full"
+              disabled={contest.submissionDeadline <= Date.now()}
+            >
+              "Make Your Picks"
+            </Button>
+          </Link>
+        )}
         <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
           <Button className="w-full" size="sm" variant="outline">
             View All Picks
           </Button>
         </Link>
 
+        {/* Show these buttons when games are not yet finalized */}
         {!contest.gamesFinalized && (
           <>
             <Button
@@ -382,6 +382,11 @@ export default function PickemContestList() {
             >
               {finalizingGames[contest.id] ? "Finalizing..." : "Finalize Games"}
             </Button>
+          </>
+        )}
+
+        {contest.gamesFinalized && !contest.payoutComplete && (
+          <div className="flex gap-2 items-center w-full">
             <Button
               className="w-full mb-2"
               disabled={calculatingScores[contest.id] || !account}
@@ -393,7 +398,7 @@ export default function PickemContestList() {
                 ? "Calculating..."
                 : "Calculate Scores"}
             </Button>
-          </>
+          </div>
         )}
 
         {contest.gamesFinalized && !contest.payoutComplete && (
