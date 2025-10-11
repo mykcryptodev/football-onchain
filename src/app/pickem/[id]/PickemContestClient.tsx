@@ -420,7 +420,7 @@ export default function PickemContestClient({
                     >
                       <div className="grid grid-cols-2 gap-3">
                         <div
-                          className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
                             picks[game.gameId] === 0
                               ? "border-primary bg-primary/10"
                               : ""
@@ -432,36 +432,39 @@ export default function PickemContestClient({
                           <RadioGroupItem
                             id={`${game.gameId}-away`}
                             value="0"
+                            className="mt-1"
                           />
                           <Label
                             className="flex-1 cursor-pointer"
                             htmlFor={`${game.gameId}-away`}
                           >
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 w-full">
                               <div className="flex items-center gap-2 justify-between w-full">
-                                <img
-                                  alt={`${game.awayTeam} logo`}
-                                  className="h-6 w-6 flex-shrink-0"
-                                  src={game.awayLogo}
-                                />
-                                <span
-                                  className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                >
-                                  {game.awayAbbreviation}
-                                </span>
-                                <span
-                                  className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                >
-                                  {game.awayTeam}
-                                </span>
-                                <span className="text-sm text-muted-foreground text-nowrap">
+                                <div className="flex items-center gap-2 justify-between w-fit">
+                                  <img
+                                    alt={`${game.awayTeam} logo`}
+                                    className="h-6 w-6 flex-shrink-0"
+                                    src={game.awayLogo}
+                                  />
+                                  <div
+                                    className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                  >
+                                    {game.awayAbbreviation}
+                                  </div>
+                                  <div
+                                    className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                  >
+                                    {game.awayTeam}
+                                  </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground text-nowrap">
                                   {game.awayRecord}
-                                </span>
+                                </div>
                               </div>
                               {!gameFinished &&
                                 game.odds?.awayTeamOdds &&
                                 game.odds.awayTeamOdds.moneyLine && (
-                                  <div className="flex items-center gap-2 text-xs ml-8">
+                                  <div className="flex items-center gap-2 text-xs justify-end">
                                     <Badge
                                       className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
                                         game.odds.awayTeamOdds.favorite
@@ -480,7 +483,7 @@ export default function PickemContestClient({
                         </div>
 
                         <div
-                          className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
                             picks[game.gameId] === 1
                               ? "border-primary bg-primary/10"
                               : ""
@@ -492,28 +495,31 @@ export default function PickemContestClient({
                           <RadioGroupItem
                             id={`${game.gameId}-home`}
                             value="1"
+                            className="mt-1"
                           />
                           <Label
                             className="flex-1 cursor-pointer"
                             htmlFor={`${game.gameId}-home`}
                           >
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-1 w-full">
                               <div className="flex items-center gap-2 justify-between w-full">
-                                <img
-                                  alt={`${game.homeTeam} logo`}
-                                  className="h-6 w-6 flex-shrink-0"
-                                  src={game.homeLogo}
-                                />
-                                <span
-                                  className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                >
-                                  {game.homeAbbreviation}
-                                </span>
-                                <span
-                                  className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                >
-                                  {game.homeTeam}
-                                </span>
+                                <div className="flex items-center gap-2 justify-between w-fit">
+                                  <img
+                                    alt={`${game.homeTeam} logo`}
+                                    className="h-6 w-6 flex-shrink-0"
+                                    src={game.homeLogo}
+                                  />
+                                  <div
+                                    className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                  >
+                                    {game.homeAbbreviation}
+                                  </div>
+                                  <div
+                                    className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                  >
+                                    {game.homeTeam}
+                                  </div>
+                                </div>
                                 {gameFinished ? (
                                   <div className="flex items-center gap-2">
                                     {winner === "home" && (
@@ -534,7 +540,7 @@ export default function PickemContestClient({
                               {!gameFinished &&
                                 game.odds?.homeTeamOdds &&
                                 game.odds.homeTeamOdds.moneyLine && (
-                                  <div className="flex items-center gap-2 text-xs ml-8">
+                                  <div className="flex items-end gap-2 text-xs justify-end">
                                     <Badge
                                       className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
                                         game.odds.homeTeamOdds.favorite
@@ -582,6 +588,12 @@ export default function PickemContestClient({
                   Guess the total points scored in the{" "}
                   {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
                   game
+                  {lastGame?.odds?.overUnder && (
+                    <span className="font-medium text-muted-foreground">
+                      {" "}
+                      (over/under: {lastGame.odds.overUnder})
+                    </span>
+                  )}
                 </p>
               </div>
 
