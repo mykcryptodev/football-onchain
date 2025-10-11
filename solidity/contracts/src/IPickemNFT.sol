@@ -21,4 +21,6 @@ interface IPickemNFT {
     ) external;
 
     function markClaimed(uint256 tokenId) external;
+
+    function ownerOf(uint256 tokenId) external view returns (address);
 }

@@ -692,9 +692,10 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // ============ Prize Claims ============
 
     /**
-     * @notice Claim prize for a winning prediction
+     * @notice Claim prize for a winning prediction (permissionless - anyone can claim for any tokenId)
      * @param contestId The contest to claim from
      * @param tokenId The specific token ID to claim for
+     * @dev Prize is sent to the current NFT owner, not the caller
      */
     function claimPrize(uint256 contestId, uint256 tokenId) external {
         // Load contest struct into memory for cheaper access
@@ -704,20 +705,18 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Check if payout period has started (24 hours after finalization)
         if (block.timestamp < contestMem.payoutDeadline) revert PayoutPeriodNotStarted();
 
-        // Verify the caller owns this token
-        uint256[] memory userTokenList = userTokens[contestId][msg.sender];
-        bool ownsToken = false;
-        for (uint256 i = 0; i < userTokenList.length; i++) {
-            if (userTokenList[i] == tokenId) {
-                ownsToken = true;
-                break;
-            }
-        }
-        if (!ownsToken) revert NoPrizeToClain();
-
         // Check if already claimed
         UserPrediction storage predictionStorage = predictions[tokenId];
         if (predictionStorage.claimed) revert AlreadyClaimed();
+
+        // Get the current NFT owner (prize recipient)
+        address tokenOwner;
+        if (address(pickemNFT) != address(0)) {
+            tokenOwner = pickemNFT.ownerOf(tokenId);
+        } else {
+            // Fallback to original predictor if NFT contract not set
+            tokenOwner = predictionStorage.predictor;
+        }
 
         // Check leaderboard to see if this token won
         LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
@@ -750,15 +749,15 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
             pickemNFT.markClaimed(tokenId);
         }
 
-        // Transfer prize
+        // Transfer prize to token owner
         if (contestMem.currency == address(0)) {
-            (bool sent,) = payable(msg.sender).call{value: prizeAmount}("");
+            (bool sent,) = payable(tokenOwner).call{value: prizeAmount}("");
             if (!sent) revert TransferFailed();
         } else {
-            IERC20(contestMem.currency).safeTransfer(msg.sender, prizeAmount);
+            IERC20(contestMem.currency).safeTransfer(tokenOwner, prizeAmount);
         }
 
-        emit PrizeClaimed(contestId, msg.sender, prizeAmount);
+        emit PrizeClaimed(contestId, tokenOwner, prizeAmount);
 
         // If all prizes claimed, send treasury fee
         bool allClaimed = true;
@@ -784,8 +783,11 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     }
 
     /**
-     * @notice Claim all prizes for a user's winning predictions in a contest
-     * @param contestId The contest to claim from
+     * @notice Claim all prizes for all winners of a contest
+     * @param contestId The contest to claim prizes for
+     * @dev Distributes prizes to all winners on the leaderboard
+     * @dev Prizes are sent to current NFT owners (or original predictors if no NFT contract)
+     * @dev Anyone can call this to distribute all prizes in one transaction
      */
     function claimAllPrizes(uint256 contestId) external {
         // Load contest struct into memory for cheaper access
@@ -795,67 +797,52 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
         // Check if payout period has started (24 hours after finalization)
         if (block.timestamp < contestMem.payoutDeadline) revert PayoutPeriodNotStarted();
 
-        // Get all user's tokens for this contest
-        uint256[] memory userTokenList = userTokens[contestId][msg.sender];
-        if (userTokenList.length == 0) revert NoPrizeToClain();
-
         // Get contest leaderboard
         LeaderboardEntry[] memory leaderboard = contestLeaderboard[contestId];
+        if (leaderboard.length == 0) revert NoPrizeToClain();
 
-        uint256 totalPrizeAmount = 0;
-        uint256[] memory winningTokens = new uint256[](userTokenList.length);
-        uint256 winningTokenCount = 0;
+        uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
 
-        // Check each user token to see if it's on the leaderboard
-        for (uint256 i = 0; i < userTokenList.length; i++) {
-            uint256 tokenId = userTokenList[i];
+        // Claim prize for each winner on the leaderboard
+        for (uint256 i = 0; i < leaderboard.length; i++) {
+            uint256 tokenId = leaderboard[i].tokenId;
 
             // Skip if already claimed
             if (predictions[tokenId].claimed) continue;
 
-            // Check if this token is on the leaderboard
-            for (uint256 j = 0; j < leaderboard.length; j++) {
-                if (leaderboard[j].tokenId == tokenId) {
-                    // Calculate prize for this winning position
-                    uint256 totalPrizePoolAfterFee = contestMem.totalPrizePool - (contestMem.totalPrizePool * TREASURY_FEE / PERCENT_DENOMINATOR);
-                    uint256 prizeAmount = 0;
-
-                    if (j < contestMem.payoutStructure.payoutPercentages.length) {
-                        prizeAmount = totalPrizePoolAfterFee * contestMem.payoutStructure.payoutPercentages[j] / PERCENT_DENOMINATOR;
-                    }
-
-                    if (prizeAmount > 0) {
-                        totalPrizeAmount += prizeAmount;
-                        winningTokens[winningTokenCount] = tokenId;
-                        winningTokenCount++;
-
-                        // Mark as claimed
-                        predictions[tokenId].claimed = true;
-
-                        // Mark NFT as claimed if contract is set
-                        if (address(pickemNFT) != address(0)) {
-                            pickemNFT.markClaimed(tokenId);
-                        }
-                    }
-
-                    break; // Found this token on leaderboard, move to next token
-                }
+            // Calculate prize for this position
+            uint256 prizeAmount = 0;
+            if (i < contestMem.payoutStructure.payoutPercentages.length) {
+                prizeAmount = totalPrizePoolAfterFee * contestMem.payoutStructure.payoutPercentages[i] / PERCENT_DENOMINATOR;
             }
-        }
 
-        if (totalPrizeAmount == 0) revert NoPrizeToClain();
+            if (prizeAmount > 0) {
+                // Get current NFT owner for this token
+                address currentOwner;
+                if (address(pickemNFT) != address(0)) {
+                    currentOwner = pickemNFT.ownerOf(tokenId);
+                } else {
+                    currentOwner = predictions[tokenId].predictor;
+                }
 
-        // Transfer total prize amount
-        if (contestMem.currency == address(0)) {
-            (bool sent,) = payable(msg.sender).call{value: totalPrizeAmount}("");
-            if (!sent) revert TransferFailed();
-        } else {
-            IERC20(contestMem.currency).safeTransfer(msg.sender, totalPrizeAmount);
-        }
+                // Mark as claimed
+                predictions[tokenId].claimed = true;
 
-        // Emit events for each claimed prize
-        for (uint256 i = 0; i < winningTokenCount; i++) {
-            emit PrizeClaimed(contestId, msg.sender, totalPrizeAmount / winningTokenCount);
+                // Mark NFT as claimed if contract is set
+                if (address(pickemNFT) != address(0)) {
+                    pickemNFT.markClaimed(tokenId);
+                }
+
+                // Send prize to current owner
+                if (contestMem.currency == address(0)) {
+                    (bool sent,) = payable(currentOwner).call{value: prizeAmount}("");
+                    if (!sent) revert TransferFailed();
+                } else {
+                    IERC20(contestMem.currency).safeTransfer(currentOwner, prizeAmount);
+                }
+
+                emit PrizeClaimed(contestId, currentOwner, prizeAmount);
+            }
         }
 
         // Check if all prizes have been claimed to send treasury fee

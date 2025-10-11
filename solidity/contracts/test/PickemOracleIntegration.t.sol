@@ -687,6 +687,169 @@ contract PickemOracleIntegrationTest is Test {
         // Just checking that function executed without reverting
         assertTrue(true, "updateContestResults should succeed");
     }
+
+    function testPermissionlessPrizeClaim() public {
+        uint256 year = 2025;
+        uint8 seasonType = 1;
+        uint8 weekNumber = 3;
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+
+        MockGameScoreOracle mockOracle = new MockGameScoreOracle(functionsRouter);
+        mockOracle.exposedFulfillWeekGamesRequest(weekId, weekGamesResponse);
+        Pickem pickemWithMock = new Pickem(treasury, address(mockOracle));
+
+        vm.prank(alice);
+        uint256 contestId = pickemWithMock.createContest(
+            seasonType, weekNumber, year,
+            address(0), 0.01 ether, 0,
+            block.timestamp + 1 days
+        );
+
+        // Alice submits prediction
+        uint8[] memory picks = new uint8[](16);
+        for (uint256 i = 0; i < 16; i++) {
+            picks[i] = i % 2 == 0 ? 0 : 1;
+        }
+        vm.prank(alice);
+        uint256 tokenId = pickemWithMock.submitPredictions{value: 0.01 ether}(contestId, picks, 100);
+
+        // Advance time and finalize
+        vm.warp(block.timestamp + 2 days);
+        mockOracle.exposedFulfillWeekResultsRequest(weekId, weekResultsResponse);
+        pickemWithMock.updateContestResults(contestId);
+
+        // Calculate score
+        pickemWithMock.calculateScore(tokenId);
+
+        // Fast forward past payout deadline
+        vm.warp(block.timestamp + 24 hours + 1);
+
+        // Record Alice's balance before claim
+        uint256 aliceBalanceBefore = alice.balance;
+
+        // Bob (not the owner) claims the prize on behalf of Alice's tokenId
+        vm.prank(bob);
+        pickemWithMock.claimPrize(contestId, tokenId);
+
+        // Verify prize was sent to Alice (the token owner), not Bob (the caller)
+        uint256 aliceBalanceAfter = alice.balance;
+        assertGt(aliceBalanceAfter, aliceBalanceBefore, "Alice should receive prize");
+
+        // Bob's balance should be unchanged (minus gas)
+        // Note: In this test setup, Bob doesn't actually spend gas, but in real scenario they would
+    }
+
+    function testPermissionlessClaimAllPrizes() public {
+        uint256 year = 2025;
+        uint8 seasonType = 1;
+        uint8 weekNumber = 3;
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+
+        MockGameScoreOracle mockOracle = new MockGameScoreOracle(functionsRouter);
+        mockOracle.exposedFulfillWeekGamesRequest(weekId, weekGamesResponse);
+        Pickem pickemWithMock = new Pickem(treasury, address(mockOracle));
+
+        vm.prank(alice);
+        uint256 contestId = pickemWithMock.createContest(
+            seasonType, weekNumber, year,
+            address(0), 0.01 ether, 0,
+            block.timestamp + 1 days
+        );
+
+        // Alice submits prediction
+        uint8[] memory picks = new uint8[](16);
+        for (uint256 i = 0; i < 16; i++) {
+            picks[i] = i % 2 == 0 ? 0 : 1;
+        }
+
+        vm.prank(alice);
+        uint256 tokenId1 = pickemWithMock.submitPredictions{value: 0.01 ether}(contestId, picks, 100);
+
+        // Advance time and finalize
+        vm.warp(block.timestamp + 2 days);
+        mockOracle.exposedFulfillWeekResultsRequest(weekId, weekResultsResponse);
+        pickemWithMock.updateContestResults(contestId);
+
+        // Calculate score
+        pickemWithMock.calculateScore(tokenId1);
+
+        // Fast forward past payout deadline
+        vm.warp(block.timestamp + 24 hours + 1);
+
+        // Record Alice's balance before claim
+        uint256 aliceBalanceBefore = alice.balance;
+
+        // Bob (not the owner) claims all prizes for the entire contest
+        vm.prank(bob);
+        pickemWithMock.claimAllPrizes(contestId);
+
+        // Verify prize was sent to Alice (the token owner), not Bob (the caller)
+        uint256 aliceBalanceAfter = alice.balance;
+        assertGt(aliceBalanceAfter, aliceBalanceBefore, "Alice should receive prize");
+    }
+
+    function testNFTTransferChangesClaimRecipient() public {
+        uint256 year = 2025;
+        uint8 seasonType = 1;
+        uint8 weekNumber = 3;
+        uint256 weekId = (year << 16) | (seasonType << 8) | weekNumber;
+
+        MockGameScoreOracle mockOracle = new MockGameScoreOracle(functionsRouter);
+        mockOracle.exposedFulfillWeekGamesRequest(weekId, weekGamesResponse);
+
+        // Create Pickem with NFT contract
+        PickemNFT nft = new PickemNFT("Pickem Predictions", "PICK");
+        Pickem pickemWithMock = new Pickem(treasury, address(mockOracle));
+        pickemWithMock.setPickemNFT(address(nft));
+        nft.setPickemContract(address(pickemWithMock));
+
+        vm.prank(alice);
+        uint256 contestId = pickemWithMock.createContest(
+            seasonType, weekNumber, year,
+            address(0), 0.01 ether, 0,
+            block.timestamp + 1 days
+        );
+
+        // Alice submits prediction
+        uint8[] memory picks = new uint8[](16);
+        for (uint256 i = 0; i < 16; i++) {
+            picks[i] = i % 2 == 0 ? 0 : 1;
+        }
+        vm.prank(alice);
+        uint256 tokenId = pickemWithMock.submitPredictions{value: 0.01 ether}(contestId, picks, 100);
+
+        // Alice transfers NFT to Bob
+        vm.prank(alice);
+        nft.transferFrom(alice, bob, tokenId);
+
+        // Verify Bob now owns the NFT
+        assertEq(nft.ownerOf(tokenId), bob, "Bob should own the NFT");
+
+        // Advance time and finalize
+        vm.warp(block.timestamp + 2 days);
+        mockOracle.exposedFulfillWeekResultsRequest(weekId, weekResultsResponse);
+        pickemWithMock.updateContestResults(contestId);
+
+        // Calculate score
+        pickemWithMock.calculateScore(tokenId);
+
+        // Fast forward past payout deadline
+        vm.warp(block.timestamp + 24 hours + 1);
+
+        // Record balances before claim
+        uint256 aliceBalanceBefore = alice.balance;
+        uint256 bobBalanceBefore = bob.balance;
+
+        // Anyone claims the prize
+        pickemWithMock.claimPrize(contestId, tokenId);
+
+        // Verify prize was sent to Bob (current NFT owner), not Alice (original predictor)
+        uint256 aliceBalanceAfter = alice.balance;
+        uint256 bobBalanceAfter = bob.balance;
+
+        assertEq(aliceBalanceAfter, aliceBalanceBefore, "Alice should not receive prize");
+        assertGt(bobBalanceAfter, bobBalanceBefore, "Bob should receive prize as NFT owner");
+    }
 }
 
 
