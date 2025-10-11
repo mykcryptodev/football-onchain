@@ -119,32 +119,53 @@ export function usePickemContract() {
       );
 
       // Check wallet capabilities for batching support using the useCapabilities hook
+      // Debug: Log the full capabilities object to understand its structure
+      console.log("🔍 Capabilities loading:", capabilitiesLoading);
+      console.log("🔍 Raw capabilities:", capabilities);
+      console.log("🔍 Capabilities type:", typeof capabilities);
+      console.log("🔍 Chain ID:", chain.id);
+
       // According to EIP-5792, if capabilities.message exists, it means there was an error
       const hasError = capabilities && "message" in capabilities;
 
+      // Check multiple possible structures for wallet capabilities
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const caps = capabilities as any;
+
+      // Try different possible capability structures
       const supportsBatching =
         !capabilitiesLoading &&
         capabilities &&
         !hasError &&
-        // Check if the current chain supports atomicBatch
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (capabilities as any)[chain.id]?.atomicBatch?.supported === true;
+        // Check for atomicBatch support in various possible formats
+        (caps?.atomicBatch?.supported === true ||
+          caps?.[chain.id]?.atomicBatch?.supported === true ||
+          caps?.[`0x${chain.id.toString(16)}`]?.atomicBatch?.supported ===
+            true ||
+          caps?.[String(chain.id)]?.atomicBatch?.supported === true ||
+          // Also check for sendCalls capability (alternative way to check)
+          caps?.sendCalls !== undefined ||
+          caps?.[chain.id]?.sendCalls !== undefined ||
+          caps?.[`0x${chain.id.toString(16)}`]?.sendCalls !== undefined);
+
+      console.log("🔍 Supports batching:", supportsBatching);
 
       if (capabilitiesLoading) {
-        console.log("Loading wallet capabilities...");
+        console.log("⏳ Loading wallet capabilities...");
       } else if (hasError) {
         console.log(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          `Wallet capabilities error: ${(capabilities as any).message}. Will send transactions separately if approval needed.`,
+          `❌ Wallet capabilities error: ${(capabilities as any).message}. Will send transactions separately if approval needed.`,
         );
       } else if (supportsBatching) {
         console.log(
-          `Wallet supports batching on chain ${chain.id}, will batch transactions if approval needed`,
+          `✅ Wallet supports batching on chain ${chain.id}, will batch transactions if approval needed`,
         );
       } else {
         console.log(
-          `Wallet does not support batching on chain ${chain.id}, will send transactions separately if approval needed`,
+          `⚠️ Wallet does not support batching on chain ${chain.id}, will send transactions separately if approval needed`,
         );
+        console.log("Available capabilities:", Object.keys(capabilities || {}));
       }
 
       // Entry fee is already in base units (wei/smallest unit), just convert string to BigInt
