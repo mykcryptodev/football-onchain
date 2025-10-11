@@ -171,8 +171,9 @@ export default function CreatePickemForm() {
         `Fetched ${fetchedGames.length} games for the week${needToRequest ? " (onchain request sent)" : ""}`,
       );
     } catch (error) {
-      console.error("Error fetching games:", error);
-      toast.error("Failed to fetch week games");
+      const e = error as Error;
+      console.error("Error fetching games:", e);
+      toast.error("Failed to fetch week games: " + e.message);
     } finally {
       setIsFetchingGames(false);
     }

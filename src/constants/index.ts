@@ -12,47 +12,47 @@ export const chain = base;
 // ADDRESSES
 export const contests = {
   [baseSepolia.id]: "0x2de23490da5A155abEBCe591504a651C12475F96",
-  [base.id]: "0x4c1457c18670a6392e78453d815de67bd098ce80",
+  [base.id]: "0xf9994670ebbc47bf32e4c52a66d9b2329646aaf4",
 };
 
 export const contestsManager = {
   [baseSepolia.id]: "0x0c2f20bca82682c753E009603743eA3046A70463",
-  [base.id]: "0xbefb88cc6bd5096e34ad339668b68c3a96d5bc35",
+  [base.id]: "0x32a9540bebfd41f7c200dd0ac65184867e7b64ff",
 };
 
 export const boxes = {
   [baseSepolia.id]: "0x981227a1B8d967a8812a1aD10B9AF64791B051D3",
-  [base.id]: "0x8065e0284fe4f0e7adf3de39d3ce2fc68198be58",
+  [base.id]: "0xbe9a9103f1a43d895cad63d6f532ae2fce6829d8",
 };
 
 export const gameScoreOracle = {
   [baseSepolia.id]: "0xFf8D5B025fC0061Ba41bFfcD1A9049F066B91Fe6",
-  [base.id]: "0x01c21d312b948fc6d931286bf76ba3df28ea4306",
+  [base.id]: "0x19664736c634b546628b41d20b51c3dd18d61eb4",
 };
 
 export const scoreChangesPayoutStrategy = {
   [baseSepolia.id]: "0xf69F876BBB478AD28C94a3E7b449230Fd88F56cB",
-  [base.id]: "0x8a9ec11d8a07d43f41f56595c68948e95d855840",
+  [base.id]: "0xe32ba5d0755f996bb0c650ac7a7fbdea0839d417",
 };
 
 export const quartersOnlyPayoutStrategy = {
   [baseSepolia.id]: "0xD768a2440924Bd16b950583966b0CBc92f19845d",
-  [base.id]: "0xb6053cf5c1f4528842fa4be2db2baeb4da1d14c1",
+  [base.id]: "0x0fb1ab606a3d71cc706d3931c065146d7a189b0b",
 };
 
 export const randomNumbers = {
   [baseSepolia.id]: "0x951BbC0e36b0838f2B87f6a0feDe8F421CDaD7eA",
-  [base.id]: "0x0081251c796a6054a15ee049e17473aef6d4e592",
+  [base.id]: "0x323f3c42d2009947b4ee13ecbdda3a0e8025afae",
 };
 
 export const pickemNFT = {
   [baseSepolia.id]: "0x676d9b3a41654191789b097640011734491544b7",
-  [base.id]: "0xcab760b1eaf0f566c791b1c635986a1c6c5485aa",
+  [base.id]: "0xdd8c809ea8c0ae2d9bcc307189945866026efefd",
 };
 
 export const pickem = {
   [baseSepolia.id]: "0x0174888171951518908830462666580944b05308",
-  [base.id]: "0xa2f5b0ee40888d8c9e7085b20dcda9646d1fff57",
+  [base.id]: "0xaa2a3d340941bb1bdde6956b657cded549cd42b4",
 };
 
 export const usdc = {

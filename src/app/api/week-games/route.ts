@@ -209,9 +209,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(games);
   } catch (error) {
-    console.error("Error fetching week games:", error);
+    const e = error as Error;
+    console.error("Error fetching week games:", e);
     return NextResponse.json(
-      { error: "Failed to fetch week games" },
+      { error: "Failed to fetch week games: " + e.message },
       { status: 500 },
     );
   }

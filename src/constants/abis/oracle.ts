@@ -12,6 +12,8 @@ export const abi = [
   { inputs: [], name: "OnlyRouterCanFulfill", type: "error" },
   { inputs: [], name: "ScoreChangeIndexOutOfBounds", type: "error" },
   { inputs: [], name: "ScoreChangesAlreadyStored", type: "error" },
+  { inputs: [], name: "WeekGamesAlreadyFinalized", type: "error" },
+  { inputs: [], name: "WeekResultsAlreadyFinalized", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -266,6 +268,17 @@ export const abi = [
     name: "areScoreChangesAvailable",
     outputs: [{ internalType: "bool", name: "", type: "bool" }],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "year", type: "uint256" },
+      { internalType: "uint8", name: "seasonType", type: "uint8" },
+      { internalType: "uint8", name: "weekNumber", type: "uint8" },
+    ],
+    name: "calculateWeekId",
+    outputs: [{ internalType: "uint256", name: "weekId", type: "uint256" }],
+    stateMutability: "pure",
     type: "function",
   },
   {
@@ -557,7 +570,6 @@ export const abi = [
       { internalType: "uint8", name: "weekNumber", type: "uint8" },
       { internalType: "uint256", name: "year", type: "uint256" },
       { internalType: "uint8", name: "gamesCount", type: "uint8" },
-      { internalType: "uint256", name: "earliestKickoff", type: "uint256" },
       { internalType: "bool", name: "isFinalized", type: "bool" },
     ],
     stateMutability: "view",

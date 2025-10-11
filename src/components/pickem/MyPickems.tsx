@@ -240,8 +240,9 @@ export default function MyPickems() {
       toast.success("Contest finalized and winners calculated!");
       await fetchUserNFTs(); // Refresh to show prizes
     } catch (error) {
-      console.error("Error finalizing contest:", error);
-      toast.error("Failed to finalize contest");
+      const e = error as Error;
+      console.error("Error finalizing contest:", e);
+      toast.error("Failed to finalize contest: " + e.message);
     } finally {
       setFinalizing(prev => ({ ...prev, [contestId]: false }));
     }

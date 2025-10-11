@@ -19,6 +19,7 @@ import {
 } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { useMultipleWeekResultsFinalized } from "@/hooks/useWeekResultsFinalized";
 
 interface PickemContest {
   id: number;
@@ -92,6 +93,18 @@ export default function PickemContestList() {
     Record<number, boolean>
   >({});
 
+  // Use hook to check week results finalization for all contests
+  const { statusMap: weekResultsFinalized, refresh: refreshWeekResults } =
+    useMultipleWeekResultsFinalized(
+      contests.map(contest => ({
+        contestId: contest.id,
+        year: contest.year,
+        seasonType: contest.seasonType,
+        weekNumber: contest.weekNumber,
+        enabled: !contest.gamesFinalized, // Only check if games aren't finalized yet
+      })),
+    );
+
   useEffect(() => {
     fetchContests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,9 +177,15 @@ export default function PickemContestList() {
       toast.success(
         "Week results fetch requested. This may take a few minutes.",
       );
+
+      // Refresh the week results status after 10 seconds
+      setTimeout(() => {
+        refreshWeekResults();
+      }, 10000);
     } catch (error) {
-      console.error("Error requesting week results:", error);
-      toast.error("Failed to request week results");
+      const e = error as Error;
+      console.error("Error requesting week results:", e);
+      toast.error("Failed to request week results: " + e.message);
     } finally {
       setFetchingResults(prev => ({ ...prev, [contest.id]: false }));
     }
@@ -181,8 +200,9 @@ export default function PickemContestList() {
       // Optionally refresh contests
       await fetchContests();
     } catch (error) {
-      console.error("Error distributing prizes:", error);
-      toast.error("Failed to distribute prizes");
+      const e = error as Error;
+      console.error("Error distributing prizes:", e);
+      toast.error("Failed to distribute prizes: " + e.message);
     } finally {
       setClaimingPrizes(prev => ({ ...prev, [contestId]: false }));
     }
@@ -196,8 +216,9 @@ export default function PickemContestList() {
       toast.success("Game results finalized! Now you can calculate scores.");
       await fetchContests();
     } catch (error) {
-      console.error("Error finalizing games:", error);
-      toast.error("Failed to finalize game results");
+      const e = error as Error;
+      console.error("Error finalizing games:", e);
+      toast.error("Failed to finalize game results: " + e.message);
     } finally {
       setFinalizingGames(prev => ({ ...prev, [contestId]: false }));
     }
@@ -380,17 +401,20 @@ export default function PickemContestList() {
         {/* Show these buttons when games are not yet finalized */}
         {!contest.gamesFinalized && (
           <>
-            <Button
-              className="w-full mb-2"
-              disabled={fetchingResults[contest.id] || !account}
-              size="sm"
-              variant="outline"
-              onClick={() => handleFetchWeekResults(contest)}
-            >
-              {fetchingResults[contest.id]
-                ? "Requesting..."
-                : "Fetch Week Results"}
-            </Button>
+            {/* Only show Fetch Week Results button if results are not already finalized in oracle */}
+            {!weekResultsFinalized[contest.id] && (
+              <Button
+                className="w-full mb-2"
+                disabled={fetchingResults[contest.id] || !account}
+                size="sm"
+                variant="outline"
+                onClick={() => handleFetchWeekResults(contest)}
+              >
+                {fetchingResults[contest.id]
+                  ? "Requesting..."
+                  : "Fetch Week Results"}
+              </Button>
+            )}
             <Button
               className="w-full mb-2"
               disabled={finalizingGames[contest.id] || !account}

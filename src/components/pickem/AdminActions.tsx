@@ -90,8 +90,9 @@ export default function AdminActions() {
       toast.success(`Prizes distributed for Contest #${contestId}!`);
       await fetchContests(); // Refresh
     } catch (error) {
-      console.error("Error distributing prizes:", error);
-      toast.error("Failed to distribute prizes");
+      const e = error as Error;
+      console.error("Error distributing prizes:", e);
+      toast.error("Failed to distribute prizes: " + e.message);
     } finally {
       setDistributing(prev => ({ ...prev, [contestId]: false }));
     }

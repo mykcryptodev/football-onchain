@@ -25,10 +25,13 @@ export const abi = [
   { inputs: [], name: "InsufficientPayment", type: "error" },
   { inputs: [], name: "InvalidCurrency", type: "error" },
   { inputs: [], name: "InvalidEntryFee", type: "error" },
+  { inputs: [], name: "InvalidGameScoreOracle", type: "error" },
+  { inputs: [], name: "InvalidNFTContract", type: "error" },
   { inputs: [], name: "InvalidPayoutStructure", type: "error" },
   { inputs: [], name: "InvalidPredictions", type: "error" },
   { inputs: [], name: "InvalidSeasonType", type: "error" },
   { inputs: [], name: "InvalidTokenId", type: "error" },
+  { inputs: [], name: "InvalidTreasury", type: "error" },
   { inputs: [], name: "InvalidWeekNumber", type: "error" },
   { inputs: [], name: "NoGamesProvided", type: "error" },
   { inputs: [], name: "NoPrizeToClaim", type: "error" },
@@ -46,6 +49,7 @@ export const abi = [
   { inputs: [], name: "SubmissionDeadlinePassed", type: "error" },
   { inputs: [], name: "TooManyGames", type: "error" },
   { inputs: [], name: "TransferFailed", type: "error" },
+  { inputs: [], name: "WeekResultsNotFinalized", type: "error" },
   {
     anonymous: false,
     inputs: [
@@ -344,6 +348,16 @@ export const abi = [
     type: "function",
   },
   {
+    inputs: [
+      { internalType: "uint256", name: "", type: "uint256" },
+      { internalType: "uint256", name: "", type: "uint256" },
+    ],
+    name: "contestTokenIds",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     name: "contests",
     outputs: [
@@ -494,14 +508,14 @@ export const abi = [
   },
   {
     inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
-    name: "getContestWinners",
+    name: "getContestTokenIds",
     outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
     stateMutability: "view",
     type: "function",
   },
   {
     inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
-    name: "getContestTokenIds",
+    name: "getContestWinners",
     outputs: [{ internalType: "uint256[]", name: "", type: "uint256[]" }],
     stateMutability: "view",
     type: "function",
@@ -654,18 +668,6 @@ export const abi = [
   {
     inputs: [{ internalType: "uint256", name: "contestId", type: "uint256" }],
     name: "updateContestResults",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint256", name: "contestId", type: "uint256" },
-      { internalType: "uint256", name: "gameId", type: "uint256" },
-      { internalType: "uint8", name: "winner", type: "uint8" },
-      { internalType: "uint256", name: "totalPoints", type: "uint256" },
-    ],
-    name: "updateGameResult",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

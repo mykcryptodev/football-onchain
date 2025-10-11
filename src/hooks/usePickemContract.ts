@@ -755,6 +755,62 @@ export function usePickemContract() {
     }
   };
 
+  // Helper function to calculate weekId (matches Solidity logic)
+  const calculateWeekId = (
+    year: number,
+    seasonType: number,
+    weekNumber: number,
+  ): bigint => {
+    return (
+      (BigInt(year) << BigInt(16)) |
+      (BigInt(seasonType) << BigInt(8)) |
+      BigInt(weekNumber)
+    );
+  };
+
+  // Check if week results are finalized in oracle
+  const isWeekResultsFinalized = async (params: {
+    year: number;
+    seasonType: number;
+    weekNumber: number;
+  }) => {
+    try {
+      // First, get oracle address
+      const oracleAddress = await readContract({
+        contract: pickemContract,
+        method: "gameScoreOracle",
+        params: [],
+      });
+
+      const oracle = getContract({
+        client,
+        chain,
+        address: oracleAddress as `0x${string}`,
+        abi: oracleAbi,
+      });
+
+      // Calculate weekId using helper function
+      const weekId = calculateWeekId(
+        params.year,
+        params.seasonType,
+        params.weekNumber,
+      );
+
+      const result = await readContract({
+        contract: oracle,
+        method: "weekResults",
+        params: [weekId],
+      });
+
+      // weekResults returns: [weekId, packedResults, gamesCount, isFinalized]
+      // isFinalized is the 4th element (index 3)
+      return result[3] as boolean;
+    } catch (error) {
+      console.error("Error checking if week results are finalized:", error);
+      return false; // Return false on error to be safe
+    }
+  };
+
   // Get user picks for a token
   const getUserPicks = async (tokenId: number, gameIds: bigint[]) => {
     try {
@@ -852,6 +908,7 @@ export function usePickemContract() {
     requestWeekGames,
     getWeekGameIds,
     requestWeekResults,
+    isWeekResultsFinalized,
     getUserPicks,
     getTotalNFTSupply,
     getNFTOwner,
