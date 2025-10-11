@@ -89,8 +89,8 @@ contract Pickem is ConfirmedOwner, IERC721Receiver {
     // Maximum games per week (safety limit)
     uint256 public constant MAX_GAMES_PER_WEEK = 16;
 
-    // Score calculation period (24 hours) // TODO: Change to 24 hours when going live
-    uint256 public constant SCORE_CALCULATION_PERIOD = 2 minutes;
+    // Score calculation period (24 hours)
+    uint256 public constant SCORE_CALCULATION_PERIOD = 24 hours;
 
     // Mappings
     mapping(uint256 => PickemContest) public contests;
