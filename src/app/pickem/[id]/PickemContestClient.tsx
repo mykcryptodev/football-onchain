@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 
 interface ContestData {
@@ -82,6 +83,17 @@ export default function PickemContestClient({
   const [picks, setPicks] = useState<Record<string, number>>({});
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Format currency values using the hook
+  const { formattedValue: formattedEntryFee } = useFormattedCurrency({
+    amount: contest.entryFee,
+    currencyAddress: contest.currency,
+  });
+
+  const { formattedValue: formattedPrizePool } = useFormattedCurrency({
+    amount: contest.totalPrizePool,
+    currencyAddress: contest.currency,
+  });
 
   const fetchGameInfo = useCallback(
     async (gameIds: string[]) => {
@@ -226,11 +238,7 @@ export default function PickemContestClient({
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Entry Fee</p>
-              <p className="font-medium">
-                {contest.currency === "ETH"
-                  ? `${formatEther(contest.entryFee)} ETH`
-                  : `${Number(contest.entryFee) / 1e6} USDC`}
-              </p>
+              <p className="font-medium">{formattedEntryFee}</p>
             </div>
           </div>
 
@@ -238,11 +246,7 @@ export default function PickemContestClient({
             <Trophy className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Prize Pool</p>
-              <p className="font-medium">
-                {contest.currency === "ETH"
-                  ? `${formatEther(contest.totalPrizePool)} ETH`
-                  : `${Number(contest.totalPrizePool) / 1e6} USDC`}
-              </p>
+              <p className="font-medium">{formattedPrizePool}</p>
             </div>
           </div>
 
@@ -406,11 +410,7 @@ export default function PickemContestClient({
               <div className="p-4 bg-muted rounded-lg">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Entry Fee:</span>
-                  <span className="font-bold">
-                    {contest.currency === "ETH"
-                      ? `${formatEther(contest.entryFee)} ETH`
-                      : `${Number(contest.entryFee) / 1e6} USDC`}
-                  </span>
+                  <span className="font-bold">{formattedEntryFee}</span>
                 </div>
               </div>
 
