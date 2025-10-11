@@ -269,189 +269,193 @@ export default function PickemContestClient({
       {/* Games and Picks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Games List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Games ({games.length})</CardTitle>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                Picks Made: {getPickedCount()} / {games.length}
-              </span>
-              <Badge
-                variant={
-                  getPickedCount() === games.length ? "default" : "secondary"
-                }
-              >
-                {getPickedCount() === games.length
-                  ? "Ready to Submit"
-                  : "Incomplete"}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-            {games.map((game, index) => (
-              <div key={game.gameId} className="p-4 border rounded-lg">
-                <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
-                  <span>Game {index + 1}</span>
-                  <span>
-                    {(() => {
-                      const kickoffDate = new Date(game.kickoff);
-                      return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-                    })()}
-                  </span>
-                </div>
-
-                <RadioGroup
-                  value={picks[game.gameId]?.toString()}
-                  onValueChange={(value: string) =>
-                    setPicks({ ...picks, [game.gameId]: parseInt(value) })
+        {!isSubmissionClosed && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Games ({games.length})</CardTitle>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Picks Made: {getPickedCount()} / {games.length}
+                </span>
+                <Badge
+                  variant={
+                    getPickedCount() === games.length ? "default" : "secondary"
                   }
                 >
-                  <div className="grid grid-cols-2 gap-3">
-                    <div
-                      className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                        picks[game.gameId] === 0
-                          ? "border-primary bg-primary/10"
-                          : ""
-                      }`}
-                      onClick={() => setPicks({ ...picks, [game.gameId]: 0 })}
-                    >
-                      <RadioGroupItem id={`${game.gameId}-away`} value="0" />
-                      <Label
-                        className="flex-1 cursor-pointer"
-                        htmlFor={`${game.gameId}-away`}
-                      >
-                        <div className="flex items-center gap-2 justify-between w-full">
-                          <img
-                            alt={`${game.awayTeam} logo`}
-                            className="h-6 w-6 flex-shrink-0"
-                            src={game.awayLogo}
-                          />
-                          <span className="font-medium sm:hidden block">
-                            {game.awayAbbreviation}
-                          </span>
-                          <span className="font-medium hidden sm:block">
-                            {game.awayTeam}
-                          </span>
-                          <span className="text-sm text-muted-foreground text-nowrap">
-                            {game.awayRecord}
-                          </span>
-                        </div>
-                      </Label>
-                    </div>
-
-                    <div
-                      className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                        picks[game.gameId] === 1
-                          ? "border-primary bg-primary/10"
-                          : ""
-                      }`}
-                      onClick={() => setPicks({ ...picks, [game.gameId]: 1 })}
-                    >
-                      <RadioGroupItem id={`${game.gameId}-home`} value="1" />
-                      <Label
-                        className="flex-1 cursor-pointer"
-                        htmlFor={`${game.gameId}-home`}
-                      >
-                        <div className="flex items-center gap-2 justify-between w-full">
-                          <img
-                            alt={`${game.homeTeam} logo`}
-                            className="h-6 w-6 flex-shrink-0"
-                            src={game.homeLogo}
-                          />
-                          <span className="font-medium sm:hidden block">
-                            {game.homeAbbreviation}
-                          </span>
-                          <span className="font-medium hidden sm:block">
-                            {game.homeTeam}
-                          </span>
-                          <span className="text-sm text-muted-foreground text-nowrap">
-                            {game.homeRecord}
-                          </span>
-                        </div>
-                      </Label>
-                    </div>
-                  </div>
-                </RadioGroup>
+                  {getPickedCount() === games.length
+                    ? "Ready to Submit"
+                    : "Incomplete"}
+                </Badge>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+              {games.map((game, index) => (
+                <div key={game.gameId} className="p-4 border rounded-lg">
+                  <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
+                    <span>Game {index + 1}</span>
+                    <span>
+                      {(() => {
+                        const kickoffDate = new Date(game.kickoff);
+                        return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+                      })()}
+                    </span>
+                  </div>
+
+                  <RadioGroup
+                    value={picks[game.gameId]?.toString()}
+                    onValueChange={(value: string) =>
+                      setPicks({ ...picks, [game.gameId]: parseInt(value) })
+                    }
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+                      <div
+                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          picks[game.gameId] === 0
+                            ? "border-primary bg-primary/10"
+                            : ""
+                        }`}
+                        onClick={() => setPicks({ ...picks, [game.gameId]: 0 })}
+                      >
+                        <RadioGroupItem id={`${game.gameId}-away`} value="0" />
+                        <Label
+                          className="flex-1 cursor-pointer"
+                          htmlFor={`${game.gameId}-away`}
+                        >
+                          <div className="flex items-center gap-2 justify-between w-full">
+                            <img
+                              alt={`${game.awayTeam} logo`}
+                              className="h-6 w-6 flex-shrink-0"
+                              src={game.awayLogo}
+                            />
+                            <span className="font-medium sm:hidden block">
+                              {game.awayAbbreviation}
+                            </span>
+                            <span className="font-medium hidden sm:block">
+                              {game.awayTeam}
+                            </span>
+                            <span className="text-sm text-muted-foreground text-nowrap">
+                              {game.awayRecord}
+                            </span>
+                          </div>
+                        </Label>
+                      </div>
+
+                      <div
+                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          picks[game.gameId] === 1
+                            ? "border-primary bg-primary/10"
+                            : ""
+                        }`}
+                        onClick={() => setPicks({ ...picks, [game.gameId]: 1 })}
+                      >
+                        <RadioGroupItem id={`${game.gameId}-home`} value="1" />
+                        <Label
+                          className="flex-1 cursor-pointer"
+                          htmlFor={`${game.gameId}-home`}
+                        >
+                          <div className="flex items-center gap-2 justify-between w-full">
+                            <img
+                              alt={`${game.homeTeam} logo`}
+                              className="h-6 w-6 flex-shrink-0"
+                              src={game.homeLogo}
+                            />
+                            <span className="font-medium sm:hidden block">
+                              {game.homeAbbreviation}
+                            </span>
+                            <span className="font-medium hidden sm:block">
+                              {game.homeTeam}
+                            </span>
+                            <span className="text-sm text-muted-foreground text-nowrap">
+                              {game.homeRecord}
+                            </span>
+                          </div>
+                        </Label>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Submission Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Submit Your Picks</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Tiebreaker */}
-            <div className="space-y-2">
-              <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
-              <Input
-                id="tiebreaker"
-                min="0"
-                placeholder="e.g., 45"
-                type="number"
-                value={tiebreakerPoints}
-                onChange={e => setTiebreakerPoints(e.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Guess the total points scored in the highest-scoring game
-              </p>
-            </div>
-
-            {/* Entry Fee Display */}
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Entry Fee:</span>
-                <span className="font-bold">
-                  {contest.currency === "ETH"
-                    ? `${formatEther(contest.entryFee)} ETH`
-                    : `${Number(contest.entryFee) / 1e6} USDC`}
-                </span>
+        {!isSubmissionClosed && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Submit Your Picks</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Tiebreaker */}
+              <div className="space-y-2">
+                <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
+                <Input
+                  id="tiebreaker"
+                  min="0"
+                  placeholder="e.g., 45"
+                  type="number"
+                  value={tiebreakerPoints}
+                  onChange={e => setTiebreakerPoints(e.target.value)}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Guess the total points scored in the highest-scoring game
+                </p>
               </div>
-            </div>
 
-            {/* Submit Button */}
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={
-                !account ||
-                submitting ||
-                isSubmissionClosed ||
-                getPickedCount() !== games.length
-              }
-              onClick={handleSubmit}
-            >
-              {submitting
-                ? "Submitting..."
-                : isSubmissionClosed
-                  ? "Submissions Closed"
-                  : getPickedCount() !== games.length
-                    ? "Complete All Picks"
-                    : "Submit Picks"}
-            </Button>
+              {/* Entry Fee Display */}
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Entry Fee:</span>
+                  <span className="font-bold">
+                    {contest.currency === "ETH"
+                      ? `${formatEther(contest.entryFee)} ETH`
+                      : `${Number(contest.entryFee) / 1e6} USDC`}
+                  </span>
+                </div>
+              </div>
 
-            {!account && (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Please connect your wallet to submit picks.
-                </AlertDescription>
-              </Alert>
-            )}
+              {/* Submit Button */}
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={
+                  !account ||
+                  submitting ||
+                  isSubmissionClosed ||
+                  getPickedCount() !== games.length
+                }
+                onClick={handleSubmit}
+              >
+                {submitting
+                  ? "Submitting..."
+                  : isSubmissionClosed
+                    ? "Submissions Closed"
+                    : getPickedCount() !== games.length
+                      ? "Complete All Picks"
+                      : "Submit Picks"}
+              </Button>
 
-            {isSubmissionClosed && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  The submission deadline has passed. You can no longer submit
-                  picks for this contest.
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+              {!account && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Please connect your wallet to submit picks.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isSubmissionClosed && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    The submission deadline has passed. You can no longer submit
+                    picks for this contest.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* All Participants' Picks */}

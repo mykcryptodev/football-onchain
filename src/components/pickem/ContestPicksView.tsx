@@ -206,22 +206,12 @@ export default function ContestPicksView({
   ) => {
     if (!isExpanded) {
       // Collapsed view: show a summary
-      const pickSummary = picks
-        .map((pick, idx) => {
-          const game = games[idx];
-          if (!game) return null;
-          const pickedTeam =
-            pick === 0 ? game.awayAbbreviation : game.homeAbbreviation;
-          return pickedTeam;
-        })
-        .filter(Boolean);
-
       return (
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="sm"
             className="h-8 px-2"
+            size="sm"
+            variant="ghost"
             onClick={() => toggleRow(tokenId)}
           >
             <ChevronDown className="h-4 w-4 mr-1" />
@@ -236,9 +226,9 @@ export default function ContestPicksView({
       <div className="space-y-1.5 min-w-[200px]">
         <div className="flex items-center justify-between mb-2">
           <Button
-            variant="ghost"
-            size="sm"
             className="h-6 px-2"
+            size="sm"
+            variant="ghost"
             onClick={() => toggleRow(tokenId)}
           >
             <ChevronUp className="h-3 w-3 mr-1" />

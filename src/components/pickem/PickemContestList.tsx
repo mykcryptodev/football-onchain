@@ -349,7 +349,7 @@ export default function PickemContestList() {
               className="w-full"
               disabled={contest.submissionDeadline <= Date.now()}
             >
-              "Make Your Picks"
+              Make Your Picks
             </Button>
           </Link>
         )}

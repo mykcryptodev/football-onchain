@@ -45,7 +45,6 @@ export default function PickemLeaderboard({
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
-  const [totalGames, setTotalGames] = useState(0);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -57,7 +56,6 @@ export default function PickemLeaderboard({
       // Fetch contest data
       const contest = await getContest(contestId);
       setPrizePool(contest.totalPrizePool);
-      setTotalGames(contest.gameIds.length);
 
       // Fetch leaderboard entries
       const leaderboard = await getContestLeaderboard(contestId);
@@ -79,7 +77,7 @@ export default function PickemLeaderboard({
 
         // Get current owner and original predictor
         const currentOwner = await getNFTOwner(tokenId);
-        const predictionData = await getNFTPrediction(BigInt(tokenId));
+        const predictionData = await getNFTPrediction(tokenId);
         const originalPredictor = predictionData[1]; // predictor is second element
 
         // Calculate prize amount based on position

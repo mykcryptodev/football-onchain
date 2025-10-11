@@ -449,9 +449,9 @@ export default function MyPickems() {
                 </p>
               </div>
               <Button
-                onClick={handleBatchClaimPrizes}
-                disabled={batchClaiming}
                 className="w-full sm:w-auto"
+                disabled={batchClaiming}
+                onClick={handleBatchClaimPrizes}
               >
                 {batchClaiming ? (
                   <>

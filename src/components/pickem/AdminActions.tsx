@@ -220,7 +220,7 @@ export default function AdminActions() {
               Prize Distribution Dashboard
             </span>
             {eligibleForPayout.length > 0 && (
-              <Button onClick={handleDistributeAll} variant="default">
+              <Button variant="default" onClick={handleDistributeAll}>
                 <DollarSign className="h-4 w-4 mr-2" />
                 Distribute All Eligible ({eligibleForPayout.length})
               </Button>
@@ -264,13 +264,13 @@ export default function AdminActions() {
                 </div>
 
                 <Button
-                  onClick={() => handleDistributePrizes(contest.id)}
+                  size="sm"
+                  variant="secondary"
                   disabled={
                     distributing[contest.id] ||
                     Date.now() < contest.payoutDeadline * 1000
                   }
-                  variant="secondary"
-                  size="sm"
+                  onClick={() => handleDistributePrizes(contest.id)}
                 >
                   {distributing[contest.id] ? (
                     <>
