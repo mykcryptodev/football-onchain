@@ -9,24 +9,21 @@ import {
   waitForReceipt,
   ZERO_ADDRESS,
 } from "thirdweb";
-import { allowance, approve } from "thirdweb/extensions/erc20";
+import { allowance, decimals } from "thirdweb/extensions/erc20";
 import {
   useActiveAccount,
   useActiveWallet,
+  useCapabilities,
   useSendTransaction,
 } from "thirdweb/react";
-
-// Import sendCalls from the wallets module
-import { useCapabilities } from "thirdweb/react";
 import { sendCalls as walletSendCalls } from "thirdweb/wallets/eip5792";
+import { isAddressEqual } from "viem";
 
 import { chain, pickem, pickemNFT } from "@/constants";
 import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
 import { client } from "@/providers/Thirdweb";
-import { decimals } from "thirdweb/extensions/erc20";
-import { isAddressEqual } from "viem";
 
 export function usePickemContract() {
   const account = useActiveAccount();
@@ -130,12 +127,14 @@ export function usePickemContract() {
         capabilities &&
         !hasError &&
         // Check if the current chain supports atomicBatch
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (capabilities as any)[chain.id]?.atomicBatch?.supported === true;
 
       if (capabilitiesLoading) {
         console.log("Loading wallet capabilities...");
       } else if (hasError) {
         console.log(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           `Wallet capabilities error: ${(capabilities as any).message}. Will send transactions separately if approval needed.`,
         );
       } else if (supportsBatching) {
@@ -217,10 +216,11 @@ export function usePickemContract() {
             `⚠️ Approval needed! Will approve ${humanReadableAmount} tokens (${entryFeeInWei.toString()} base units)`,
           );
 
-          approveTransaction = approve({
+          approveTransaction = prepareContractCall({
             contract: tokenContract,
-            spender: pickem[chain.id],
-            amountWei: entryFeeInWei,
+            method:
+              "function approve(address spender, uint256 amount) returns (bool)",
+            params: [pickem[chain.id], entryFeeInWei],
           });
         } else {
           console.log(
@@ -232,7 +232,9 @@ export function usePickemContract() {
       // Handle based on wallet capabilities
       if (supportsBatching && needsApproval) {
         // Wallet supports batching - send both transactions together
-        const calls: any[] = [
+        console.log("✅ Batching approval and main transaction together...");
+
+        const calls = [
           {
             to: tokenContract!.address,
             data: await encode(approveTransaction!),
@@ -249,11 +251,14 @@ export function usePickemContract() {
           },
         ];
 
+        console.log("Sending batched calls:", calls.length, "transactions");
+
         const bundleId = await walletSendCalls({
           wallet,
           calls,
         });
 
+        console.log("✅ Batched transaction sent! Bundle ID:", bundleId);
         return { bundleId, batched: true };
       } else if (!supportsBatching && needsApproval) {
         // Wallet doesn't support batching - send approval first, then main transaction

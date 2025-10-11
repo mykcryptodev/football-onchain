@@ -306,10 +306,10 @@ export default function PickemContestClient({
                   Picks Made: {getPickedCount()} / {games.length}
                 </span>
                 <Button
+                  disabled={submitting || isSubmissionClosed}
                   size="sm"
                   variant="outline"
                   onClick={pickAtRandom}
-                  disabled={submitting || isSubmissionClosed}
                 >
                   <Shuffle className="h-4 w-4 mr-2" />
                   Pick Em Randomly
