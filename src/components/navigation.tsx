@@ -14,7 +14,7 @@ import { client } from "@/providers/Thirdweb";
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { tokenAddress } = useDisplayToken();
 
   const wallets = [
@@ -94,7 +94,7 @@ export function Navigation() {
               showThirdwebBranding: false,
             }}
             theme={
-              theme === "dark"
+              resolvedTheme === "dark"
                 ? darkTheme({
                     colors: { connectedButtonBg: "oklch(0.145 0 0)" },
                   })
