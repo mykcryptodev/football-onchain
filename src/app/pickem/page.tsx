@@ -39,17 +39,7 @@ export default function PickemPage() {
         </TabsList>
 
         <TabsContent className="space-y-4" value="contests">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Pick&apos;em Contests</CardTitle>
-              <CardDescription>
-                Join a contest, submit your predictions, and win prizes!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PickemContestList />
-            </CardContent>
-          </Card>
+          <PickemContestList />
         </TabsContent>
 
         <TabsContent className="space-y-4" value="create">
@@ -67,17 +57,7 @@ export default function PickemPage() {
         </TabsContent>
 
         <TabsContent className="space-y-4" value="my-pickems">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Pick&apos;em NFTs</CardTitle>
-              <CardDescription>
-                View your predictions and track your performance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <MyPickems />
-            </CardContent>
-          </Card>
+          <MyPickems />
         </TabsContent>
       </Tabs>
     </div>
