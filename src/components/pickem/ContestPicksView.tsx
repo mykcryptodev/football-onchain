@@ -1,14 +1,12 @@
 "use client";
 
 import {
-  Check,
   ChevronDown,
   ChevronUp,
   Eye,
   RefreshCw,
   TrendingUp,
   Users,
-  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createThirdwebClient } from "thirdweb";
@@ -20,6 +18,7 @@ import {
   Blobbie,
   useActiveAccount,
 } from "thirdweb/react";
+import { shortenAddress } from "thirdweb/utils";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePickemContract } from "@/hooks/usePickemContract";
-import { shortenAddress } from "thirdweb/utils";
 
 // Create Thirdweb client for AccountProvider
 const client = createThirdwebClient({
@@ -209,10 +207,15 @@ export default function ContestPicksView({
       );
       if (!response.ok) return;
 
-      const gamesData = await response.json();
+      const gamesData = (await response.json()) as Array<{
+        gameId: string;
+        status?: string;
+        homeScore?: number;
+        awayScore?: number;
+      }>;
       const resultsMap = new Map<string, number | null>();
 
-      gamesData.forEach((game: any) => {
+      gamesData.forEach(game => {
         // Only show results for completed games
         const isCompleted =
           game.status &&
@@ -509,7 +512,7 @@ export default function ContestPicksView({
               <TableRow>
                 <TableHead className="w-20">Rank</TableHead>
                 <TableHead>Participant</TableHead>
-                <TableHead className="w-32">Score</TableHead>
+                <TableHead className="w-32 text-right">Score</TableHead>
                 <TableHead className="w-28">Tiebreaker</TableHead>
                 <TableHead>Picks</TableHead>
               </TableRow>

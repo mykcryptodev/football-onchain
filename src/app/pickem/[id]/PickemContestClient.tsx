@@ -320,7 +320,7 @@ export default function PickemContestClient({
     );
   };
 
-  const PrizePoolUsd: FC<{ className?: string }> = ({ className }) => {
+  const _PrizePoolUsd: FC<{ className?: string }> = ({ className }) => {
     return contest.entryFeeUsd ? (
       <span className={className}>
         $
@@ -403,13 +403,13 @@ export default function PickemContestClient({
 
       {/* Contest Info */}
       <ContestStatsCard
-        entryFee={contest.entryFee}
-        currency={contest.currency}
-        totalPrizePool={contest.totalPrizePool}
-        totalEntries={contest.totalEntries}
-        payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
-        entryFeeUsd={contest.entryFeeUsd}
         showTitle
+        currency={contest.currency}
+        entryFee={contest.entryFee}
+        entryFeeUsd={contest.entryFeeUsd}
+        payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+        totalEntries={contest.totalEntries}
+        totalPrizePool={contest.totalPrizePool}
       />
 
       {/* Games and Picks */}

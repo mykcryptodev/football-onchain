@@ -118,13 +118,6 @@ export function usePickemContract() {
         ZERO_ADDRESS,
       );
 
-      // Check wallet capabilities for batching support using the useCapabilities hook
-      // Debug: Log the full capabilities object to understand its structure
-      console.log("🔍 Capabilities loading:", capabilitiesLoading);
-      console.log("🔍 Raw capabilities:", capabilities);
-      console.log("🔍 Capabilities type:", typeof capabilities);
-      console.log("🔍 Chain ID:", chain.id);
-
       // According to EIP-5792, if capabilities.message exists, it means there was an error
       const hasError = capabilities && "message" in capabilities;
 
@@ -147,8 +140,6 @@ export function usePickemContract() {
           caps?.sendCalls !== undefined ||
           caps?.[chain.id]?.sendCalls !== undefined ||
           caps?.[`0x${chain.id.toString(16)}`]?.sendCalls !== undefined);
-
-      console.log("🔍 Supports batching:", supportsBatching);
 
       if (capabilitiesLoading) {
         console.log("⏳ Loading wallet capabilities...");

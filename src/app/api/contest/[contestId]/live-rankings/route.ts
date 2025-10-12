@@ -12,12 +12,47 @@ interface LiveGameScore {
   status: string;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ contestId: string }> },
-) {
+interface ESPNCompetitor {
+  id: string;
+  homeAway: string;
+  score?: string;
+}
+
+interface ESPNCompetition {
+  competitors?: ESPNCompetitor[];
+  status?: {
+    type?: {
+      completed?: boolean;
+      name?: string;
+    };
+  };
+}
+
+interface ESPNEvent {
+  id: string;
+  competitions?: ESPNCompetition[];
+}
+
+interface ESPNResponse {
+  events?: ESPNEvent[];
+}
+
+interface ContestPick {
+  tokenId: number;
+  owner: string;
+  picks: number[];
+  correctPicks: number;
+  tiebreakerPoints: number;
+}
+
+interface RankedPick extends ContestPick {
+  liveCorrectPicks: number;
+  liveTotalScoredGames: number;
+  liveRank?: number;
+}
+
+export async function POST(request: NextRequest) {
   try {
-    const { contestId } = await params;
     const body = await request.json();
     const { gameIds, picks, year, seasonType, weekNumber } = body;
 
@@ -40,20 +75,20 @@ export async function POST(
       throw new Error("Failed to fetch live scores from ESPN");
     }
 
-    const espnData = await espnResponse.json();
+    const espnData = (await espnResponse.json()) as ESPNResponse;
 
     // Create a map of game scores
     const gameScoresMap = new Map<string, LiveGameScore>();
 
-    espnData.events?.forEach((event: any) => {
+    espnData.events?.forEach((event: ESPNEvent) => {
       const competition = event.competitions?.[0];
       if (!competition) return;
 
       const homeTeam = competition.competitors?.find(
-        (c: any) => c.homeAway === "home",
+        c => c.homeAway === "home",
       );
       const awayTeam = competition.competitors?.find(
-        (c: any) => c.homeAway === "away",
+        c => c.homeAway === "away",
       );
 
       if (!homeTeam || !awayTeam) return;
@@ -81,7 +116,7 @@ export async function POST(
     });
 
     // Calculate live rankings for each pick
-    const rankedPicks = picks.map((pick: any) => {
+    const rankedPicks: RankedPick[] = (picks as ContestPick[]).map(pick => {
       let correctPicks = 0;
       let totalScoredGames = 0; // Games that have started
 
@@ -114,7 +149,7 @@ export async function POST(
     });
 
     // Sort by live correct picks
-    rankedPicks.sort((a: any, b: any) => {
+    rankedPicks.sort((a, b) => {
       if (b.liveCorrectPicks !== a.liveCorrectPicks) {
         return b.liveCorrectPicks - a.liveCorrectPicks;
       }
@@ -125,7 +160,7 @@ export async function POST(
     });
 
     // Add ranks
-    const rankedPicksWithRank = rankedPicks.map((pick: any, index: number) => ({
+    const rankedPicksWithRank = rankedPicks.map((pick, index) => ({
       ...pick,
       liveRank: index + 1,
     }));

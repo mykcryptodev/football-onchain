@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
+import type { TokensResponse } from "@/app/api/tokens/route";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { TokensResponse } from "@/app/api/tokens/route";
 import {
   chain,
   chainlinkGasLimit,
@@ -384,14 +384,14 @@ export default function PickemContestList() {
       </CardHeader>
       <CardContent>
         <ContestStatsCard
-          entryFee={contest.entryFee}
-          currency={contest.currency}
-          totalPrizePool={contest.totalPrizePool}
-          totalEntries={contest.totalEntries}
-          payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
-          entryFeeUsd={contest.entryFeeUsd}
-          showCard={false}
           className="mb-4"
+          currency={contest.currency}
+          entryFee={contest.entryFee}
+          entryFeeUsd={contest.entryFeeUsd}
+          payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+          showCard={false}
+          totalEntries={contest.totalEntries}
+          totalPrizePool={contest.totalPrizePool}
         />
 
         {contest.submissionDeadline > Date.now() && (
