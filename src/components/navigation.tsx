@@ -93,6 +93,12 @@ export function Navigation() {
               title: `Login to ${appName}`,
               showThirdwebBranding: false,
             }}
+            detailsButton={{
+              className: "!border-none",
+              displayBalanceToken: {
+                [chain.id]: tokenAddress || usdc[chain.id],
+              },
+            }}
             theme={
               resolvedTheme === "dark"
                 ? darkTheme({
@@ -102,12 +108,6 @@ export function Navigation() {
                     colors: { connectedButtonBg: "var(--background)" },
                   })
             }
-            detailsButton={{
-              className: "!border-none",
-              displayBalanceToken: {
-                [chain.id]: tokenAddress || usdc[chain.id],
-              },
-            }}
           />
           <ModeToggle />
         </div>

@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { getContract, toTokens } from "thirdweb";
 import {
   BuyWidget,
   darkTheme,
@@ -23,6 +25,7 @@ import {
   useReadContract,
   useWalletBalance,
 } from "thirdweb/react";
+import { erc20Abi } from "viem";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,16 +38,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { chain } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { toCaip19 } from "@/lib/utils";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
-
-import { getContract, toTokens } from "thirdweb";
-import { erc20Abi } from "viem";
-
-import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
-import { toCaip19 } from "@/lib/utils";
-import { useTheme } from "next-themes";
 
 interface ContestData {
   id: number;
@@ -127,13 +125,12 @@ export default function PickemContestClient({
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: walletBalance, isLoading: walletBalanceLoading } =
-    useWalletBalance({
-      chain,
-      address: account?.address,
-      client,
-      tokenAddress: contest.currency,
-    });
+  const { data: walletBalance } = useWalletBalance({
+    chain,
+    address: account?.address,
+    client,
+    tokenAddress: contest.currency,
+  });
 
   // Set the display token to the contest's currency
   useEffect(() => {
@@ -725,13 +722,17 @@ export default function PickemContestClient({
                         You do not have enough balance to submit picks.
                       </div>
                       <BuyWidget
-                        client={client}
                         chain={chain}
+                        client={client}
+                        showThirdwebBranding={false}
+                        tokenAddress={contest.currency as `0x${string}`}
                         amount={toTokens(
                           contest.entryFee,
                           currencyDecimals ?? 18,
                         ).toString()}
-                        tokenAddress={contest.currency as `0x${string}`}
+                        style={{
+                          border: "none",
+                        }}
                         theme={
                           resolvedTheme === "dark"
                             ? darkTheme({
@@ -741,10 +742,6 @@ export default function PickemContestClient({
                                 colors: { modalBg: "var(--card-foreground)" },
                               })
                         }
-                        style={{
-                          border: "none",
-                        }}
-                        showThirdwebBranding={false}
                       />
                     </div>
                   )}

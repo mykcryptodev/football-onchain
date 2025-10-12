@@ -76,7 +76,7 @@ export function useFormattedCurrency({
     return () => {
       isMounted = false;
     };
-  }, [amount, currencyAddress, client, chain]);
+  }, [amount, currencyAddress]);
 
   return { formattedValue, isLoading, error };
 }

@@ -1,57 +1,32 @@
 {
-  // Auto-formatting on save
+  // Format on save
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSaveMode": "file",
 
-  // Code actions on save - try different timing
+  // Run ESLint auto-fix on save
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "always",
-    "source.organizeImports": "always"
+    "source.fixAll.eslint": "explicit"
   },
 
-  // File-specific formatters
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[typescriptreact]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[json]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-
-  // ESLint settings
+  // ESLint configuration
   "eslint.validate": [
     "javascript",
     "javascriptreact",
     "typescript",
     "typescriptreact"
   ],
-  "eslint.format.enable": true,
-  "eslint.lintTask.enable": true,
 
-  // TypeScript settings
-  "typescript.preferences.organizeImportsIgnoreCase": false,
-  "typescript.preferences.organizeImportsCollation": "ordinal",
-  "typescript.preferences.organizeImportsNumericCollation": true,
-  "typescript.suggest.autoImports": true,
+  // File associations
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
 
-  // Prettier settings
-  "prettier.requireConfig": true,
-  "prettier.useEditorConfig": false,
-
-  // Editor settings for better development experience
-  "editor.tabSize": 2,
-  "editor.insertSpaces": true,
-  "editor.detectIndentation": false,
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-  "files.trimFinalNewlines": true
+  // Exclude node_modules from search
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/solidity/node_modules": true,
+    "**/.next": true,
+    "**/build": true,
+    "**/dist": true
+  }
 }

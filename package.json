@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint src/ --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
-    "check": "npm run format:check && npm run lint",
-    "fix": "npm run format && npm run lint:fix"
+    "prettier": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "prettier:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix && prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\" && eslint src/ --ext .js,.jsx,.ts,.tsx",
+    "check": "npm run format:check",
+    "fix": "npm run format"
   },
   "dependencies": {
     "@farcaster/miniapp-sdk": "^0.1.10",

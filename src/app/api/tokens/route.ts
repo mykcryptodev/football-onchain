@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getContract } from "thirdweb";
+import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
+import { isAddress } from "thirdweb/utils";
 
 import { chain } from "@/constants";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-import { getContract } from "thirdweb";
-import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
-import { isAddress } from "thirdweb/utils";
 
 export interface Token {
   chainId: number;
