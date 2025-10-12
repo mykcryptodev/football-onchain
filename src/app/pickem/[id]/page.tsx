@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getContract, readContract } from "thirdweb";
 
 import type { TokensResponse } from "@/app/api/tokens/route";
 import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
+import { getBaseUrl } from "@/lib/farcaster-metadata";
 import { client } from "@/providers/Thirdweb";
 
 import PickemContestClient from "./PickemContestClient";
@@ -24,6 +26,97 @@ interface ContestData {
   gameIds: string[];
   tiebreakerGameId: string;
   entryFeeUsd?: number;
+}
+
+function getSeasonTypeName(seasonType: number): string {
+  switch (seasonType) {
+    case 1:
+      return "Preseason";
+    case 2:
+      return "Regular Season";
+    case 3:
+      return "Postseason";
+    default:
+      return "Season";
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const contestId = parseInt(id);
+
+  if (isNaN(contestId)) {
+    return {
+      title: "Contest Not Found",
+    };
+  }
+
+  try {
+    const pickemContract = getContract({
+      client,
+      chain,
+      address: pickem[chain.id],
+      abi: pickemAbi,
+    });
+
+    const contestData = await readContract({
+      contract: pickemContract,
+      method: "getContest",
+      params: [BigInt(contestId)],
+    });
+
+    if (!contestData || Number(contestData.id) !== contestId) {
+      return {
+        title: "Contest Not Found",
+      };
+    }
+
+    const baseUrl = getBaseUrl();
+    const ogImageUrl = `${baseUrl}/api/og/pickem/${contestId}`;
+    const contestUrl = `${baseUrl}/pickem/${contestId}`;
+
+    const seasonTypeName = getSeasonTypeName(contestData.seasonType);
+    const totalEntries = Number(contestData.totalEntries);
+    const weekNumber = contestData.weekNumber;
+    const year = Number(contestData.year);
+
+    const title = `${seasonTypeName} Week ${weekNumber} ${year} - Pick'em Contest #${contestId}`;
+    const description = `Join this Pick'em contest! ${totalEntries} ${totalEntries === 1 ? "entry" : "entries"} so far. Blockchain-powered fair play with instant payouts.`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        images: [
+          {
+            url: ogImageUrl,
+            width: 1200,
+            height: 630,
+            alt: title,
+          },
+        ],
+        type: "website",
+        url: contestUrl,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [ogImageUrl],
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+    return {
+      title: "Pick'em Contest",
+    };
+  }
 }
 
 export default async function PickemContestPage({
