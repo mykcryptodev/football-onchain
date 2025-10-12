@@ -1,16 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Calendar,
-  Clock,
-  HandCoins,
-  Shuffle,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { AlertCircle, ArrowLeft, Clock, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -28,6 +19,7 @@ import {
 import { erc20Abi } from "viem";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
+import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -142,11 +134,6 @@ export default function PickemContestClient({
   // Format currency values using the hook
   const { formattedValue: formattedEntryFee } = useFormattedCurrency({
     amount: contest.entryFee,
-    currencyAddress: contest.currency,
-  });
-
-  const { formattedValue: formattedPrizePool } = useFormattedCurrency({
-    amount: contest.totalPrizePool,
     currencyAddress: contest.currency,
   });
 
@@ -415,64 +402,15 @@ export default function PickemContestClient({
       </div>
 
       {/* Contest Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Contest Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center gap-2 w-full">
-            <div className="w-full">
-              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
-                <HandCoins className="h-4 w-4 text-muted-foreground" />
-                Entry Fee
-              </div>
-              <div className="flex items-center gap-2 w-full">
-                <div className="font-medium">{formattedEntryFee}</div>
-                <EntryFeeUsd className="text-xs text-muted-foreground justify-end flex-shrink-0" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full">
-            <div className="w-full">
-              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
-                <Trophy className="h-4 w-4 text-muted-foreground" />
-                Prize Pool
-              </div>
-              <div className="flex items-center gap-2 w-full">
-                <div className="font-medium">{formattedPrizePool}</div>
-                <PrizePoolUsd className="text-xs text-muted-foreground justify-end flex-shrink-0" />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full">
-            <div className="w-full">
-              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Entries</p>
-              </div>
-              <div className="w-full">
-                <p className="font-medium w-full">{contest.totalEntries}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full">
-            <div className="w-full">
-              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Payout</p>
-              </div>
-              <div className="w-full">
-                <p className="font-medium w-full">
-                  {PAYOUT_TYPE_LABELS[contest.payoutType]}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ContestStatsCard
+        entryFee={contest.entryFee}
+        currency={contest.currency}
+        totalPrizePool={contest.totalPrizePool}
+        totalEntries={contest.totalEntries}
+        payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+        entryFeeUsd={contest.entryFeeUsd}
+        showTitle
+      />
 
       {/* Games and Picks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,23 +1,25 @@
 "use client";
 
-import { Calendar, Clock, DollarSign, Trophy, Users } from "lucide-react";
+import { Clock, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
+import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { TokensResponse } from "@/app/api/tokens/route";
 import {
   chain,
   chainlinkGasLimit,
   chainlinkJobId,
   chainlinkSubscriptionId,
+  usdc,
 } from "@/constants";
-import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { useMultipleWeekResultsFinalized } from "@/hooks/useWeekResultsFinalized";
 
@@ -36,6 +38,7 @@ interface PickemContest {
   payoutComplete: boolean;
   payoutType: number;
   gameIds: string[];
+  entryFeeUsd?: number;
 }
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
@@ -49,23 +52,6 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
   1: "Top 3",
   2: "Top 5",
 };
-
-// Helper component to format currency using the hook
-function FormattedCurrency({
-  amount,
-  currencyAddress,
-}: {
-  amount: bigint;
-  currencyAddress: string;
-}) {
-  const { formattedValue, isLoading } = useFormattedCurrency({
-    amount,
-    currencyAddress,
-  });
-
-  if (isLoading) return <span>...</span>;
-  return <span>{formattedValue}</span>;
-}
 
 export default function PickemContestList() {
   const account = useActiveAccount();
@@ -148,7 +134,66 @@ export default function PickemContestList() {
         (a, b) => b.submissionDeadline - a.submissionDeadline,
       );
 
-      setContests(fetchedContests);
+      // Fetch USD prices for all unique currencies
+      const uniqueCurrencies = [
+        ...new Set(fetchedContests.map(c => c.currency)),
+      ];
+      const tokenPriceMap: Record<
+        string,
+        { priceUsd: number; decimals: number }
+      > = {};
+
+      // USDC is always $1, no need to fetch price
+      const usdcAddress = usdc[chain.id].toLowerCase();
+
+      await Promise.all(
+        uniqueCurrencies.map(async currency => {
+          // Skip API call for USDC - it's always $1
+          if (currency.toLowerCase() === usdcAddress) {
+            tokenPriceMap[currency] = {
+              priceUsd: 1,
+              decimals: 6, // USDC has 6 decimals
+            };
+            return;
+          }
+
+          try {
+            const tokenResponse = await fetch(
+              `/api/tokens?chainId=${chain.id}&name=${currency}`,
+            );
+
+            if (tokenResponse.ok) {
+              const tokenData: TokensResponse = await tokenResponse.json();
+              if (tokenData.result.tokens.length > 0) {
+                const token = tokenData.result.tokens[0];
+                tokenPriceMap[currency] = {
+                  priceUsd: token.priceUsd,
+                  decimals: token.decimals,
+                };
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching token price for ${currency}:`, error);
+          }
+        }),
+      );
+
+      // Calculate USD values for each contest
+      const contestsWithUsd = fetchedContests.map(contest => {
+        // Use original currency address for lookup (case-insensitive via map keys)
+        const tokenPrice = tokenPriceMap[contest.currency];
+        if (tokenPrice) {
+          const entryFeeInTokens =
+            Number(contest.entryFee) / Math.pow(10, tokenPrice.decimals);
+          return {
+            ...contest,
+            entryFeeUsd: entryFeeInTokens * tokenPrice.priceUsd,
+          };
+        }
+        return contest;
+      });
+
+      setContests(contestsWithUsd);
     } catch (error) {
       console.error("Error fetching contests:", error);
     } finally {
@@ -338,51 +383,16 @@ export default function PickemContestList() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Entry Fee</p>
-              <p className="font-medium">
-                <FormattedCurrency
-                  amount={contest.entryFee}
-                  currencyAddress={contest.currency}
-                />
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Prize Pool</p>
-              <p className="font-medium">
-                <FormattedCurrency
-                  amount={contest.totalPrizePool}
-                  currencyAddress={contest.currency}
-                />
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Entries</p>
-              <p className="font-medium">{contest.totalEntries}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Payout</p>
-              <p className="font-medium">
-                {PAYOUT_TYPE_LABELS[contest.payoutType]}
-              </p>
-            </div>
-          </div>
-        </div>
+        <ContestStatsCard
+          entryFee={contest.entryFee}
+          currency={contest.currency}
+          totalPrizePool={contest.totalPrizePool}
+          totalEntries={contest.totalEntries}
+          payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+          entryFeeUsd={contest.entryFeeUsd}
+          showCard={false}
+          className="mb-4"
+        />
 
         {contest.submissionDeadline > Date.now() && (
           <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
