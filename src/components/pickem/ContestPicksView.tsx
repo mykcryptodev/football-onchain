@@ -67,6 +67,7 @@ interface ContestPicksViewProps {
   year: number;
   seasonType: number;
   weekNumber: number;
+  tiebreakerGameId: string;
 }
 
 export default function ContestPicksView({
@@ -76,6 +77,7 @@ export default function ContestPicksView({
   year,
   seasonType,
   weekNumber,
+  tiebreakerGameId,
 }: ContestPicksViewProps) {
   const account = useActiveAccount();
   const {
@@ -86,6 +88,7 @@ export default function ContestPicksView({
     getNFTOwner,
   } = usePickemContract();
 
+  const [mounted, setMounted] = useState(false);
   const [allPicks, setAllPicks] = useState<ContestPick[]>([]);
   const [games, setGames] = useState<GameInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +98,17 @@ export default function ContestPicksView({
     new Map(),
   ); // gameId -> winner (0=away, 1=home, null=tied/no result)
 
+  // Prevent hydration mismatch by waiting for client mount
   useEffect(() => {
-    fetchGames();
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchGames();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, seasonType, weekNumber]);
+  }, [year, seasonType, weekNumber, mounted]);
 
   useEffect(() => {
     if (games.length > 0) {
@@ -107,13 +117,16 @@ export default function ContestPicksView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId, games]);
 
-  // Fetch live rankings when games are not finalized (initial load only)
+  // Fetch live rankings and game results (initial load only)
   useEffect(() => {
-    if (!gamesFinalized && allPicks.length > 0) {
+    if (allPicks.length > 0) {
+      // Always fetch live rankings to show current scores
       fetchLiveRankings();
-    } else if (gamesFinalized && allPicks.length > 0) {
-      // Fetch game results for finalized games to show correct/wrong indicators
-      fetchGameResults();
+
+      if (gamesFinalized) {
+        // Also fetch game results for finalized games to show correct/wrong indicators
+        fetchGameResults();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gamesFinalized, allPicks.length, contestId]);
@@ -179,15 +192,49 @@ export default function ContestPicksView({
 
       // Sort by correct picks (highest first) when finalized
       if (gamesFinalized) {
+        // Fetch the tiebreaker game's actual total for proper sorting
+        let actualTiebreakerTotal = 0;
+        try {
+          const response = await fetch(
+            `/api/week-games?year=${year}&seasonType=${seasonType}&week=${weekNumber}`,
+          );
+          if (response.ok) {
+            const gamesData = (await response.json()) as Array<{
+              gameId: string;
+              homeScore?: number;
+              awayScore?: number;
+            }>;
+            // Get the tiebreaker game from oracle (or fall back to last game)
+            const tiebreakerGameIdToUse =
+              tiebreakerGameId || gameIds[gameIds.length - 1];
+            const tiebreakerGame = gamesData.find(
+              g => g.gameId === tiebreakerGameIdToUse,
+            );
+            if (
+              tiebreakerGame &&
+              tiebreakerGame.homeScore !== undefined &&
+              tiebreakerGame.awayScore !== undefined
+            ) {
+              actualTiebreakerTotal =
+                tiebreakerGame.homeScore + tiebreakerGame.awayScore;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching tiebreaker game total:", err);
+        }
+
         picks.sort((a, b) => {
           if (b.correctPicks !== a.correctPicks) {
             return b.correctPicks - a.correctPicks;
           }
-          // Secondary sort by tiebreaker
-          return (
-            Math.abs(b.tiebreakerPoints - 50) -
-            Math.abs(a.tiebreakerPoints - 50)
-          );
+          // Secondary sort by tiebreaker - closer to actual total wins
+          if (actualTiebreakerTotal > 0) {
+            const aDiff = Math.abs(a.tiebreakerPoints - actualTiebreakerTotal);
+            const bDiff = Math.abs(b.tiebreakerPoints - actualTiebreakerTotal);
+            return aDiff - bDiff; // Lower difference = better rank
+          }
+          // Fallback if tiebreaker game total not available
+          return 0;
         });
       }
 
@@ -213,6 +260,7 @@ export default function ContestPicksView({
         homeScore?: number;
         awayScore?: number;
       }>;
+      console.log("fetchGameResults gamesData", gamesData);
       const resultsMap = new Map<string, number | null>();
 
       gamesData.forEach(game => {
@@ -244,7 +292,7 @@ export default function ContestPicksView({
   };
 
   const fetchLiveRankings = async () => {
-    if (gamesFinalized || allPicks.length === 0) return;
+    if (allPicks.length === 0) return;
 
     setLoadingLiveRankings(true);
     try {
@@ -255,6 +303,7 @@ export default function ContestPicksView({
         },
         body: JSON.stringify({
           gameIds,
+          tiebreakerGameId,
           picks: allPicks,
           year,
           seasonType,
@@ -424,7 +473,8 @@ export default function ContestPicksView({
     );
   };
 
-  if (loading) {
+  // Show loading state before mounting and while loading
+  if (!mounted || loading) {
     return (
       <Card>
         <CardHeader>
@@ -507,6 +557,7 @@ export default function ContestPicksView({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">TokenId</TableHead>
                 <TableHead className="w-20">Rank</TableHead>
                 <TableHead>Participant</TableHead>
                 <TableHead className="w-32 text-right">Score</TableHead>
@@ -518,14 +569,16 @@ export default function ContestPicksView({
               {allPicks.map((pick, index) => {
                 const isUserPick = isCurrentUser(pick.owner);
                 const displayRank = gamesFinalized ? index + 1 : pick.liveRank;
-                const hasLiveData = !gamesFinalized && pick.liveRank;
+                // Check if we have live data from ESPN, regardless of finalized state
+                const hasLiveData = pick.liveCorrectPicks !== undefined;
 
                 return (
                   <TableRow
                     key={pick.tokenId}
                     className={isUserPick ? "bg-accent/50" : ""}
                   >
-                    <TableCell>
+                    <TableCell className="w-10">{pick.tokenId}</TableCell>
+                    <TableCell className="w-20">
                       {displayRank ? (
                         <div className="flex items-center gap-1.5">
                           <Badge
@@ -595,24 +648,11 @@ export default function ContestPicksView({
                       </AccountProvider>
                     </TableCell>
                     <TableCell className="w-32">
-                      {gamesFinalized ? (
-                        <div className="flex flex-col min-w-[100px]">
-                          <span className="font-semibold whitespace-nowrap text-right">
-                            {pick.correctPicks} / {gameIds.length}
-                          </span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap text-right">
-                            {(
-                              (pick.correctPicks / gameIds.length) *
-                              100
-                            ).toFixed(0)}
-                            %
-                          </span>
-                        </div>
-                      ) : hasLiveData && pick.liveCorrectPicks !== undefined ? (
+                      {hasLiveData && pick.liveCorrectPicks !== undefined ? (
                         <div className="flex flex-col min-w-[100px]">
                           <span className="font-semibold whitespace-nowrap text-right">
                             {pick.liveCorrectPicks} /{" "}
-                            {pick.liveTotalScoredGames || 0}
+                            {pick.liveTotalScoredGames || gameIds.length}
                           </span>
                           <span className="text-xs text-muted-foreground whitespace-nowrap text-right">
                             {pick.liveTotalScoredGames
@@ -625,8 +665,21 @@ export default function ContestPicksView({
                             %
                           </span>
                         </div>
+                      ) : gamesFinalized && pick.correctPicks > 0 ? (
+                        <div className="flex flex-col min-w-[100px]">
+                          <span className="font-semibold whitespace-nowrap text-right">
+                            {pick.correctPicks} / {gameIds.length}
+                          </span>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap text-right">
+                            {(
+                              (pick.correctPicks / gameIds.length) *
+                              100
+                            ).toFixed(0)}
+                            %
+                          </span>
+                        </div>
                       ) : (
-                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-16 justify-end" />
                       )}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -650,46 +703,74 @@ export default function ContestPicksView({
         </div>
 
         {/* Summary Stats */}
-        {gamesFinalized && allPicks.length > 0 && (
-          <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-            <h4 className="text-sm font-medium mb-2">Contest Statistics</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Total Entries</p>
-                <p className="font-bold">{allPicks.length}</p>
+        {gamesFinalized &&
+          allPicks.length > 0 &&
+          (() => {
+            // Check if any picks have live data
+            const hasAnyLiveData = allPicks.some(
+              p => p.liveCorrectPicks !== undefined,
+            );
+
+            return (
+              <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-medium mb-2">Contest Statistics</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Total Entries</p>
+                    <p className="font-bold">{allPicks.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Highest Score</p>
+                    <p className="font-bold">
+                      {Math.max(
+                        ...allPicks.map(p =>
+                          hasAnyLiveData && p.liveCorrectPicks !== undefined
+                            ? p.liveCorrectPicks
+                            : p.correctPicks,
+                        ),
+                      )}{" "}
+                      / {gameIds.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Average Score</p>
+                    <p className="font-bold">
+                      {(
+                        allPicks.reduce(
+                          (sum, p) =>
+                            sum +
+                            (hasAnyLiveData && p.liveCorrectPicks !== undefined
+                              ? p.liveCorrectPicks
+                              : p.correctPicks),
+                          0,
+                        ) / allPicks.length
+                      ).toFixed(1)}{" "}
+                      / {gameIds.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Average Accuracy</p>
+                    <p className="font-bold">
+                      {(
+                        (allPicks.reduce(
+                          (sum, p) =>
+                            sum +
+                            (hasAnyLiveData && p.liveCorrectPicks !== undefined
+                              ? p.liveCorrectPicks
+                              : p.correctPicks),
+                          0,
+                        ) /
+                          allPicks.length /
+                          gameIds.length) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground">Highest Score</p>
-                <p className="font-bold">
-                  {Math.max(...allPicks.map(p => p.correctPicks))} /{" "}
-                  {gameIds.length}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Average Score</p>
-                <p className="font-bold">
-                  {(
-                    allPicks.reduce((sum, p) => sum + p.correctPicks, 0) /
-                    allPicks.length
-                  ).toFixed(1)}{" "}
-                  / {gameIds.length}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Average Accuracy</p>
-                <p className="font-bold">
-                  {(
-                    (allPicks.reduce((sum, p) => sum + p.correctPicks, 0) /
-                      allPicks.length /
-                      gameIds.length) *
-                    100
-                  ).toFixed(1)}
-                  %
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+            );
+          })()}
       </CardContent>
     </Card>
   );

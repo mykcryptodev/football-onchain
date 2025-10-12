@@ -38,6 +38,7 @@ interface PickemContest {
   payoutComplete: boolean;
   payoutType: number;
   gameIds: string[];
+  tiebreakerGameId: string;
   entryFeeUsd?: number;
 }
 
@@ -63,6 +64,9 @@ export default function PickemContestList() {
     claimAllPrizes,
     calculateScoresBatch,
     getContestTokenIds,
+    getNFTPrediction,
+    getNFTOwner,
+    getUserPicks,
   } = usePickemContract();
   const [contests, setContests] = useState<PickemContest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +126,7 @@ export default function PickemContestList() {
               payoutComplete: contest.payoutComplete,
               payoutType: contest.payoutStructure.payoutType,
               gameIds: contest.gameIds.map(id => id.toString()),
+              tiebreakerGameId: contest.tiebreakerGameId.toString(),
             });
           }
         } catch (err) {
@@ -282,30 +287,139 @@ export default function PickemContestList() {
       }
 
       toast.info(
-        `Found ${contestTokenIds.length} entries. Calculating scores...`,
+        `Found ${contestTokenIds.length} entries. Fetching picks data...`,
       );
 
-      // Calculate scores in batches to avoid gas issues
-      const BATCH_SIZE = 50;
-      const numBatches = Math.ceil(contestTokenIds.length / BATCH_SIZE);
-
-      for (let i = 0; i < numBatches; i++) {
-        const start = i * BATCH_SIZE;
-        const end = Math.min(start + BATCH_SIZE, contestTokenIds.length);
-        const batch = contestTokenIds.slice(start, end);
-
-        try {
-          await calculateScoresBatch(batch);
-          toast.success(
-            `Calculated scores for batch ${i + 1}/${numBatches} (${batch.length} entries)`,
-          );
-        } catch (error) {
-          console.error(`Error calculating batch ${i + 1}:`, error);
-          toast.error(`Failed to calculate batch ${i + 1}/${numBatches}`);
-        }
+      // Get contest details to fetch live rankings
+      const contest = contests.find(c => c.id === contestId);
+      if (!contest) {
+        throw new Error("Contest not found");
       }
 
-      toast.success("All scores calculated and leaderboard updated!");
+      // Fetch all picks data for the contest
+      const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
+      const picks = await Promise.all(
+        contestTokenIds.map(async tokenId => {
+          const prediction = await getNFTPrediction(tokenId);
+          const owner = await getNFTOwner(tokenId);
+          const userPicks = await getUserPicks(tokenId, gameIdsBigInt);
+
+          return {
+            tokenId,
+            owner,
+            picks: userPicks.map((p: number) => Number(p)),
+            correctPicks: Number(prediction[4]),
+            tiebreakerPoints: Number(prediction[3]),
+          };
+        }),
+      );
+
+      // Fetch live rankings to sort token IDs by rank
+      try {
+        const response = await fetch(
+          `/api/contest/${contestId}/live-rankings`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              gameIds: contest.gameIds,
+              tiebreakerGameId: contest.tiebreakerGameId,
+              picks,
+              year: contest.year,
+              seasonType: contest.seasonType,
+              weekNumber: contest.weekNumber,
+            }),
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          // Sort token IDs by their rank (already sorted by API, but extract in order)
+          const sortedTokenIds = data.picks.map(
+            (pick: { tokenId: number }) => pick.tokenId,
+          );
+
+          console.log("sortedTokenIds", sortedTokenIds);
+
+          toast.info(`Calculating scores in rank order (highest to lowest)...`);
+
+          // Calculate scores in batches using sorted order
+          const BATCH_SIZE = 50;
+          const numBatches = Math.ceil(sortedTokenIds.length / BATCH_SIZE);
+
+          for (let i = 0; i < numBatches; i++) {
+            const start = i * BATCH_SIZE;
+            const end = Math.min(start + BATCH_SIZE, sortedTokenIds.length);
+            const batch = sortedTokenIds.slice(start, end);
+
+            try {
+              await calculateScoresBatch(batch);
+              toast.success(
+                `Calculated scores for batch ${i + 1}/${numBatches} (${batch.length} entries)`,
+              );
+            } catch (error) {
+              console.error(`Error calculating batch ${i + 1}:`, error);
+              toast.error(`Failed to calculate batch ${i + 1}/${numBatches}`);
+            }
+          }
+
+          toast.success("All scores calculated and leaderboard updated!");
+        } else {
+          // Fallback to original order if live rankings API fails
+          toast.warning(
+            "Unable to fetch live rankings, calculating in default order...",
+          );
+
+          const BATCH_SIZE = 50;
+          const numBatches = Math.ceil(contestTokenIds.length / BATCH_SIZE);
+
+          for (let i = 0; i < numBatches; i++) {
+            const start = i * BATCH_SIZE;
+            const end = Math.min(start + BATCH_SIZE, contestTokenIds.length);
+            const batch = contestTokenIds.slice(start, end);
+
+            try {
+              await calculateScoresBatch(batch);
+              toast.success(
+                `Calculated scores for batch ${i + 1}/${numBatches} (${batch.length} entries)`,
+              );
+            } catch (error) {
+              console.error(`Error calculating batch ${i + 1}:`, error);
+              toast.error(`Failed to calculate batch ${i + 1}/${numBatches}`);
+            }
+          }
+
+          toast.success("All scores calculated and leaderboard updated!");
+        }
+      } catch (rankingError) {
+        console.error("Error fetching live rankings:", rankingError);
+        // Fallback to original order
+        toast.warning(
+          "Unable to fetch live rankings, calculating in default order...",
+        );
+
+        const BATCH_SIZE = 50;
+        const numBatches = Math.ceil(contestTokenIds.length / BATCH_SIZE);
+
+        for (let i = 0; i < numBatches; i++) {
+          const start = i * BATCH_SIZE;
+          const end = Math.min(start + BATCH_SIZE, contestTokenIds.length);
+          const batch = contestTokenIds.slice(start, end);
+
+          try {
+            await calculateScoresBatch(batch);
+            toast.success(
+              `Calculated scores for batch ${i + 1}/${numBatches} (${batch.length} entries)`,
+            );
+          } catch (error) {
+            console.error(`Error calculating batch ${i + 1}:`, error);
+            toast.error(`Failed to calculate batch ${i + 1}/${numBatches}`);
+          }
+        }
+
+        toast.success("All scores calculated and leaderboard updated!");
+      }
+
       await fetchContests();
     } catch (error) {
       console.error("Error calculating scores:", error);
@@ -394,19 +508,11 @@ export default function PickemContestList() {
           totalPrizePool={contest.totalPrizePool}
         />
 
-        {contest.submissionDeadline > Date.now() && (
-          <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
-            <Button
-              className="w-full"
-              disabled={contest.submissionDeadline <= Date.now()}
-            >
-              Make Your Picks
-            </Button>
-          </Link>
-        )}
         <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
           <Button className="w-full" size="sm" variant="default">
-            View All Picks
+            {contest.submissionDeadline > Date.now()
+              ? "Make Your Picks"
+              : "View All Picks"}
           </Button>
         </Link>
 

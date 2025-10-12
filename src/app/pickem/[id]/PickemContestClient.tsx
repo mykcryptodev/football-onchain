@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { chain, usdc } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -50,6 +51,7 @@ interface ContestData {
   gamesFinalized: boolean;
   payoutType: number;
   gameIds: string[];
+  tiebreakerGameId: string;
   entryFeeUsd?: number;
 }
 
@@ -113,17 +115,24 @@ export default function PickemContestClient({
   const { resolvedTheme } = useTheme();
   const { isInMiniApp } = useIsInMiniApp();
 
+  const [mounted, setMounted] = useState(false);
   const [games, setGames] = useState<GameInfo[]>([]);
   const [picks, setPicks] = useState<Record<string, number>>({});
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: walletBalance } = useWalletBalance({
-    chain,
-    address: account?.address,
-    client,
-    tokenAddress: contest.currency,
-  });
+  // Prevent hydration mismatch by waiting for client mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { data: walletBalance, isLoading: isLoadingWalletBalance } =
+    useWalletBalance({
+      chain,
+      address: account?.address,
+      client,
+      tokenAddress: contest.currency,
+    });
 
   // Set the display token to the contest's currency
   useEffect(() => {
@@ -252,6 +261,9 @@ export default function PickemContestClient({
   };
 
   const getTimeRemaining = (deadline: number) => {
+    // Return placeholder during SSR to prevent hydration mismatch
+    if (!mounted) return "Loading...";
+
     const now = Date.now();
     const diff = deadline - now;
 
@@ -304,27 +316,15 @@ export default function PickemContestClient({
     return null; // tie (unlikely in NFL)
   };
 
-  const isSubmissionClosed = contest.submissionDeadline <= Date.now();
+  // Use mounted state to prevent hydration mismatch with Date.now()
+  const isSubmissionClosed =
+    mounted && contest.submissionDeadline <= Date.now();
 
   const EntryFeeUsd: FC<{ className?: string }> = ({ className }) => {
     return contest.entryFeeUsd ? (
       <span className={className}>
         $
         {contest.entryFeeUsd.toLocaleString([], {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
-      </span>
-    ) : (
-      <></>
-    );
-  };
-
-  const _PrizePoolUsd: FC<{ className?: string }> = ({ className }) => {
-    return contest.entryFeeUsd ? (
-      <span className={className}>
-        $
-        {(contest.entryFeeUsd * contest.totalEntries).toLocaleString([], {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })}
@@ -353,8 +353,12 @@ export default function PickemContestClient({
   });
 
   const hasSufficientBalance = useMemo(() => {
-    return walletBalance && walletBalance.value >= contest.entryFee;
-  }, [walletBalance, contest.entryFee]);
+    return (
+      walletBalance &&
+      walletBalance.value >= contest.entryFee &&
+      !isLoadingWalletBalance
+    );
+  }, [walletBalance, contest.entryFee, isLoadingWalletBalance]);
 
   const handleMiniAppSwap = async () => {
     if (isInMiniApp) {
@@ -370,7 +374,37 @@ export default function PickemContestClient({
     }
   };
 
-  if (!resolvedTheme) return null;
+  // Show loading skeleton until mounted to prevent hydration mismatch
+  if (!mounted || !resolvedTheme) {
+    return (
+      <div className="container mx-auto py-5 space-y-6">
+        <div className="flex items-center gap-4 px-2">
+          <Link href="/pickem">
+            <Button size="sm" variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <Badge className="ml-auto" variant="secondary">
+            <Clock className="h-3 w-3 mr-1" />
+            Loading...
+          </Badge>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading Contest...</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-5 space-y-6">
@@ -455,10 +489,12 @@ export default function PickemContestClient({
                     <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
                       <span>Game {index + 1}</span>
                       <span>
-                        {(() => {
-                          const kickoffDate = new Date(game.kickoff);
-                          return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-                        })()}
+                        {mounted
+                          ? (() => {
+                              const kickoffDate = new Date(game.kickoff);
+                              return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
+                            })()
+                          : "Loading..."}
                       </span>
                     </div>
 
@@ -766,6 +802,7 @@ export default function PickemContestClient({
         gameIds={contest.gameIds}
         gamesFinalized={contest.gamesFinalized}
         seasonType={contest.seasonType}
+        tiebreakerGameId={contest.tiebreakerGameId}
         weekNumber={contest.weekNumber}
         year={contest.year}
       />

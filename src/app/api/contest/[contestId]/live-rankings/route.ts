@@ -54,7 +54,8 @@ interface RankedPick extends ContestPick {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { gameIds, picks, year, seasonType, weekNumber } = body;
+    const { gameIds, tiebreakerGameId, picks, year, seasonType, weekNumber } =
+      body;
 
     if (!gameIds || !picks || !year || !seasonType || !weekNumber) {
       return NextResponse.json(
@@ -148,15 +149,28 @@ export async function POST(request: NextRequest) {
       };
     });
 
+    // Get the tiebreaker game from the oracle (or fall back to last game if not provided)
+    const tiebreakerGameIdToUse =
+      tiebreakerGameId || gameIds[gameIds.length - 1];
+    const tiebreakerGame = gameScoresMap.get(tiebreakerGameIdToUse);
+    const actualTiebreakerTotal = tiebreakerGame
+      ? tiebreakerGame.homeScore + tiebreakerGame.awayScore
+      : 0;
+
     // Sort by live correct picks
     rankedPicks.sort((a, b) => {
       if (b.liveCorrectPicks !== a.liveCorrectPicks) {
         return b.liveCorrectPicks - a.liveCorrectPicks;
       }
-      // Secondary sort by tiebreaker
-      return (
-        Math.abs(b.tiebreakerPoints - 50) - Math.abs(a.tiebreakerPoints - 50)
-      );
+      // Secondary sort by tiebreaker - closer to actual total wins
+      // If tiebreaker game hasn't been played yet (actualTotal = 0), fall back to submission time
+      if (actualTiebreakerTotal > 0) {
+        const aDiff = Math.abs(a.tiebreakerPoints - actualTiebreakerTotal);
+        const bDiff = Math.abs(b.tiebreakerPoints - actualTiebreakerTotal);
+        return aDiff - bDiff; // Lower difference = better rank
+      }
+      // If tiebreaker game not played, keep current order (will be resolved later)
+      return 0;
     });
 
     // Add ranks
