@@ -420,43 +420,55 @@ export default function PickemContestClient({
           <CardTitle>Contest Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="flex items-center gap-2">
-            <HandCoins className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Entry Fee</p>
-              <div className="font-medium flex flex-col">
-                {formattedEntryFee}
-                <EntryFeeUsd className="text-xs text-muted-foreground justify-end w-full flex" />
+          <div className="flex items-center gap-2 w-full">
+            <div className="w-full">
+              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
+                <HandCoins className="h-4 w-4 text-muted-foreground" />
+                Entry Fee
+              </div>
+              <div className="flex items-center gap-2 w-full">
+                <div className="font-medium">{formattedEntryFee}</div>
+                <EntryFeeUsd className="text-xs text-muted-foreground justify-end flex-shrink-0" />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Prize Pool</p>
-              <div className="font-medium flex flex-col">
-                <p className="font-medium">{formattedPrizePool}</p>
-                <PrizePoolUsd className="text-xs text-muted-foreground justify-end w-full flex" />
+          <div className="flex items-center gap-2 w-full">
+            <div className="w-full">
+              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
+                <Trophy className="h-4 w-4 text-muted-foreground" />
+                Prize Pool
+              </div>
+              <div className="flex items-center gap-2 w-full">
+                <div className="font-medium">{formattedPrizePool}</div>
+                <PrizePoolUsd className="text-xs text-muted-foreground justify-end flex-shrink-0" />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Entries</p>
-              <p className="font-medium">{contest.totalEntries}</p>
+          <div className="flex items-center gap-2 w-full">
+            <div className="w-full">
+              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Entries</p>
+              </div>
+              <div className="w-full">
+                <p className="font-medium w-full">{contest.totalEntries}</p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Payout</p>
-              <p className="font-medium">
-                {PAYOUT_TYPE_LABELS[contest.payoutType]}
-              </p>
+          <div className="flex items-center gap-2 w-full">
+            <div className="w-full">
+              <div className=" flex items-center justify-start gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Payout</p>
+              </div>
+              <div className="w-full">
+                <p className="font-medium w-full">
+                  {PAYOUT_TYPE_LABELS[contest.payoutType]}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
