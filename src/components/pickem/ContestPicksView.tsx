@@ -425,9 +425,9 @@ export default function ContestPicksView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Rank</TableHead>
+                <TableHead className="w-20">Rank</TableHead>
                 <TableHead>Participant</TableHead>
-                <TableHead>Score</TableHead>
+                <TableHead className="w-32">Score</TableHead>
                 <TableHead className="w-28">Tiebreaker</TableHead>
                 <TableHead>Picks</TableHead>
               </TableRow>
@@ -512,13 +512,13 @@ export default function ContestPicksView({
                         </div>
                       </AccountProvider>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-32">
                       {gamesFinalized ? (
-                        <div className="flex flex-col">
-                          <span className="font-semibold">
+                        <div className="flex flex-col min-w-[100px]">
+                          <span className="font-semibold whitespace-nowrap">
                             {pick.correctPicks} / {gameIds.length}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {(
                               (pick.correctPicks / gameIds.length) *
                               100
@@ -527,12 +527,12 @@ export default function ContestPicksView({
                           </span>
                         </div>
                       ) : hasLiveData && pick.liveCorrectPicks !== undefined ? (
-                        <div className="flex flex-col">
-                          <span className="font-semibold">
+                        <div className="flex flex-col min-w-[100px]">
+                          <span className="font-semibold whitespace-nowrap">
                             {pick.liveCorrectPicks} /{" "}
                             {pick.liveTotalScoredGames || 0}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap text-right">
                             {pick.liveTotalScoredGames
                               ? (
                                   (pick.liveCorrectPicks /
