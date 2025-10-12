@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getContract, ZERO_ADDRESS } from "thirdweb";
 import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
-import { toTokens } from "thirdweb/utils";
+import { shortenLargeNumber, toTokens } from "thirdweb/utils";
 import { erc20Abi, formatEther, isAddressEqual } from "viem";
 
 import { chain } from "@/constants";
@@ -52,7 +52,8 @@ export function useFormattedCurrency({
         const amountFormatted = Number(
           toTokens(BigInt(amount), metadata.decimals),
         );
-        const formatted = `${amountFormatted.toLocaleString()} ${metadata.symbol}`;
+        const amountFormmatedAbbreviated = shortenLargeNumber(amountFormatted);
+        const formatted = `${amountFormmatedAbbreviated.toLocaleString()} ${metadata.symbol}`;
 
         if (isMounted) {
           setFormattedValue(formatted);

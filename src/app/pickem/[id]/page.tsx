@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getContract, readContract } from "thirdweb";
 
+import type { TokensResponse } from "@/app/api/tokens/route";
 import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { client } from "@/providers/Thirdweb";
@@ -21,6 +22,7 @@ interface ContestData {
   gamesFinalized: boolean;
   payoutType: number;
   gameIds: string[];
+  entryFeeUsd?: number;
 }
 
 export default async function PickemContestPage({
@@ -53,6 +55,29 @@ export default async function PickemContestPage({
       notFound();
     }
 
+    // Fetch token data to get USD price
+    let entryFeeUsd: number | undefined;
+    try {
+      const tokenResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/tokens?chainId=${chain.id}&name=${contestData.currency}`,
+        { cache: "no-store" },
+      );
+
+      if (tokenResponse.ok) {
+        const tokenData: TokensResponse = await tokenResponse.json();
+        if (tokenData.result.tokens.length > 0) {
+          const token = tokenData.result.tokens[0];
+          // Convert entry fee from wei to token units and multiply by USD price
+          const entryFeeInTokens =
+            Number(contestData.entryFee) / Math.pow(10, token.decimals);
+          entryFeeUsd = entryFeeInTokens * token.priceUsd;
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching token price:", error);
+      // Continue without USD price if fetch fails
+    }
+
     // Convert to frontend format
     const contest: ContestData = {
       id: Number(contestData.id),
@@ -68,6 +93,7 @@ export default async function PickemContestPage({
       gamesFinalized: contestData.gamesFinalized,
       payoutType: contestData.payoutStructure.payoutType,
       gameIds: contestData.gameIds.map(id => id.toString()),
+      entryFeeUsd,
     };
 
     return <PickemContestClient contest={contest} />;

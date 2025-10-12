@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  DollarSign,
+  HandCoins,
   Shuffle,
   Trophy,
   Users,
@@ -14,7 +14,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
@@ -35,7 +35,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { chain } from "@/constants";
+import { chain, usdc } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
@@ -58,6 +58,7 @@ interface ContestData {
   gamesFinalized: boolean;
   payoutType: number;
   gameIds: string[];
+  entryFeeUsd?: number;
 }
 
 interface GameInfo {
@@ -318,6 +319,34 @@ export default function PickemContestClient({
 
   const isSubmissionClosed = contest.submissionDeadline <= Date.now();
 
+  const EntryFeeUsd: FC<{ className?: string }> = ({ className }) => {
+    return contest.entryFeeUsd ? (
+      <span className={className}>
+        $
+        {contest.entryFeeUsd.toLocaleString([], {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+    ) : (
+      <></>
+    );
+  };
+
+  const PrizePoolUsd: FC<{ className?: string }> = ({ className }) => {
+    return contest.entryFeeUsd ? (
+      <span className={className}>
+        $
+        {(contest.entryFeeUsd * contest.totalEntries).toLocaleString([], {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+    ) : (
+      <></>
+    );
+  };
+
   const lastGame = useMemo(() => {
     // get the game with the latest start time
     return [...games].sort(
@@ -343,11 +372,11 @@ export default function PickemContestClient({
   const handleMiniAppSwap = async () => {
     if (isInMiniApp) {
       await sdk.actions.swapToken({
+        sellToken: toCaip19({ address: usdc[chain.id], chain }),
         buyToken: toCaip19({ address: contest.currency, chain }),
-        sellAmount: toTokens(
-          contest.entryFee,
-          currencyDecimals ?? 18,
-        ).toString(),
+        sellAmount: contest.entryFeeUsd
+          ? contest.entryFeeUsd.toString()
+          : undefined,
       });
     } else {
       toast.error("You must be in a Farcaster Mini App to swap");
@@ -392,10 +421,13 @@ export default function PickemContestClient({
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <HandCoins className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Entry Fee</p>
-              <p className="font-medium">{formattedEntryFee}</p>
+              <div className="font-medium flex flex-col">
+                {formattedEntryFee}
+                <EntryFeeUsd className="text-xs text-muted-foreground justify-end w-full flex" />
+              </div>
             </div>
           </div>
 
@@ -403,7 +435,10 @@ export default function PickemContestClient({
             <Trophy className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Prize Pool</p>
-              <p className="font-medium">{formattedPrizePool}</p>
+              <div className="font-medium flex flex-col">
+                <p className="font-medium">{formattedPrizePool}</p>
+                <PrizePoolUsd className="text-xs text-muted-foreground justify-end w-full flex" />
+              </div>
             </div>
           </div>
 
@@ -710,7 +745,12 @@ export default function PickemContestClient({
                         size="lg"
                         onClick={handleMiniAppSwap}
                       >
-                        Swap for ${formattedEntryFee}
+                        <div className="flex gap-2 items-center">
+                          <span>Swap for {formattedEntryFee}</span>
+                          <span>
+                            (<EntryFeeUsd />)
+                          </span>
+                        </div>
                       </Button>
                       <div className="text-xs text-muted-foreground">
                         You do not have enough balance to submit picks.
