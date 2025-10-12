@@ -33,7 +33,6 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
         // Call ready when the app is ready to be displayed
         // This will hide the Farcaster splash screen
         await sdk.actions.ready();
-        console.log("Farcaster SDK initialized");
 
         // Check if we have a wallet available and automatically connect
         if (sdk.wallet && !isSDKLoaded) {

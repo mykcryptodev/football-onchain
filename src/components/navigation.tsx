@@ -96,10 +96,10 @@ export function Navigation() {
             theme={
               resolvedTheme === "dark"
                 ? darkTheme({
-                    colors: { connectedButtonBg: "oklch(0.145 0 0)" },
+                    colors: { connectedButtonBg: "var(--background)" },
                   })
                 : lightTheme({
-                    colors: { connectedButtonBg: "oklch(1 0 0)" },
+                    colors: { connectedButtonBg: "var(--background)" },
                   })
             }
             detailsButton={{

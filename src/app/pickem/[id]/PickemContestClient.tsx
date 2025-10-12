@@ -1,5 +1,6 @@
 "use client";
 
+import { sdk } from "@farcaster/miniapp-sdk";
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,7 +15,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useActiveAccount, useWalletBalance } from "thirdweb/react";
+import {
+  BuyWidget,
+  darkTheme,
+  lightTheme,
+  useActiveAccount,
+  useReadContract,
+  useWalletBalance,
+} from "thirdweb/react";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +38,13 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
+
+import { getContract, toTokens } from "thirdweb";
+import { erc20Abi } from "viem";
+
+import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
+import { toCaip19 } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 interface ContestData {
   id: number;
@@ -104,6 +119,8 @@ export default function PickemContestClient({
   const { submitPredictions } = usePickemContract();
   const { selectionChanged } = useHaptics();
   const { setTokenAddress } = useDisplayToken();
+  const { resolvedTheme } = useTheme();
+  const { isInMiniApp } = useIsInMiniApp();
 
   const [games, setGames] = useState<GameInfo[]>([]);
   const [picks, setPicks] = useState<Record<string, number>>({});
@@ -302,7 +319,7 @@ export default function PickemContestClient({
     return null; // tie (unlikely in NFL)
   };
 
-  const isSubmissionClosed = contest.submissionDeadline <= Date.now();
+  const isSubmissionClosed = contest.submissionDeadline >= Date.now();
 
   const lastGame = useMemo(() => {
     // get the game with the latest start time
@@ -310,6 +327,37 @@ export default function PickemContestClient({
       (a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime(),
     )[0];
   }, [games]);
+
+  const { data: currencyDecimals } = useReadContract({
+    contract: getContract({
+      client,
+      chain,
+      address: contest.currency as `0x${string}`,
+      abi: erc20Abi,
+    }),
+    method: "decimals",
+    params: [],
+  });
+
+  const hasSufficientBalance = useMemo(() => {
+    return walletBalance && walletBalance.value >= contest.entryFee;
+  }, [walletBalance, contest.entryFee]);
+
+  const handleMiniAppSwap = async () => {
+    if (isInMiniApp) {
+      await sdk.actions.swapToken({
+        buyToken: toCaip19({ address: contest.currency, chain }),
+        sellAmount: toTokens(
+          contest.entryFee,
+          currencyDecimals ?? 18,
+        ).toString(),
+      });
+    } else {
+      toast.error("You must be in a Farcaster Mini App to swap");
+    }
+  };
+
+  if (!resolvedTheme) return null;
 
   return (
     <div className="container mx-auto py-5 space-y-6">
@@ -619,7 +667,6 @@ export default function PickemContestClient({
                   )}
                 </p>
               </div>
-
               {/* Entry Fee Display */}
               <div className="p-4 bg-muted rounded-lg">
                 <div className="flex justify-between items-center">
@@ -635,27 +682,74 @@ export default function PickemContestClient({
                   </span>
                 </div>
               </div>
-
               {/* Submit Button */}
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={
-                  !account ||
-                  submitting ||
-                  isSubmissionClosed ||
-                  getPickedCount() !== games.length
-                }
-                onClick={handleSubmit}
-              >
-                {submitting
-                  ? "Submitting..."
-                  : isSubmissionClosed
-                    ? "Submissions Closed"
-                    : getPickedCount() !== games.length
-                      ? "Complete All Picks"
-                      : "Submit Picks"}
-              </Button>
+              {hasSufficientBalance ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={
+                    !account ||
+                    submitting ||
+                    isSubmissionClosed ||
+                    getPickedCount() !== games.length
+                  }
+                  onClick={handleSubmit}
+                >
+                  {submitting
+                    ? "Submitting..."
+                    : isSubmissionClosed
+                      ? "Submissions Closed"
+                      : getPickedCount() !== games.length
+                        ? "Complete All Picks"
+                        : "Submit Picks"}
+                </Button>
+              ) : (
+                <div className="flex flex-col items-center">
+                  {/* if the user is in a mini app, show the buy widget */}
+                  {isInMiniApp ? (
+                    <div className="flex flex-col gap-2 items-center w-full">
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={handleMiniAppSwap}
+                      >
+                        Swap for ${formattedEntryFee}
+                      </Button>
+                      <div className="text-xs text-muted-foreground">
+                        You do not have enough balance to submit picks.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 items-center w-full">
+                      <div className="text-xs text-muted-foreground">
+                        You do not have enough balance to submit picks.
+                      </div>
+                      <BuyWidget
+                        client={client}
+                        chain={chain}
+                        amount={toTokens(
+                          contest.entryFee,
+                          currencyDecimals ?? 18,
+                        ).toString()}
+                        tokenAddress={contest.currency as `0x${string}`}
+                        theme={
+                          resolvedTheme === "dark"
+                            ? darkTheme({
+                                colors: { modalBg: "--var(--card-foreground)" },
+                              })
+                            : lightTheme({
+                                colors: { modalBg: "var(--card-foreground)" },
+                              })
+                        }
+                        style={{
+                          border: "none",
+                        }}
+                        showThirdwebBranding={false}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!account && (
                 <Alert>
@@ -665,7 +759,6 @@ export default function PickemContestClient({
                   </AlertDescription>
                 </Alert>
               )}
-
               {isSubmissionClosed && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
