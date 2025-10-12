@@ -474,10 +474,7 @@ export default function ContestPicksView({
             <Eye className="h-5 w-5" />
             All Picks
             {!gamesFinalized && loadingLiveRankings && (
-              <Badge
-                className="text-[10px] px-1.5 animate-pulse"
-                variant="destructive"
-              >
+              <Badge className="text-[10px] px-1.5 animate-pulse">
                 Updating...
               </Badge>
             )}

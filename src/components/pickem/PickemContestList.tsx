@@ -405,7 +405,7 @@ export default function PickemContestList() {
           </Link>
         )}
         <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
-          <Button className="w-full" size="sm" variant="outline">
+          <Button className="w-full" size="sm" variant="default">
             View All Picks
           </Button>
         </Link>
@@ -427,17 +427,20 @@ export default function PickemContestList() {
                   : "Sync NFL Scores Onchain"}
               </Button>
             )}
-            <Button
-              className="w-full mb-2"
-              disabled={finalizingGames[contest.id] || !account}
-              size="sm"
-              variant="outline"
-              onClick={() => handleFinalizeGames(contest.id)}
-            >
-              {finalizingGames[contest.id]
-                ? "Syncing..."
-                : "Sync Pick Em Results with NFL Scores"}
-            </Button>
+            {/* Only show Finalize Games button if oracle has finalized the week's results */}
+            {weekResultsFinalized[contest.id] && (
+              <Button
+                className="w-full mb-2"
+                disabled={finalizingGames[contest.id] || !account}
+                size="sm"
+                variant="outline"
+                onClick={() => handleFinalizeGames(contest.id)}
+              >
+                {finalizingGames[contest.id]
+                  ? "Syncing..."
+                  : "Sync Pick Em Results with NFL Scores"}
+              </Button>
+            )}
           </>
         )}
 
@@ -447,7 +450,7 @@ export default function PickemContestList() {
               className="w-full mb-2"
               disabled={calculatingScores[contest.id] || !account}
               size="sm"
-              variant="default"
+              variant="outline"
               onClick={() => handleCalculateScores(contest.id)}
             >
               {calculatingScores[contest.id]
@@ -463,7 +466,7 @@ export default function PickemContestList() {
               className="flex-1"
               disabled={claimingPrizes[contest.id] || !account}
               size="sm"
-              variant="default"
+              variant="outline"
               onClick={() => handleClaimAllPrizes(contest.id)}
             >
               {claimingPrizes[contest.id]
