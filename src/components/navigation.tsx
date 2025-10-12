@@ -4,7 +4,7 @@
 import { useTheme } from "next-themes";
 import Link from "next/link";
 /* eslint-enable simple-import-sort/imports */
-import { ConnectButton } from "thirdweb/react";
+import { ConnectButton, darkTheme, lightTheme } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
 
 import { appDescription, appName, chain, usdc } from "@/constants";
@@ -80,7 +80,6 @@ export function Navigation() {
           <ConnectButton
             chain={chain}
             client={client}
-            theme={theme === "dark" ? "dark" : "light"}
             wallets={wallets}
             appMetadata={{
               name: appName,
@@ -94,6 +93,15 @@ export function Navigation() {
               title: `Login to ${appName}`,
               showThirdwebBranding: false,
             }}
+            theme={
+              theme === "dark"
+                ? darkTheme({
+                    colors: { connectedButtonBg: "oklch(0.145 0 0)" },
+                  })
+                : lightTheme({
+                    colors: { connectedButtonBg: "oklch(1 0 0)" },
+                  })
+            }
             detailsButton={{
               className: "!size-9 !border-none",
               displayBalanceToken: {
