@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { shortenAddress } from "thirdweb/utils";
 
 // Create Thirdweb client for AccountProvider
 const client = createThirdwebClient({
@@ -301,7 +302,7 @@ export default function ContestPicksView({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            All Participants&apos; Picks
+            All Picks
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -321,7 +322,7 @@ export default function ContestPicksView({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            All Participants&apos; Picks
+            All Picks
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -343,7 +344,7 @@ export default function ContestPicksView({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
-            All Participants&apos; Picks
+            All Picks
           </CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -362,12 +363,11 @@ export default function ContestPicksView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Rank</TableHead>
+                {gamesFinalized && <TableHead className="w-16">Rank</TableHead>}
                 <TableHead>Participant</TableHead>
-                <TableHead className="w-24">Token</TableHead>
                 {gamesFinalized && <TableHead>Score</TableHead>}
                 <TableHead className="w-28">Tiebreaker</TableHead>
-                <TableHead>Matchups & Picks</TableHead>
+                <TableHead>Picks</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -379,8 +379,8 @@ export default function ContestPicksView({
                     key={pick.tokenId}
                     className={isUserPick ? "bg-accent/50" : ""}
                   >
-                    <TableCell>
-                      {gamesFinalized ? (
+                    {gamesFinalized && (
+                      <TableCell>
                         <Badge
                           variant={
                             index === 0
@@ -392,12 +392,8 @@ export default function ContestPicksView({
                         >
                           #{index + 1}
                         </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          #{index + 1}
-                        </span>
-                      )}
-                    </TableCell>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <AccountProvider address={pick.owner} client={client}>
                         <div className="flex items-center gap-2">
@@ -418,14 +414,12 @@ export default function ContestPicksView({
                             }}
                           />
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
+                            <div className="flex w-full items-center gap-2">
                               <AccountName
-                                className="font-medium text-sm"
+                                className="font-medium text-sm truncate"
                                 fallbackComponent={
                                   <AccountAddress
-                                    formatFn={addr =>
-                                      `${addr.slice(0, 6)}...${addr.slice(-4)}`
-                                    }
+                                    formatFn={addr => shortenAddress(addr)}
                                   />
                                 }
                                 loadingComponent={
@@ -442,18 +436,13 @@ export default function ContestPicksView({
                             </div>
                             {!isUserPick && (
                               <AccountAddress
-                                className="text-xs text-muted-foreground"
-                                formatFn={addr =>
-                                  `${addr.slice(0, 6)}...${addr.slice(-4)}`
-                                }
+                                className="text-xs text-muted-foreground truncate"
+                                formatFn={addr => shortenAddress(addr)}
                               />
                             )}
                           </div>
                         </div>
                       </AccountProvider>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      #{pick.tokenId}
                     </TableCell>
                     {gamesFinalized && (
                       <TableCell>
@@ -472,7 +461,7 @@ export default function ContestPicksView({
                       </TableCell>
                     )}
                     <TableCell className="text-sm">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center w-full gap-1">
                         <TrendingUp className="h-3 w-3 text-muted-foreground" />
                         <span>{pick.tiebreakerPoints}</span>
                       </div>
