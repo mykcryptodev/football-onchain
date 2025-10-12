@@ -630,10 +630,9 @@ export default function MyPickems() {
 
         <TabsContent className="space-y-4" value="active">
           {nfts
-            .filter(nft => Number(nft.correctPicks) === 0)
+            .filter(nft => !nft.contest?.gamesFinalized)
             .map(nft => (
-              <Card key={nft.tokenId}>
-                {/* Same card content as above */}
+              <Card key={nft.tokenId} className="overflow-hidden">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -641,22 +640,58 @@ export default function MyPickems() {
                         Week {nft.weekNumber} - {nft.year}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        NFT #{nft.tokenId}
+                        NFT #{nft.tokenId} • Contest #{nft.contestId} • Pending
+                        Finalization
                       </p>
                     </div>
                     {getStatusBadge(nft)}
                   </div>
                 </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Tiebreaker</p>
+                      <p className="font-medium">
+                        {nft.tiebreakerPoints} points
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-2">
+                    {/* Show finalize button */}
+                    <Button
+                      className="w-full"
+                      disabled={finalizing[nft.contestId] || !account}
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleFinalizeContest(nft.contestId)}
+                    >
+                      {finalizing[nft.contestId]
+                        ? "Finalizing..."
+                        : "Finalize Contest & Calculate Winners"}
+                    </Button>
+
+                    {/* Always show leaderboard button */}
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setSelectedContest(nft.contestId)}
+                    >
+                      View Leaderboard
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
         </TabsContent>
 
         <TabsContent className="space-y-4" value="completed">
           {nfts
-            .filter(nft => Number(nft.correctPicks) > 0)
+            .filter(nft => nft.contest?.gamesFinalized)
             .map(nft => (
-              <Card key={nft.tokenId}>
-                {/* Same card content as above */}
+              <Card key={nft.tokenId} className="overflow-hidden">
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div>
@@ -664,12 +699,123 @@ export default function MyPickems() {
                         Week {nft.weekNumber} - {nft.year}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        NFT #{nft.tokenId}
+                        NFT #{nft.tokenId} • Contest #{nft.contestId} •{" "}
+                        Finalized
                       </p>
                     </div>
                     {getStatusBadge(nft)}
                   </div>
                 </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Performance */}
+                  {Number(nft.correctPicks) > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Correct Picks</span>
+                        <span className="font-medium">
+                          {nft.correctPicks} / {nft.totalGames}
+                        </span>
+                      </div>
+                      <Progress
+                        className="h-2"
+                        value={
+                          (Number(nft.correctPicks) / nft.totalGames) * 100
+                        }
+                      />
+                      <p
+                        className={`text-sm font-medium ${getAccuracyColor((Number(nft.correctPicks) / nft.totalGames) * 100)}`}
+                      >
+                        {(
+                          (Number(nft.correctPicks) / nft.totalGames) *
+                          100
+                        ).toFixed(1)}
+                        % Accuracy
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Tiebreaker</p>
+                      <p className="font-medium">
+                        {nft.tiebreakerPoints} points
+                      </p>
+                    </div>
+                    {nft.rank && nft.rank > 0 && (
+                      <div>
+                        <p className="text-muted-foreground">Rank</p>
+                        <p className="font-medium">#{nft.rank}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Claim section - show different states */}
+                  <div className="space-y-2">
+                    {nft.contest?.payoutComplete ? (
+                      // All prizes distributed
+                      <div className="text-center py-3 px-4 bg-muted rounded-lg">
+                        <CheckCircle className="h-5 w-5 mx-auto text-green-500 mb-1" />
+                        <p className="text-sm text-muted-foreground">
+                          All prizes distributed
+                        </p>
+                      </div>
+                    ) : nft.claimed ? (
+                      // This NFT claimed
+                      <Button disabled className="w-full" variant="secondary">
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Prize Claimed
+                      </Button>
+                    ) : nft.prizeWon > BigInt(0) ? (
+                      // Eligible to claim
+                      <div className="space-y-3">
+                        {/* Warning if NFT was transferred */}
+                        {account?.address &&
+                          nft.currentOwner.toLowerCase() !==
+                            account.address.toLowerCase() && (
+                            <Alert variant="destructive">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                This NFT is owned by{" "}
+                                <span className="font-mono">
+                                  {nft.currentOwner.slice(0, 6)}...
+                                  {nft.currentOwner.slice(-4)}
+                                </span>
+                                . The prize will be sent to them, not you.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        <Button
+                          className="w-full"
+                          variant="default"
+                          onClick={() =>
+                            handleClaimPrize(nft.tokenId, nft.contestId)
+                          }
+                        >
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Claim Prize ({formatEther(nft.prizeWon)} ETH)
+                        </Button>
+                      </div>
+                    ) : (
+                      // Not a winner
+                      <div className="text-center py-3 px-4 bg-muted rounded-lg">
+                        <XCircle className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-sm text-muted-foreground">
+                          No prize for this entry
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Always show leaderboard button */}
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setSelectedContest(nft.contestId)}
+                    >
+                      View Leaderboard
+                    </Button>
+                  </div>
+                </CardContent>
               </Card>
             ))}
         </TabsContent>

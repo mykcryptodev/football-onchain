@@ -472,6 +472,23 @@ export default function PickemContestList() {
     </Card>
   );
 
+  // Helper function to determine if a contest is completed
+  const isContestCompleted = (contest: PickemContest) => {
+    // Contest is completed if payouts are complete
+    if (contest.payoutComplete) return true;
+
+    // Contest with 0 entries and closed submissions is also completed
+    // (nothing left to happen - no entries to score, no prizes to distribute)
+    if (
+      contest.totalEntries === 0 &&
+      contest.submissionDeadline <= Date.now()
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
   return (
     <Tabs className="space-y-4" defaultValue="active">
       <TabsList>
@@ -481,7 +498,8 @@ export default function PickemContestList() {
       </TabsList>
 
       <TabsContent className="space-y-4" value="active">
-        {contests.filter(contest => !contest.payoutComplete).length === 0 ? (
+        {contests.filter(contest => !isContestCompleted(contest)).length ===
+        0 ? (
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Active Contests</h3>
@@ -491,13 +509,14 @@ export default function PickemContestList() {
           </div>
         ) : (
           contests
-            .filter(contest => !contest.payoutComplete)
+            .filter(contest => !isContestCompleted(contest))
             .map(contest => renderContestCard(contest))
         )}
       </TabsContent>
 
       <TabsContent className="space-y-4" value="completed">
-        {contests.filter(contest => contest.payoutComplete).length === 0 ? (
+        {contests.filter(contest => isContestCompleted(contest)).length ===
+        0 ? (
           <div className="text-center py-12">
             <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
@@ -509,7 +528,7 @@ export default function PickemContestList() {
           </div>
         ) : (
           contests
-            .filter(contest => contest.payoutComplete)
+            .filter(contest => isContestCompleted(contest))
             .map(contest => renderContestCard(contest))
         )}
       </TabsContent>
