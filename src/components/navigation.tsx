@@ -103,7 +103,7 @@ export function Navigation() {
                   })
             }
             detailsButton={{
-              className: "!size-9 !border-none",
+              className: "!border-none",
               displayBalanceToken: {
                 [chain.id]: tokenAddress || usdc[chain.id],
               },
