@@ -1,12 +1,14 @@
 "use client";
 
 import {
+  Check,
   ChevronDown,
   ChevronUp,
   Eye,
   RefreshCw,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createThirdwebClient } from "thirdweb";
@@ -91,6 +93,9 @@ export default function ContestPicksView({
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [loadingLiveRankings, setLoadingLiveRankings] = useState(false);
+  const [gameResults, setGameResults] = useState<Map<string, number | null>>(
+    new Map(),
+  ); // gameId -> winner (0=away, 1=home, null=tied/no result)
 
   useEffect(() => {
     fetchGames();
@@ -108,7 +113,11 @@ export default function ContestPicksView({
   useEffect(() => {
     if (!gamesFinalized && allPicks.length > 0) {
       fetchLiveRankings();
+    } else if (gamesFinalized && allPicks.length > 0) {
+      // Fetch game results for finalized games to show correct/wrong indicators
+      fetchGameResults();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gamesFinalized, allPicks.length, contestId]);
 
   const fetchGames = async () => {
@@ -192,6 +201,45 @@ export default function ContestPicksView({
     }
   };
 
+  const fetchGameResults = async () => {
+    try {
+      // Fetch game results from ESPN API to show correct/wrong indicators
+      const response = await fetch(
+        `/api/week-games?year=${year}&seasonType=${seasonType}&week=${weekNumber}`,
+      );
+      if (!response.ok) return;
+
+      const gamesData = await response.json();
+      const resultsMap = new Map<string, number | null>();
+
+      gamesData.forEach((game: any) => {
+        // Only show results for completed games
+        const isCompleted =
+          game.status &&
+          (game.status.toLowerCase().includes("final") ||
+            game.status === "STATUS_FINAL");
+
+        if (
+          isCompleted &&
+          game.homeScore !== undefined &&
+          game.awayScore !== undefined
+        ) {
+          let winner: number | null = null;
+          if (game.homeScore > game.awayScore) {
+            winner = 1; // home wins
+          } else if (game.awayScore > game.homeScore) {
+            winner = 0; // away wins
+          }
+          resultsMap.set(game.gameId, winner);
+        }
+      });
+
+      setGameResults(resultsMap);
+    } catch (error) {
+      console.error("Error fetching game results:", error);
+    }
+  };
+
   const fetchLiveRankings = async () => {
     if (gamesFinalized || allPicks.length === 0) return;
 
@@ -219,6 +267,24 @@ export default function ContestPicksView({
 
       // Update picks with live ranking data
       setAllPicks(data.picks);
+
+      // Update game results for showing correct/wrong indicators (only completed games)
+      if (data.gameScores) {
+        const resultsMap = new Map<string, number | null>();
+        data.gameScores.forEach(
+          (score: {
+            gameId: string;
+            winner: number | null;
+            completed: boolean;
+          }) => {
+            // Only show indicators for completed games
+            if (score.completed) {
+              resultsMap.set(score.gameId, score.winner);
+            }
+          },
+        );
+        setGameResults(resultsMap);
+      }
     } catch (error) {
       console.error("Error fetching live rankings:", error);
     } finally {
@@ -287,11 +353,25 @@ export default function ContestPicksView({
 
           const pickedAway = pick === 0;
           const pickedHome = pick === 1;
+          const gameId = gameIds[gameIndex];
+          const winner = gameResults.get(gameId);
+
+          // Determine if pick is correct/wrong
+          let pickStatus: "correct" | "wrong" | "pending" = "pending";
+          if (winner !== null && winner !== undefined) {
+            pickStatus = pick === winner ? "correct" : "wrong";
+          }
 
           return (
             <div
               key={gameIndex}
-              className="flex items-center gap-2 text-xs border rounded p-1.5 bg-background"
+              className={`flex items-center gap-2 text-xs border rounded p-1.5 ${
+                pickStatus === "correct"
+                  ? "bg-green-500/10 border-green-500/30"
+                  : pickStatus === "wrong"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-background"
+              }`}
             >
               {/* Game Number */}
               <span className="text-[10px] text-muted-foreground font-mono w-4">
@@ -411,6 +491,8 @@ export default function ContestPicksView({
                 fetchAllPicks();
                 if (!gamesFinalized) {
                   fetchLiveRankings();
+                } else {
+                  fetchGameResults();
                 }
               }}
             >
@@ -515,10 +597,10 @@ export default function ContestPicksView({
                     <TableCell className="w-32">
                       {gamesFinalized ? (
                         <div className="flex flex-col min-w-[100px]">
-                          <span className="font-semibold whitespace-nowrap">
+                          <span className="font-semibold whitespace-nowrap text-right">
                             {pick.correctPicks} / {gameIds.length}
                           </span>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap text-right">
                             {(
                               (pick.correctPicks / gameIds.length) *
                               100
@@ -528,7 +610,7 @@ export default function ContestPicksView({
                         </div>
                       ) : hasLiveData && pick.liveCorrectPicks !== undefined ? (
                         <div className="flex flex-col min-w-[100px]">
-                          <span className="font-semibold whitespace-nowrap">
+                          <span className="font-semibold whitespace-nowrap text-right">
                             {pick.liveCorrectPicks} /{" "}
                             {pick.liveTotalScoredGames || 0}
                           </span>
