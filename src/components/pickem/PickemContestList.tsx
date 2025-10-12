@@ -339,9 +339,7 @@ export default function PickemContestList() {
             (pick: { tokenId: number }) => pick.tokenId,
           );
 
-          console.log("sortedTokenIds", sortedTokenIds);
-
-          toast.info(`Calculating scores in rank order (highest to lowest)...`);
+          toast.info("Calculating scores...");
 
           // Calculate scores in batches using sorted order
           const BATCH_SIZE = 50;
@@ -561,7 +559,7 @@ export default function PickemContestList() {
             >
               {calculatingScores[contest.id]
                 ? "Calculating..."
-                : `Calculate Winner${contest.payoutType === 0 ? "" : `s`}`}
+                : `Calculate Winner${contest.payoutType === 0 ? "" : "s"}`}
             </Button>
           </div>
         )}

@@ -22,6 +22,7 @@ interface ContestData {
   gamesFinalized: boolean;
   payoutType: number;
   gameIds: string[];
+  tiebreakerGameId: string;
   entryFeeUsd?: number;
 }
 
@@ -93,6 +94,7 @@ export default async function PickemContestPage({
       gamesFinalized: contestData.gamesFinalized,
       payoutType: contestData.payoutStructure.payoutType,
       gameIds: contestData.gameIds.map(id => id.toString()),
+      tiebreakerGameId: contestData.tiebreakerGameId.toString(),
       entryFeeUsd,
     };
 
