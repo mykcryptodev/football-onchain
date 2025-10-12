@@ -161,7 +161,9 @@ export function TokenPicker({
                       <div className="flex items-center gap-3 w-full">
                         <TokenIcon
                           className="size-8 flex-shrink-0"
-                          iconResolver={resolveTokenIcon(token)}
+                          iconResolver={async () =>
+                            await resolveTokenIcon(token)
+                          }
                         />
                         <div className="flex flex-col items-start text-left min-w-0 flex-1">
                           <span className="font-medium text-sm">

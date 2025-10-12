@@ -10,6 +10,7 @@ import {
   generateFarcasterMetadata,
   getBaseUrl,
 } from "@/lib/farcaster-metadata";
+import { DisplayTokenProvider } from "@/providers/DisplayTokenProvider";
 import { FarcasterProvider } from "@/providers/Farcaster";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
@@ -64,10 +65,12 @@ export default function RootLayout({
           defaultTheme="system"
         >
           <ThirdwebProvider>
-            <FarcasterProvider>
-              <Navigation />
-              {children}
-            </FarcasterProvider>
+            <DisplayTokenProvider>
+              <FarcasterProvider>
+                <Navigation />
+                {children}
+              </FarcasterProvider>
+            </DisplayTokenProvider>
           </ThirdwebProvider>
           <Toaster />
         </ThemeProvider>

@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { useActiveAccount } from "thirdweb/react";
+import { useActiveAccount, useWalletBalance } from "thirdweb/react";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,9 +24,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { chain } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { useDisplayToken } from "@/providers/DisplayTokenProvider";
+import { client } from "@/providers/Thirdweb";
 
 interface ContestData {
   id: number;
@@ -100,11 +103,26 @@ export default function PickemContestClient({
   const account = useActiveAccount();
   const { submitPredictions } = usePickemContract();
   const { selectionChanged } = useHaptics();
+  const { setTokenAddress } = useDisplayToken();
 
   const [games, setGames] = useState<GameInfo[]>([]);
   const [picks, setPicks] = useState<Record<string, number>>({});
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const { data: walletBalance, isLoading: walletBalanceLoading } =
+    useWalletBalance({
+      chain,
+      address: account?.address,
+      client,
+      tokenAddress: contest.currency,
+    });
+
+  // Set the display token to the contest's currency
+  useEffect(() => {
+    setTokenAddress(contest.currency);
+    return () => setTokenAddress(null); // Reset when leaving the page
+  }, [contest.currency, setTokenAddress]);
 
   // Format currency values using the hook
   const { formattedValue: formattedEntryFee } = useFormattedCurrency({
@@ -607,6 +625,14 @@ export default function PickemContestClient({
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Entry Fee:</span>
                   <span className="font-bold">{formattedEntryFee}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">
+                    Your Balance:
+                  </span>
+                  <span className="text-muted-foreground text-xs font-bold">
+                    {Number(walletBalance?.displayValue).toLocaleString()}
+                  </span>
                 </div>
               </div>
 

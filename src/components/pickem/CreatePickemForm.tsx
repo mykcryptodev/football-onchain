@@ -377,7 +377,9 @@ export default function CreatePickemForm() {
                 >
                   <TokenIcon
                     className="size-6 flex-shrink-0"
-                    iconResolver={resolveTokenIcon(selectedToken)}
+                    iconResolver={async () =>
+                      await resolveTokenIcon(selectedToken)
+                    }
                   />
                 </TokenProvider>
                 <div className="flex flex-col items-start text-left min-w-0 flex-1">

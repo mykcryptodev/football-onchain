@@ -4,17 +4,18 @@
 import { useTheme } from "next-themes";
 import Link from "next/link";
 /* eslint-enable simple-import-sort/imports */
-import { base, baseSepolia } from "thirdweb/chains";
 import { ConnectButton } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
 
 import { appDescription, appName, chain, usdc } from "@/constants";
+import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
 
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
   const { theme } = useTheme();
+  const { tokenAddress } = useDisplayToken();
 
   const wallets = [
     inAppWallet({
@@ -96,8 +97,7 @@ export function Navigation() {
             detailsButton={{
               className: "!size-9 !border-none",
               displayBalanceToken: {
-                [baseSepolia.id]: usdc[baseSepolia.id],
-                [base.id]: usdc[base.id],
+                [chain.id]: tokenAddress || usdc[chain.id],
               },
             }}
           />

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { chain } from "@/constants";
+import { resolveTokenIcon } from "@/lib/utils";
+import { client } from "@/providers/Thirdweb";
+import { getContract } from "thirdweb";
+import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
+import { isAddress } from "thirdweb/utils";
 
 export interface Token {
   chainId: number;
@@ -37,8 +42,15 @@ export async function GET(request: NextRequest) {
     apiUrl.searchParams.set("chainId", chainId);
     apiUrl.searchParams.set("limit", limit);
     apiUrl.searchParams.set("page", page);
-    if (name) {
+
+    const isQueryTokenAddress = isAddress(name.trim());
+
+    if (name && !isQueryTokenAddress) {
       apiUrl.searchParams.set("name", name);
+    }
+
+    if (isQueryTokenAddress) {
+      apiUrl.searchParams.set("tokenAddress", name);
     }
 
     const response = await fetch(apiUrl.toString(), {
@@ -52,6 +64,36 @@ export async function GET(request: NextRequest) {
     }
 
     const data: TokensResponse = await response.json();
+
+    // if we do not get anything returned and the isQueryTokenAddress is true, fetch the token from the contract
+    if (isQueryTokenAddress && data.result.tokens.length === 0) {
+      const tokenContract = getContract({
+        client,
+        chain,
+        address: name,
+      });
+      const tokenMetadata = await getCurrencyMetadata({
+        contract: tokenContract,
+      });
+      const token = {
+        chainId: chain.id,
+        address: name,
+        symbol: tokenMetadata.symbol,
+        name: tokenMetadata.name,
+        decimals: tokenMetadata.decimals,
+        priceUsd: 0,
+        iconUri: "",
+        prices: {},
+      };
+
+      const image = await resolveTokenIcon(token);
+      console.log({ image });
+
+      data.result.tokens.push({
+        ...token,
+        iconUri: image,
+      });
+    }
 
     return NextResponse.json(data);
   } catch (error) {
