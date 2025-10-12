@@ -45,6 +45,9 @@ interface ContestPick {
   picks: number[];
   correctPicks: number;
   tiebreakerPoints: number;
+  liveCorrectPicks?: number;
+  liveTotalScoredGames?: number;
+  liveRank?: number;
 }
 
 interface GameInfo {
@@ -87,6 +90,7 @@ export default function ContestPicksView({
   const [games, setGames] = useState<GameInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [loadingLiveRankings, setLoadingLiveRankings] = useState(false);
 
   useEffect(() => {
     fetchGames();
@@ -99,6 +103,13 @@ export default function ContestPicksView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId, games]);
+
+  // Fetch live rankings when games are not finalized (initial load only)
+  useEffect(() => {
+    if (!gamesFinalized && allPicks.length > 0) {
+      fetchLiveRankings();
+    }
+  }, [gamesFinalized, allPicks.length, contestId]);
 
   const fetchGames = async () => {
     try {
@@ -178,6 +189,40 @@ export default function ContestPicksView({
       console.error("Error fetching picks:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLiveRankings = async () => {
+    if (gamesFinalized || allPicks.length === 0) return;
+
+    setLoadingLiveRankings(true);
+    try {
+      const response = await fetch(`/api/contest/${contestId}/live-rankings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gameIds,
+          picks: allPicks,
+          year,
+          seasonType,
+          weekNumber,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch live rankings");
+      }
+
+      const data = await response.json();
+
+      // Update picks with live ranking data
+      setAllPicks(data.picks);
+    } catch (error) {
+      console.error("Error fetching live rankings:", error);
+    } finally {
+      setLoadingLiveRankings(false);
     }
   };
 
@@ -345,13 +390,30 @@ export default function ContestPicksView({
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
             All Picks
+            {!gamesFinalized && loadingLiveRankings && (
+              <Badge
+                className="text-[10px] px-1.5 animate-pulse"
+                variant="destructive"
+              >
+                Updating...
+              </Badge>
+            )}
           </CardTitle>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
               <span>{allPicks.length} entries</span>
             </div>
-            <Button size="sm" variant="outline" onClick={fetchAllPicks}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                fetchAllPicks();
+                if (!gamesFinalized) {
+                  fetchLiveRankings();
+                }
+              }}
+            >
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -363,9 +425,9 @@ export default function ContestPicksView({
           <Table>
             <TableHeader>
               <TableRow>
-                {gamesFinalized && <TableHead className="w-16">Rank</TableHead>}
+                <TableHead className="w-16">Rank</TableHead>
                 <TableHead>Participant</TableHead>
-                {gamesFinalized && <TableHead>Score</TableHead>}
+                <TableHead>Score</TableHead>
                 <TableHead className="w-28">Tiebreaker</TableHead>
                 <TableHead>Picks</TableHead>
               </TableRow>
@@ -373,27 +435,33 @@ export default function ContestPicksView({
             <TableBody>
               {allPicks.map((pick, index) => {
                 const isUserPick = isCurrentUser(pick.owner);
+                const displayRank = gamesFinalized ? index + 1 : pick.liveRank;
+                const hasLiveData = !gamesFinalized && pick.liveRank;
 
                 return (
                   <TableRow
                     key={pick.tokenId}
                     className={isUserPick ? "bg-accent/50" : ""}
                   >
-                    {gamesFinalized && (
-                      <TableCell>
-                        <Badge
-                          variant={
-                            index === 0
-                              ? "default"
-                              : index < 3
-                                ? "secondary"
-                                : "outline"
-                          }
-                        >
-                          #{index + 1}
-                        </Badge>
-                      </TableCell>
-                    )}
+                    <TableCell>
+                      {displayRank ? (
+                        <div className="flex items-center gap-1.5">
+                          <Badge
+                            variant={
+                              displayRank === 1
+                                ? "default"
+                                : displayRank < 4
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            #{displayRank}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <Skeleton className="h-4 w-8" />
+                      )}
+                    </TableCell>
                     <TableCell>
                       <AccountProvider address={pick.owner} client={client}>
                         <div className="flex items-center gap-2">
@@ -444,8 +512,8 @@ export default function ContestPicksView({
                         </div>
                       </AccountProvider>
                     </TableCell>
-                    {gamesFinalized && (
-                      <TableCell>
+                    <TableCell>
+                      {gamesFinalized ? (
                         <div className="flex flex-col">
                           <span className="font-semibold">
                             {pick.correctPicks} / {gameIds.length}
@@ -458,8 +526,27 @@ export default function ContestPicksView({
                             %
                           </span>
                         </div>
-                      </TableCell>
-                    )}
+                      ) : hasLiveData && pick.liveCorrectPicks !== undefined ? (
+                        <div className="flex flex-col">
+                          <span className="font-semibold">
+                            {pick.liveCorrectPicks} /{" "}
+                            {pick.liveTotalScoredGames || 0}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {pick.liveTotalScoredGames
+                              ? (
+                                  (pick.liveCorrectPicks /
+                                    pick.liveTotalScoredGames) *
+                                  100
+                                ).toFixed(0)
+                              : "0"}
+                            %
+                          </span>
+                        </div>
+                      ) : (
+                        <Skeleton className="h-4 w-16" />
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm">
                       <div className="flex items-center justify-center w-full gap-1">
                         <TrendingUp className="h-3 w-3 text-muted-foreground" />
