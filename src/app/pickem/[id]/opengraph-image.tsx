@@ -85,7 +85,7 @@ export default async function Image({
                 marginTop: "-8px",
               }}
             >
-              Pick'em Contest #{id}
+              Pick&apos;em Contest #{id}
             </span>
           </div>
         </div>

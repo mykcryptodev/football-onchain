@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-
 import { getContract, readContract } from "thirdweb";
 import { getSocialProfiles } from "thirdweb/social";
 
@@ -277,7 +276,7 @@ export async function GET(
                     marginTop: "-4px",
                   }}
                 >
-                  Pick'em Contest
+                  Pick&apos;em Contest
                 </span>
               </div>
             </div>
@@ -369,10 +368,10 @@ export async function GET(
                   >
                     {tokenIconUrl && (
                       <img
-                        src={tokenIconUrl}
                         alt={tokenData.symbol}
-                        width="20"
                         height="20"
+                        src={tokenIconUrl}
+                        width="20"
                         style={{
                           borderRadius: "50%",
                         }}
@@ -441,10 +440,10 @@ export async function GET(
                     >
                       {tokenIconUrl && (
                         <img
-                          src={tokenIconUrl}
                           alt={tokenData.symbol}
-                          width="16"
                           height="16"
+                          src={tokenIconUrl}
+                          width="16"
                           style={{
                             borderRadius: "50%",
                           }}
@@ -530,10 +529,10 @@ export async function GET(
                             }}
                           >
                             <img
-                              src={avatar}
                               alt="Avatar"
-                              width="35"
                               height="35"
+                              src={avatar}
+                              width="35"
                               style={{
                                 objectFit: "cover",
                               }}

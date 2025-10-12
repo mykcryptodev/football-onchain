@@ -122,12 +122,12 @@ export default function OGPreviewPage() {
               alt={`OG image for contest ${contestId}`}
               className="w-full"
               src={imageUrl}
+              onLoad={() => setLoading(false)}
               onError={e => {
                 console.error("Image failed to load");
                 (e.target as HTMLImageElement).src =
                   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect width='1200' height='630' fill='%23000'/%3E%3Ctext x='600' y='315' font-family='Arial' font-size='24' fill='%23fff' text-anchor='middle'%3EError loading image%3C/text%3E%3C/svg%3E";
               }}
-              onLoad={() => setLoading(false)}
             />
           )}
         </div>
