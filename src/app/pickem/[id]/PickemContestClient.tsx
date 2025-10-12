@@ -316,7 +316,7 @@ export default function PickemContestClient({
     return null; // tie (unlikely in NFL)
   };
 
-  const isSubmissionClosed = contest.submissionDeadline >= Date.now();
+  const isSubmissionClosed = contest.submissionDeadline <= Date.now();
 
   const lastGame = useMemo(() => {
     // get the game with the latest start time
