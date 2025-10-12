@@ -423,18 +423,20 @@ export default function PickemContestList() {
                 onClick={() => handleFetchWeekResults(contest)}
               >
                 {fetchingResults[contest.id]
-                  ? "Requesting..."
-                  : "Fetch Week Results"}
+                  ? "Syncing..."
+                  : "Sync NFL Scores Onchain"}
               </Button>
             )}
             <Button
               className="w-full mb-2"
               disabled={finalizingGames[contest.id] || !account}
               size="sm"
-              variant="secondary"
+              variant="outline"
               onClick={() => handleFinalizeGames(contest.id)}
             >
-              {finalizingGames[contest.id] ? "Finalizing..." : "Finalize Games"}
+              {finalizingGames[contest.id]
+                ? "Syncing..."
+                : "Sync Pick Em Results with NFL Scores"}
             </Button>
           </>
         )}
@@ -450,7 +452,7 @@ export default function PickemContestList() {
             >
               {calculatingScores[contest.id]
                 ? "Calculating..."
-                : "Calculate Scores"}
+                : `Calculate Winner${contest.payoutType === 0 ? "" : `s`}`}
             </Button>
           </div>
         )}
@@ -461,7 +463,7 @@ export default function PickemContestList() {
               className="flex-1"
               disabled={claimingPrizes[contest.id] || !account}
               size="sm"
-              variant="secondary"
+              variant="default"
               onClick={() => handleClaimAllPrizes(contest.id)}
             >
               {claimingPrizes[contest.id]
