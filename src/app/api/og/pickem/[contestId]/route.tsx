@@ -229,7 +229,7 @@ export async function GET(
             backgroundColor: "#0a0a0a",
             backgroundImage:
               "radial-gradient(circle at 25% 25%, rgba(75, 75, 75, 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(75, 75, 75, 0.15) 0%, transparent 50%)",
-            padding: "45px 60px 40px 60px",
+            padding: "50px 60px 45px 60px",
             fontFamily: "Segment, sans-serif",
           }}
         >
@@ -239,21 +239,21 @@ export async function GET(
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: "30px",
+              marginBottom: "38px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
               <div
                 style={{
-                  width: "60px",
-                  height: "60px",
-                  borderRadius: "12px",
+                  width: "70px",
+                  height: "70px",
+                  borderRadius: "14px",
                   background:
                     "linear-gradient(135deg, #4b5563 0%, #1f2937 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "32px",
+                  fontSize: "38px",
                 }}
               >
                 🏈
@@ -261,7 +261,7 @@ export async function GET(
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
                   style={{
-                    fontSize: "32px",
+                    fontSize: "38px",
                     fontWeight: "700",
                     color: "#ffffff",
                     letterSpacing: "-0.02em",
@@ -271,7 +271,7 @@ export async function GET(
                 </span>
                 <span
                   style={{
-                    fontSize: "18px",
+                    fontSize: "22px",
                     color: "#9ca3af",
                     marginTop: "-4px",
                   }}
@@ -289,7 +289,7 @@ export async function GET(
             >
               <span
                 style={{
-                  fontSize: "24px",
+                  fontSize: "28px",
                   fontWeight: "600",
                   color: "#ffffff",
                 }}
@@ -298,7 +298,7 @@ export async function GET(
               </span>
               <span
                 style={{
-                  fontSize: "20px",
+                  fontSize: "24px",
                   color: "#9ca3af",
                   marginTop: "-2px",
                 }}
@@ -313,7 +313,7 @@ export async function GET(
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "24px",
+              gap: "32px",
             }}
           >
             {/* Prize Pool - Hero */}
@@ -322,19 +322,19 @@ export async function GET(
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                padding: "32px 48px",
+                padding: "42px 48px",
                 background:
                   "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)",
-                borderRadius: "20px",
+                borderRadius: "24px",
                 border: "2px solid rgba(168, 85, 247, 0.2)",
               }}
             >
               <span
                 style={{
-                  fontSize: "24px",
+                  fontSize: "28px",
                   color: "#d1d5db",
                   fontWeight: "500",
-                  marginBottom: "10px",
+                  marginBottom: "14px",
                 }}
               >
                 Prize Pool
@@ -348,7 +348,7 @@ export async function GET(
               >
                 <span
                   style={{
-                    fontSize: "72px",
+                    fontSize: "86px",
                     fontWeight: "700",
                     color: "#ffffff",
                     lineHeight: 1,
@@ -362,16 +362,16 @@ export async function GET(
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: "8px",
-                      marginTop: "8px",
+                      gap: "10px",
+                      marginTop: "12px",
                     }}
                   >
                     {tokenIconUrl && (
                       <img
                         alt={tokenData.symbol}
-                        height="20"
+                        height="24"
                         src={tokenIconUrl}
-                        width="20"
+                        width="24"
                         style={{
                           borderRadius: "50%",
                         }}
@@ -379,7 +379,7 @@ export async function GET(
                     )}
                     <span
                       style={{
-                        fontSize: "22px",
+                        fontSize: "26px",
                         color: "#9ca3af",
                       }}
                     >
@@ -394,7 +394,7 @@ export async function GET(
             <div
               style={{
                 display: "flex",
-                gap: "20px",
+                gap: "24px",
               }}
             >
               {/* Entry Fee */}
@@ -403,17 +403,17 @@ export async function GET(
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "24px",
+                  padding: "30px 24px",
                   backgroundColor: "rgba(31, 41, 55, 0.6)",
-                  borderRadius: "14px",
+                  borderRadius: "16px",
                   border: "1px solid rgba(75, 85, 99, 0.3)",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "18px",
+                    fontSize: "21px",
                     color: "#9ca3af",
-                    marginBottom: "10px",
+                    marginBottom: "12px",
                   }}
                 >
                   Entry Fee
@@ -421,7 +421,7 @@ export async function GET(
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   <span
                     style={{
-                      fontSize: "36px",
+                      fontSize: "44px",
                       fontWeight: "700",
                       color: "#ffffff",
                       lineHeight: 1,
@@ -434,16 +434,16 @@ export async function GET(
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "6px",
-                        marginTop: "6px",
+                        gap: "7px",
+                        marginTop: "8px",
                       }}
                     >
                       {tokenIconUrl && (
                         <img
                           alt={tokenData.symbol}
-                          height="16"
+                          height="18"
                           src={tokenIconUrl}
-                          width="16"
+                          width="18"
                           style={{
                             borderRadius: "50%",
                           }}
@@ -451,7 +451,7 @@ export async function GET(
                       )}
                       <span
                         style={{
-                          fontSize: "16px",
+                          fontSize: "18px",
                           color: "#6b7280",
                         }}
                       >
@@ -468,28 +468,28 @@ export async function GET(
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "24px",
+                  padding: "30px 24px",
                   backgroundColor: "rgba(31, 41, 55, 0.6)",
-                  borderRadius: "14px",
+                  borderRadius: "16px",
                   border: "1px solid rgba(75, 85, 99, 0.3)",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "18px",
+                    fontSize: "21px",
                     color: "#9ca3af",
-                    marginBottom: "10px",
+                    marginBottom: "12px",
                   }}
                 >
                   Total Entries
                 </span>
                 <span
                   style={{
-                    fontSize: "36px",
+                    fontSize: "44px",
                     fontWeight: "700",
                     color: "#ffffff",
                     lineHeight: 1,
-                    marginBottom: "12px",
+                    marginBottom: "16px",
                   }}
                 >
                   {totalEntries}
@@ -519,20 +519,20 @@ export async function GET(
                           <div
                             key={index}
                             style={{
-                              width: "35px",
-                              height: "35px",
+                              width: "40px",
+                              height: "40px",
                               borderRadius: "50%",
                               border: "2px solid rgba(31, 41, 55, 0.9)",
-                              marginLeft: index === 0 ? "0" : "-8px",
+                              marginLeft: index === 0 ? "0" : "-10px",
                               overflow: "hidden",
                               display: "flex",
                             }}
                           >
                             <img
                               alt="Avatar"
-                              height="35"
+                              height="40"
                               src={avatar}
-                              width="35"
+                              width="40"
                               style={{
                                 objectFit: "cover",
                               }}
@@ -549,16 +549,16 @@ export async function GET(
                         <div
                           key={index}
                           style={{
-                            width: "35px",
-                            height: "35px",
+                            width: "40px",
+                            height: "40px",
                             borderRadius: "50%",
                             background: `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`,
                             border: "2px solid rgba(31, 41, 55, 0.9)",
-                            marginLeft: index === 0 ? "0" : "-8px",
+                            marginLeft: index === 0 ? "0" : "-10px",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "10px",
+                            fontSize: "11px",
                             fontWeight: "700",
                             color: "#ffffff",
                             letterSpacing: "-0.5px",
@@ -571,9 +571,9 @@ export async function GET(
                     {totalEntries > 8 && (
                       <span
                         style={{
-                          fontSize: "12px",
+                          fontSize: "14px",
                           color: "#9ca3af",
-                          marginLeft: "8px",
+                          marginLeft: "10px",
                           fontWeight: "500",
                         }}
                       >
@@ -592,14 +592,14 @@ export async function GET(
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginTop: "24px",
-              paddingTop: "18px",
+              marginTop: "32px",
+              paddingTop: "20px",
               borderTop: "1px solid rgba(75, 85, 99, 0.3)",
             }}
           >
             <span
               style={{
-                fontSize: "18px",
+                fontSize: "20px",
                 color: "#6b7280",
               }}
             >
@@ -607,7 +607,7 @@ export async function GET(
             </span>
             <span
               style={{
-                fontSize: "18px",
+                fontSize: "20px",
                 color: "#9ca3af",
               }}
             >

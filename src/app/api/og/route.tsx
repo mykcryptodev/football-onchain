@@ -29,7 +29,7 @@ export async function GET() {
             backgroundColor: "#0a0a0a",
             backgroundImage:
               "radial-gradient(circle at 25% 25%, rgba(75, 75, 75, 0.15) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(75, 75, 75, 0.15) 0%, transparent 50%)",
-            padding: "45px 60px 40px 60px",
+            padding: "50px 60px 45px 60px",
             fontFamily: "Segment, sans-serif",
           }}
         >
@@ -39,21 +39,21 @@ export async function GET() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: "40px",
+              marginBottom: "45px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
               <div
                 style={{
-                  width: "70px",
-                  height: "70px",
-                  borderRadius: "12px",
+                  width: "80px",
+                  height: "80px",
+                  borderRadius: "14px",
                   background:
                     "linear-gradient(135deg, #4b5563 0%, #1f2937 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "38px",
+                  fontSize: "44px",
                 }}
               >
                 🏈
@@ -61,7 +61,7 @@ export async function GET() {
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
                   style={{
-                    fontSize: "42px",
+                    fontSize: "48px",
                     fontWeight: "700",
                     color: "#ffffff",
                     letterSpacing: "-0.02em",
@@ -71,7 +71,7 @@ export async function GET() {
                 </span>
                 <span
                   style={{
-                    fontSize: "20px",
+                    fontSize: "24px",
                     color: "#9ca3af",
                     marginTop: "-4px",
                   }}
@@ -87,7 +87,7 @@ export async function GET() {
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "32px",
+              gap: "40px",
               flex: 1,
             }}
           >
@@ -98,36 +98,35 @@ export async function GET() {
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "48px",
+                padding: "60px",
                 background:
                   "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)",
-                borderRadius: "20px",
+                borderRadius: "24px",
                 border: "2px solid rgba(168, 85, 247, 0.2)",
                 flex: 1,
               }}
             >
               <span
                 style={{
-                  fontSize: "56px",
+                  fontSize: "68px",
                   fontWeight: "700",
                   color: "#ffffff",
                   textAlign: "center",
-                  lineHeight: 1.2,
+                  lineHeight: 1.15,
                   letterSpacing: "-0.03em",
-                  marginBottom: "20px",
+                  marginBottom: "12px",
                 }}
               >
                 Football
               </span>
               <span
                 style={{
-                  fontSize: "56px",
+                  fontSize: "68px",
                   fontWeight: "700",
                   color: "#ffffff",
                   textAlign: "center",
-                  lineHeight: 1.2,
+                  lineHeight: 1.15,
                   letterSpacing: "-0.03em",
-                  marginBottom: "24px",
                 }}
               >
                 Squares & Pick&apos;em
@@ -138,7 +137,7 @@ export async function GET() {
             <div
               style={{
                 display: "flex",
-                gap: "20px",
+                gap: "24px",
               }}
             >
               <div
@@ -146,39 +145,40 @@ export async function GET() {
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "24px",
+                  padding: "32px 24px",
                   backgroundColor: "rgba(31, 41, 55, 0.6)",
-                  borderRadius: "14px",
+                  borderRadius: "16px",
                   border: "1px solid rgba(75, 85, 99, 0.3)",
                   alignItems: "center",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "32px",
-                    marginBottom: "12px",
+                    fontSize: "42px",
+                    marginBottom: "14px",
                   }}
                 >
                   🎯
                 </span>
                 <span
                   style={{
-                    fontSize: "20px",
+                    fontSize: "24px",
                     fontWeight: "700",
                     color: "#ffffff",
-                    marginBottom: "8px",
+                    marginBottom: "10px",
                   }}
                 >
                   Fair & Transparent
                 </span>
                 <span
                   style={{
-                    fontSize: "16px",
+                    fontSize: "17px",
                     color: "#9ca3af",
                     textAlign: "center",
+                    lineHeight: 1.3,
                   }}
                 >
-                  Uses chainlink oracles for game results
+                  Chainlink oracles fetch game results
                 </span>
               </div>
 
@@ -187,36 +187,37 @@ export async function GET() {
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "24px",
+                  padding: "32px 24px",
                   backgroundColor: "rgba(31, 41, 55, 0.6)",
-                  borderRadius: "14px",
+                  borderRadius: "16px",
                   border: "1px solid rgba(75, 85, 99, 0.3)",
                   alignItems: "center",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "32px",
-                    marginBottom: "12px",
+                    fontSize: "42px",
+                    marginBottom: "14px",
                   }}
                 >
                   ⚡
                 </span>
                 <span
                   style={{
-                    fontSize: "20px",
+                    fontSize: "24px",
                     fontWeight: "700",
                     color: "#ffffff",
-                    marginBottom: "8px",
+                    marginBottom: "10px",
                   }}
                 >
                   Automated Payouts
                 </span>
                 <span
                   style={{
-                    fontSize: "16px",
+                    fontSize: "17px",
                     color: "#9ca3af",
                     textAlign: "center",
+                    lineHeight: 1.3,
                   }}
                 >
                   Receieve prizes permissionlessly
@@ -228,36 +229,37 @@ export async function GET() {
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  padding: "24px",
+                  padding: "32px 24px",
                   backgroundColor: "rgba(31, 41, 55, 0.6)",
-                  borderRadius: "14px",
+                  borderRadius: "16px",
                   border: "1px solid rgba(75, 85, 99, 0.3)",
                   alignItems: "center",
                 }}
               >
                 <span
                   style={{
-                    fontSize: "32px",
-                    marginBottom: "12px",
+                    fontSize: "42px",
+                    marginBottom: "14px",
                   }}
                 >
                   🚀
                 </span>
                 <span
                   style={{
-                    fontSize: "20px",
+                    fontSize: "24px",
                     fontWeight: "700",
                     color: "#ffffff",
-                    marginBottom: "8px",
+                    marginBottom: "10px",
                   }}
                 >
                   Easy Contest Setup
                 </span>
                 <span
                   style={{
-                    fontSize: "16px",
+                    fontSize: "17px",
                     color: "#9ca3af",
                     textAlign: "center",
+                    lineHeight: 1.3,
                   }}
                 >
                   Create with any token in seconds
@@ -272,14 +274,14 @@ export async function GET() {
               display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
-              marginTop: "24px",
-              paddingTop: "18px",
+              marginTop: "28px",
+              paddingTop: "20px",
               borderTop: "1px solid rgba(75, 85, 99, 0.3)",
             }}
           >
             <span
               style={{
-                fontSize: "18px",
+                fontSize: "20px",
                 color: "#9ca3af",
               }}
             >
