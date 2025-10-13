@@ -33,14 +33,38 @@ export async function generateMetadata(): Promise<Metadata> {
   const pathname = headersList.get("x-pathname") || "/";
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${pathname}`;
+  const ogImageUrl = `${baseUrl}/api/og`;
+
+  const title = "Football - Ultimate Football Squares and Pick'em Experience";
+  const description =
+    "Create and join football squares contests with blockchain-powered fair play and instant payouts. The ultimate football boxes experience.";
 
   return {
-    title: "Football - Ultimate Football Squares and Pick Em Experience",
-    description:
-      "Create and join football squares contests with blockchain-powered fair play and instant payouts. The ultimate football boxes experience.",
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+      type: "website",
+      url: fullUrl,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
     other: generateFarcasterMetadata({
       appName,
-      imageUrl: `${baseUrl}/embed-image.png`,
+      imageUrl: ogImageUrl,
       splashImageUrl: `${baseUrl}/splash-image.png`,
       splashBackgroundColor: "#000000",
       url: fullUrl,

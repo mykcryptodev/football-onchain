@@ -11,21 +11,36 @@ interface FarcasterMiniappConfig {
 export function generateFarcasterMetadata(
   config: FarcasterMiniappConfig,
 ): Metadata["other"] {
-  return {
-    "fc:miniapp": JSON.stringify({
-      version: "next",
-      imageUrl: config.imageUrl,
-      button: {
-        title: `Launch ${config.appName}`,
-        action: {
-          type: "launch_miniapp",
-          name: config.appName,
-          url: config.url,
-          splashImageUrl: config.splashImageUrl,
-          splashBackgroundColor: config.splashBackgroundColor || "#000000",
-        },
+  const miniappEmbed = {
+    version: "1",
+    imageUrl: config.imageUrl,
+    button: {
+      title: `Launch ${config.appName}`,
+      action: {
+        type: "launch_miniapp",
+        name: config.appName,
+        url: config.url,
+        splashImageUrl: config.splashImageUrl,
+        splashBackgroundColor: config.splashBackgroundColor || "#000000",
       },
-    }),
+    },
+  };
+
+  // For backward compatibility
+  const frameEmbed = {
+    ...miniappEmbed,
+    button: {
+      ...miniappEmbed.button,
+      action: {
+        ...miniappEmbed.button.action,
+        type: "launch_frame",
+      },
+    },
+  };
+
+  return {
+    "fc:miniapp": JSON.stringify(miniappEmbed),
+    "fc:frame": JSON.stringify(frameEmbed),
   };
 }
 
