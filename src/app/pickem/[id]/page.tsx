@@ -87,6 +87,32 @@ export async function generateMetadata({
     const title = `${seasonTypeName} Week ${weekNumber} ${year} - Pick'em Contest #${contestId}`;
     const description = `Join this Pick'em contest! ${totalEntries} ${totalEntries === 1 ? "entry" : "entries"} so far. Blockchain-powered fair play with instant payouts.`;
 
+    // Farcaster mini app embed metadata
+    const miniappEmbed = {
+      version: "1",
+      imageUrl: ogImageUrl,
+      button: {
+        title: "🏈 Make Your Picks",
+        action: {
+          type: "launch_miniapp",
+          url: contestUrl,
+          name: "Football Boxes",
+        },
+      },
+    };
+
+    // For backward compatibility
+    const frameEmbed = {
+      ...miniappEmbed,
+      button: {
+        ...miniappEmbed.button,
+        action: {
+          ...miniappEmbed.button.action,
+          type: "launch_frame",
+        },
+      },
+    };
+
     return {
       title,
       description,
@@ -109,6 +135,10 @@ export async function generateMetadata({
         title,
         description,
         images: [ogImageUrl],
+      },
+      other: {
+        "fc:miniapp": JSON.stringify(miniappEmbed),
+        "fc:frame": JSON.stringify(frameEmbed),
       },
     };
   } catch (error) {
