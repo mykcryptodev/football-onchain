@@ -557,7 +557,6 @@ export default function ContestPicksView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">TokenId</TableHead>
                 <TableHead className="w-20">Rank</TableHead>
                 <TableHead>Participant</TableHead>
                 <TableHead className="w-32 text-right">Score</TableHead>
@@ -577,7 +576,6 @@ export default function ContestPicksView({
                     key={pick.tokenId}
                     className={isUserPick ? "bg-accent/50" : ""}
                   >
-                    <TableCell className="w-10">{pick.tokenId}</TableCell>
                     <TableCell className="w-20">
                       {displayRank ? (
                         <div className="flex items-center gap-1.5">
