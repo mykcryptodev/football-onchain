@@ -8,7 +8,7 @@ interface GameInfo {
   awayAbbreviation?: string;
   homeRecord: string;
   awayRecord: string;
-  kickoff: string;
+  kickoff: string; // ISO 8601 timestamp in UTC
   homeLogo?: string;
   awayLogo?: string;
   homeScore?: number;
@@ -203,6 +203,7 @@ export async function GET(request: NextRequest) {
     // Extract games from the events
     const games: GameInfo[] = espnData.events.map(event => {
       const competition = event.competitions[0];
+      const kickoff = competition?.date ?? event.date;
       if (!competition) {
         return {
           gameId: event.id,
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
           awayTeam: "TBD",
           homeRecord: "(0-0)",
           awayRecord: "(0-0)",
-          kickoff: new Date(event.date).toLocaleString(),
+          kickoff,
           status: "SCHEDULED",
         };
       }
@@ -225,7 +226,7 @@ export async function GET(request: NextRequest) {
           awayTeam: "TBD",
           homeRecord: "(0-0)",
           awayRecord: "(0-0)",
-          kickoff: new Date(event.date).toLocaleString(),
+          kickoff,
           status: "SCHEDULED",
         };
       }
@@ -264,7 +265,7 @@ export async function GET(request: NextRequest) {
         awayAbbreviation: awayTeam.team.abbreviation,
         homeRecord: homeTeam.records?.[0]?.summary || "(0-0)",
         awayRecord: awayTeam.records?.[0]?.summary || "(0-0)",
-        kickoff: new Date(competition.date).toLocaleString(),
+        kickoff,
         homeLogo: homeTeam.team.logo,
         awayLogo: awayTeam.team.logo,
         homeScore: homeTeam.score ? parseInt(homeTeam.score) : undefined,
