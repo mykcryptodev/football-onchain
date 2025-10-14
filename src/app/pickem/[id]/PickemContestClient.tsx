@@ -904,11 +904,7 @@ export default function PickemContestClient({
               onClick={handleShare}
             >
               <Share2 className="mr-2 h-4 w-4" />
-              {shareLoading
-                ? "Sharing..."
-                : isInMiniApp
-                  ? "Compose cast"
-                  : "Share picks"}
+              {shareLoading ? "Sharing..." : "Compose cast" }
             </Button>
           </DialogFooter>
         </DialogContent>
