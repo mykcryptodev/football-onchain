@@ -33,6 +33,7 @@ import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { formatKickoffTime } from "@/lib/date";
 import { toCaip19 } from "@/lib/utils";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
@@ -489,12 +490,7 @@ export default function PickemContestClient({
                     <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
                       <span>Game {index + 1}</span>
                       <span>
-                        {mounted
-                          ? (() => {
-                              const kickoffDate = new Date(game.kickoff);
-                              return `${kickoffDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })} ${kickoffDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
-                            })()
-                          : "Loading..."}
+                        {mounted ? formatKickoffTime(game.kickoff) : "Loading..."}
                       </span>
                     </div>
 

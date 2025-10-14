@@ -28,6 +28,7 @@ import {
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { Token, useTokens } from "@/hooks/useTokens";
+import { formatKickoffTime } from "@/lib/date";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -335,7 +336,7 @@ export default function CreatePickemForm() {
                 </span>
                 <span className="text-sm text-muted-foreground">
                   <Clock className="h-3 w-3 inline mr-1" />
-                  {new Date(game.kickoff).toLocaleString()}
+                  {formatKickoffTime(game.kickoff)}
                 </span>
               </div>
             ))}
