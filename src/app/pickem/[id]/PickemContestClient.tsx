@@ -1,7 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { AlertCircle, ArrowLeft, Clock, Shuffle } from "lucide-react";
+import { AlertCircle, ArrowLeft, Clock, Share2, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -24,6 +24,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -121,6 +129,8 @@ export default function PickemContestClient({
   const [picks, setPicks] = useState<Record<string, number>>({});
   const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
 
   // Prevent hydration mismatch by waiting for client mount
   useEffect(() => {
@@ -221,6 +231,65 @@ export default function PickemContestClient({
     });
   }, [games]);
 
+  const shareMessage = useMemo(() => {
+    const seasonLabel = SEASON_TYPE_LABELS[contest.seasonType];
+    return `I just submitted my picks for Week ${contest.weekNumber} of the ${seasonLabel} on Football Onchain! Think you can beat me?`;
+  }, [contest.seasonType, contest.weekNumber]);
+
+  const handleShareModalChange = (open: boolean) => {
+    setShareModalOpen(open);
+    if (!open) {
+      router.push("/pickem");
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl =
+      typeof window !== "undefined" ? window.location.href : undefined;
+    const shareText = shareUrl ? `${shareMessage}\n${shareUrl}` : shareMessage;
+
+    try {
+      setShareLoading(true);
+
+      if (isInMiniApp) {
+        const result = await sdk.actions.composeCast({
+          text: shareMessage,
+          embeds: shareUrl ? [shareUrl] : undefined,
+        });
+
+        if (result?.cast) {
+          toast.success("Cast posted to Farcaster");
+          handleShareModalChange(false);
+        } else {
+          toast.info("Cast sharing cancelled");
+        }
+      } else if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "Football Onchain Pick'em",
+          text: shareMessage,
+          url: shareUrl,
+        });
+        toast.success("Thanks for sharing your picks!");
+        handleShareModalChange(false);
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+        toast.success("Share message copied to clipboard");
+        handleShareModalChange(false);
+      } else {
+        toast.error("Sharing is not supported on this device");
+      }
+    } catch (error) {
+      if ((error as Error)?.name === "AbortError") {
+        toast.info("Share cancelled");
+      } else {
+        console.error("Error sharing picks:", error);
+        toast.error("Failed to share your picks");
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!contest || !account) return;
 
@@ -252,7 +321,7 @@ export default function PickemContestClient({
       });
 
       toast.success("Your picks have been submitted!");
-      router.push("/pickem");
+      setShareModalOpen(true);
     } catch (error) {
       console.error("Error submitting picks:", error);
       toast.error("Failed to submit picks");
@@ -408,22 +477,23 @@ export default function PickemContestClient({
   }
 
   return (
-    <div className="container mx-auto py-5 space-y-6">
-      <div className="flex items-center gap-4 px-2">
-        <Link href="/pickem">
-          <Button size="sm" variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <Badge
-          className="ml-auto"
-          variant={isSubmissionClosed ? "secondary" : "default"}
-        >
-          <Clock className="h-3 w-3 mr-1" />
-          {getTimeRemaining(contest.submissionDeadline)}
-        </Badge>
-      </div>
+    <>
+      <div className="container mx-auto py-5 space-y-6">
+        <div className="flex items-center gap-4 px-2">
+          <Link href="/pickem">
+            <Button size="sm" variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <Badge
+            className="ml-auto"
+            variant={isSubmissionClosed ? "secondary" : "default"}
+          >
+            <Clock className="h-3 w-3 mr-1" />
+            {getTimeRemaining(contest.submissionDeadline)}
+          </Badge>
+        </div>
       {/* Header */}
       <div className="flex items-center gap-4 px-2">
         <div>
@@ -793,15 +863,56 @@ export default function PickemContestClient({
       </div>
 
       {/* All Participants' Picks */}
-      <ContestPicksView
-        contestId={contest.id}
-        gameIds={contest.gameIds}
-        gamesFinalized={contest.gamesFinalized}
-        seasonType={contest.seasonType}
-        tiebreakerGameId={contest.tiebreakerGameId}
-        weekNumber={contest.weekNumber}
-        year={contest.year}
-      />
-    </div>
+        <ContestPicksView
+          contestId={contest.id}
+          gameIds={contest.gameIds}
+          gamesFinalized={contest.gamesFinalized}
+          seasonType={contest.seasonType}
+          tiebreakerGameId={contest.tiebreakerGameId}
+          weekNumber={contest.weekNumber}
+          year={contest.year}
+        />
+      </div>
+
+      <Dialog open={shareModalOpen} onOpenChange={handleShareModalChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share your picks</DialogTitle>
+            <DialogDescription>
+              Let your friends know you&apos;re in. Challenge them to join the
+              contest and see who comes out on top.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
+              {shareMessage}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleShareModalChange(false)}
+            >
+              Skip for now
+            </Button>
+            <Button
+              disabled={shareLoading}
+              type="button"
+              onClick={handleShare}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              {shareLoading
+                ? "Sharing..."
+                : isInMiniApp
+                  ? "Compose cast"
+                  : "Share picks"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
