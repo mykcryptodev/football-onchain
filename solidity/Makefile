@@ -43,3 +43,11 @@ deploy-base-verify         :; [ -f .env ] && set -a && source .env && set +a; SK
 
 # fork mainnet with Hardhat
 mainnet-fork    :; npx hardhat node --fork ${ETH_MAINNET_RPC_URL}
+
+# Oracle Fix Deployment
+deploy-fixed-oracle :; [ -f .env ] && set -a && source .env && set +a; forge script script/DeployFixedOracle.s.sol --rpc-url $(RPC_URL) --broadcast --verify -vvv
+deploy-fixed-oracle-base :; [ -f .env ] && set -a && source .env && set +a; forge script script/DeployFixedOracle.s.sol --rpc-url https://mainnet.base.org --broadcast -vvv
+deploy-oracle-steps :; ./scripts/deploy_oracle_steps.sh $(CHAINLINK_SUBSCRIPTION_ID)
+verify-oracle   :; [ -f .env ] && set -a && source .env && set +a; forge verify-contract $(ADDRESS) contracts/src/GameScoreOracle.sol:GameScoreOracle --chain base --constructor-args $$(cast abi-encode "constructor(address)" 0xf9B8fc078197181C841c296C876945aaa425B278) --watch
+fix-contest-0   :; [ -f .env ] && set -a && source .env && set +a; npx hardhat run scripts/fix_contest_0.ts --network base
+test-oracle-fix :; forge test --match-contract GameScoreOracleSortTest -vvv

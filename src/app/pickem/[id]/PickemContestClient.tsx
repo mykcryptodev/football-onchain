@@ -175,12 +175,8 @@ export default function PickemContestClient({
           gameIds.some(contestGameId => contestGameId === weekGame.gameId),
         );
 
-        setGames(
-          games.sort(
-            (a, b) =>
-              new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
-          ),
-        );
+        // Sort games by ID to match oracle's sorted order
+        setGames(games.sort((a, b) => a.gameId.localeCompare(b.gameId)));
       } catch (error) {
         console.error("Error fetching game info:", error);
         toast.error("Failed to load game information");
@@ -307,8 +303,12 @@ export default function PickemContestClient({
 
     setSubmitting(true);
     try {
+      // Sort gameIds to match oracle's sorted order before mapping picks
+      const sortedGameIds = [...contest.gameIds].sort((a, b) =>
+        a.localeCompare(b),
+      );
       // Convert picks to array format expected by contract
-      const picksArray = contest.gameIds.map(id => picks[id]);
+      const picksArray = sortedGameIds.map(id => picks[id]);
 
       // Don't format the entry fee - pass the raw bigint value as string
       // submitPredictions will handle the decimal conversion internally

@@ -38,7 +38,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     string public constant WEEK_GAMES_SOURCE =
         "const y=args[0],s=args[1],w=args[2];"
         "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
-        "const e=r.data?.events||[];let p=[BigInt(e.length)];"
+        "const e=(r.data?.events||[]).sort((a,b)=>a.id.localeCompare(b.id));let p=[BigInt(e.length)];"
         "for(let i=0;i<e.length;i+=3){"
         "let v=0n;"
         "if(i<e.length)v|=BigInt(e[i].id)<<170n;"
@@ -51,7 +51,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
     string public constant WEEK_RESULTS_SOURCE =
         "const y=args[0],s=args[1],w=args[2];"
         "const r=await Functions.makeHttpRequest({url:`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${y}&seasontype=${s}&week=${w}`});"
-        "const e=r.data?.events||[];let p=0n,c=0,latestGame=null,latestDate=0;"
+        "const e=(r.data?.events||[]).sort((a,b)=>a.id.localeCompare(b.id));let p=0n,c=0,latestGame=null,latestDate=0;"
         "for(let i=0;i<e.length;i++){const v=e[i],m=v.competitions[0].competitors;"
         "const h=m.find(t=>t.homeAway==='home'),a=m.find(t=>t.homeAway==='away');"
         "if(v.status.type.completed&&h&&a){if(+h.score>+a.score)p|=(1n<<BigInt(i));c++;}"

@@ -146,8 +146,13 @@ export default function ContestPicksView({
         gamesData.map((game: GameInfo) => [game.gameId, game]),
       );
 
-      // Order games to match the contest's gameIds order
-      const orderedGames = gameIds
+      // Sort gameIds to match oracle's sorted order
+      const sortedGameIds = [...gameIds].sort((a, b) =>
+        a.toString().localeCompare(b.toString()),
+      );
+
+      // Order games to match the sorted gameIds
+      const orderedGames = sortedGameIds
         .map(id => gamesMap.get(id))
         .filter((game): game is GameInfo => game !== undefined);
 

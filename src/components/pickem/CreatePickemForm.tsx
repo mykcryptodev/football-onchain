@@ -166,10 +166,14 @@ export default function CreatePickemForm() {
         throw new Error("Failed to fetch games");
       }
       const fetchedGames: GameInfo[] = await response.json();
-      setGames(fetchedGames);
+      // Sort games by ID to match oracle's sorted order
+      const sortedGames = fetchedGames.sort((a, b) =>
+        a.toString().localeCompare(b.toString()),
+      );
+      setGames(sortedGames);
       setShowGames(true);
       toast.success(
-        `Fetched ${fetchedGames.length} games for the week${needToRequest ? " (onchain request sent)" : ""}`,
+        `Fetched ${sortedGames.length} games for the week${needToRequest ? " (onchain request sent)" : ""}`,
       );
     } catch (error) {
       const e = error as Error;
