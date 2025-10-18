@@ -58,6 +58,7 @@ interface GameInfo {
   awayAbbreviation?: string;
   homeLogo?: string;
   awayLogo?: string;
+  kickoff: string; // ISO 8601 timestamp in UTC
 }
 
 interface ContestPicksViewProps {
@@ -91,6 +92,9 @@ export default function ContestPicksView({
   const [mounted, setMounted] = useState(false);
   const [allPicks, setAllPicks] = useState<ContestPick[]>([]);
   const [games, setGames] = useState<GameInfo[]>([]);
+  const [displayToOracleMapping, setDisplayToOracleMapping] = useState<
+    number[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [loadingLiveRankings, setLoadingLiveRankings] = useState(false);
@@ -146,17 +150,30 @@ export default function ContestPicksView({
         gamesData.map((game: GameInfo) => [game.gameId, game]),
       );
 
-      // Sort gameIds to match oracle's sorted order
+      // Sort gameIds to match oracle's sorted order (ascending string sort)
       const sortedGameIds = [...gameIds].sort((a, b) =>
         a.toString().localeCompare(b.toString()),
       );
 
-      // Order games to match the sorted gameIds
-      const orderedGames = sortedGameIds
+      // Get games in oracle order for proper indexing
+      const oracleOrderedGames = sortedGameIds
         .map(id => gamesMap.get(id))
         .filter((game): game is GameInfo => game !== undefined);
 
-      setGames(orderedGames);
+      // Sort games by kickoff time for display (chronological order)
+      const displayOrderedGames = [...oracleOrderedGames].sort(
+        (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+      );
+
+      // Create mapping from display order to oracle order
+      const displayToOracleIndex = displayOrderedGames.map(displayGame =>
+        oracleOrderedGames.findIndex(
+          oracleGame => oracleGame.gameId === displayGame.gameId,
+        ),
+      );
+
+      setGames(displayOrderedGames);
+      setDisplayToOracleMapping(displayToOracleIndex);
     } catch (error) {
       console.error("Error fetching games:", error);
     }
@@ -404,24 +421,28 @@ export default function ContestPicksView({
             <span className="text-xs">Hide picks</span>
           </Button>
         </div>
-        {picks.map((pick, gameIndex) => {
-          const game = games[gameIndex];
+        {picks.map((_, displayIndex) => {
+          const game = games[displayIndex];
           if (!game) return null;
 
-          const pickedAway = pick === 0;
-          const pickedHome = pick === 1;
-          const gameId = gameIds[gameIndex];
+          // Map display index to oracle index to get the correct pick
+          const oracleIndex = displayToOracleMapping[displayIndex];
+          const actualPick = picks[oracleIndex];
+
+          const pickedAway = actualPick === 0;
+          const pickedHome = actualPick === 1;
+          const gameId = game.gameId;
           const winner = gameResults.get(gameId);
 
           // Determine if pick is correct/wrong
           let pickStatus: "correct" | "wrong" | "pending" = "pending";
           if (winner !== null && winner !== undefined) {
-            pickStatus = pick === winner ? "correct" : "wrong";
+            pickStatus = actualPick === winner ? "correct" : "wrong";
           }
 
           return (
             <div
-              key={gameIndex}
+              key={displayIndex}
               className={`flex items-center gap-2 text-xs border rounded p-1.5 ${
                 pickStatus === "correct"
                   ? "bg-green-500/10 border-green-500/30"
@@ -432,7 +453,7 @@ export default function ContestPicksView({
             >
               {/* Game Number */}
               <span className="text-[10px] text-muted-foreground font-mono w-4">
-                {gameIndex + 1}
+                {displayIndex + 1}
               </span>
 
               {/* Away Team */}

@@ -166,9 +166,9 @@ export default function CreatePickemForm() {
         throw new Error("Failed to fetch games");
       }
       const fetchedGames: GameInfo[] = await response.json();
-      // Sort games by ID to match oracle's sorted order
+      // Sort games by ID to match oracle's sorted order (ascending string sort)
       const sortedGames = fetchedGames.sort((a, b) =>
-        a.toString().localeCompare(b.toString()),
+        a.gameId.localeCompare(b.gameId),
       );
       setGames(sortedGames);
       setShowGames(true);
