@@ -20,6 +20,7 @@ export interface Contest {
   title: string;
   description: string;
   payoutStrategy: string; // Address of the payout strategy contract
+  payoutTransactionHash?: string | null; // Transaction hash of the payout transaction
 }
 
 export interface PayoutInfo {

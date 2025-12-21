@@ -13,6 +13,7 @@ import { abi } from "@/constants/abis/contests";
 import {
   CACHE_TTL,
   getContestCacheKey,
+  getPayoutTxKey,
   redis,
   safeRedisOperation,
 } from "@/lib/redis";
@@ -52,53 +53,6 @@ export async function GET(
       return NextResponse.json(
         { error: "Contract address not configured" },
         { status: 500 },
-      );
-    }
-
-    // Check Redis cache first (if configured and not force refresh)
-    let cachedContest = null;
-    if (redis && !forceRefresh) {
-      const redisClient = redis; // Capture for TypeScript narrowing
-      const cacheKey = getContestCacheKey(contestId, chain.id);
-      cachedContest = await safeRedisOperation(
-        () => redisClient.get(cacheKey),
-        null,
-      );
-
-      if (cachedContest) {
-        const parsedContest =
-          typeof cachedContest === "string"
-            ? JSON.parse(cachedContest)
-            : cachedContest;
-
-        // If cached data doesn't have boxes, invalidate cache and fetch fresh
-        if (
-          !("boxes" in parsedContest) ||
-          !parsedContest.boxes ||
-          parsedContest.boxes.length === 0
-        ) {
-          // Try to delete the invalid cache entry
-          await safeRedisOperation(() => redisClient.del(cacheKey), null);
-        } else {
-          // Disable Next.js caching for cached responses too
-          const response = NextResponse.json(parsedContest);
-          response.headers.set(
-            "Cache-Control",
-            "no-store, no-cache, must-revalidate, proxy-revalidate",
-          );
-          response.headers.set("Pragma", "no-cache");
-          response.headers.set("Expires", "0");
-          response.headers.set("Surrogate-Control", "no-store");
-          return response;
-        }
-      }
-    } else if (forceRefresh) {
-      console.log(
-        `Force refresh requested for contest ${contestId}, bypassing cache`,
-      );
-    } else {
-      console.warn(
-        `Redis not configured, fetching contest ${contestId} from blockchain`,
       );
     }
 
@@ -176,6 +130,84 @@ export async function GET(
       payoutStrategy,
     } = contestData;
 
+    // Convert on-chain rows/cols to arrays of numbers for comparison
+    const onChainRows = rows.map((r: bigint) => parseInt(r.toString()));
+    const onChainCols = cols.map((c: bigint) => parseInt(c.toString()));
+
+    // Check Redis cache (if configured and not force refresh)
+    let cachedContest = null;
+    let shouldUseCache = false;
+    if (redis && !forceRefresh) {
+      const redisClient = redis; // Capture for TypeScript narrowing
+      const cacheKey = getContestCacheKey(contestId, chain.id);
+      cachedContest = await safeRedisOperation(
+        () => redisClient.get(cacheKey),
+        null,
+      );
+
+      if (cachedContest) {
+        const parsedContest =
+          typeof cachedContest === "string"
+            ? JSON.parse(cachedContest)
+            : cachedContest;
+
+        // Check if cached data has boxes
+        const hasBoxes =
+          "boxes" in parsedContest &&
+          parsedContest.boxes &&
+          parsedContest.boxes.length > 0;
+
+        // Check if randomValuesSet changed from false to true
+        const cachedRandomValuesSet = parsedContest.randomValuesSet ?? false;
+        const randomValuesJustSet = !cachedRandomValuesSet && randomValuesSet;
+
+        // Check if rows/cols have changed (compare arrays)
+        const rowsChanged =
+          !parsedContest.rows ||
+          JSON.stringify(parsedContest.rows) !== JSON.stringify(onChainRows);
+        const colsChanged =
+          !parsedContest.cols ||
+          JSON.stringify(parsedContest.cols) !== JSON.stringify(onChainCols);
+
+        // If random numbers were just set or rows/cols changed, invalidate cache
+        if (randomValuesJustSet || rowsChanged || colsChanged) {
+          console.log(
+            `Invalidating cache for contest ${contestId}: randomValuesSet=${randomValuesJustSet}, rowsChanged=${rowsChanged}, colsChanged=${colsChanged}`,
+          );
+          await safeRedisOperation(() => redisClient.del(cacheKey), null);
+          cachedContest = null;
+        } else if (hasBoxes) {
+          // Cache is valid and has boxes, use cached data
+          shouldUseCache = true;
+        }
+      }
+    } else if (forceRefresh) {
+      console.log(
+        `Force refresh requested for contest ${contestId}, bypassing cache`,
+      );
+    } else {
+      console.warn(
+        `Redis not configured, fetching contest ${contestId} from blockchain`,
+      );
+    }
+
+    // Return cached data if it's valid and fresh
+    if (shouldUseCache && cachedContest) {
+      const parsedContest =
+        typeof cachedContest === "string"
+          ? JSON.parse(cachedContest)
+          : cachedContest;
+      const response = NextResponse.json(parsedContest);
+      response.headers.set(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, proxy-revalidate",
+      );
+      response.headers.set("Pragma", "no-cache");
+      response.headers.set("Expires", "0");
+      response.headers.set("Surrogate-Control", "no-store");
+      return response;
+    }
+
     // Fetch box owners data
     let boxesData: BoxOwner[] = [];
 
@@ -193,13 +225,27 @@ export async function GET(
       // Continue without boxes data if there's an error
     }
 
+    // Fetch payout transaction hash from Redis if payouts have been made
+    let payoutTransactionHash: string | null = null;
+    if (payoutsPaid.totalPayoutsMade > 0 && redis) {
+      const redisClient = redis; // Capture for TypeScript narrowing
+      const payoutTxKey = getPayoutTxKey(contestId, chain.id);
+      const storedTxHash = await safeRedisOperation(
+        () => redisClient.get(payoutTxKey),
+        null,
+      );
+      if (storedTxHash && typeof storedTxHash === "string") {
+        payoutTransactionHash = storedTxHash;
+      }
+    }
+
     // Format the contest data
     const formattedContestData = {
       id: id.toString(),
       gameId: gameId.toString(),
       creator,
-      rows: rows.map((r: bigint) => parseInt(r.toString())),
-      cols: cols.map((c: bigint) => parseInt(c.toString())),
+      rows: onChainRows,
+      cols: onChainCols,
       boxCost: {
         currency: boxCost.currency,
         amount: boxCost.amount.toString(),
@@ -215,6 +261,7 @@ export async function GET(
       title,
       description,
       payoutStrategy,
+      payoutTransactionHash,
       boxes: JSON.parse(stringify(boxesData)),
     };
 

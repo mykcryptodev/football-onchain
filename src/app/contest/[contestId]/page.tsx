@@ -85,6 +85,7 @@ export default function ContestPage() {
           title: contestData.title,
           description: contestData.description,
           payoutStrategy: contestData.payoutStrategy,
+          payoutTransactionHash: contestData.payoutTransactionHash || null,
         };
 
         // Fetch real game score from oracle
@@ -315,6 +316,7 @@ export default function ContestPage() {
         title: contestData.title,
         description: contestData.description,
         payoutStrategy: contestData.payoutStrategy,
+        payoutTransactionHash: contestData.payoutTransactionHash || null,
       };
 
       // Update box owners with fresh data

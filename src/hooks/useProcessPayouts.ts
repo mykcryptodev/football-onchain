@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { getContract, prepareContractCall } from "thirdweb";
-import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
+import {
+  useActiveAccount,
+  useSendAndConfirmTransaction,
+} from "thirdweb/react";
 
 import { chain, contests } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
+import { getPayoutTxKey, redis, safeRedisOperation } from "@/lib/redis";
 import { client } from "@/providers/Thirdweb";
 
 /**
@@ -27,7 +31,7 @@ export function useProcessPayouts() {
 
   const handleProcessPayouts = async (
     contestId: number,
-    onSuccess?: () => void,
+    onSuccess?: (txHash?: string) => void,
     onError?: (error: Error) => void,
   ) => {
     if (!account) {
@@ -49,9 +53,37 @@ export function useProcessPayouts() {
       });
 
       // Execute the transaction
-      const result = sendTransaction(transaction, {
-        onSuccess: () => {
-          onSuccess?.();
+      sendTransaction(transaction, {
+        onSuccess: async receipt => {
+          // Extract transaction hash from receipt
+          // The receipt from useSendAndConfirmTransaction should have transactionHash
+          const txHash =
+            (receipt as { transactionHash?: string })?.transactionHash ||
+            (receipt as { hash?: string })?.hash ||
+            undefined;
+
+          if (txHash) {
+            console.log(
+              `Payout transaction hash for contest ${contestId}:`,
+              txHash,
+            );
+
+            // Store transaction hash in Redis if available
+            if (redis) {
+              const payoutTxKey = getPayoutTxKey(contestId.toString(), chain.id);
+              await safeRedisOperation(
+                () => redis.set(payoutTxKey, txHash),
+                null,
+              );
+            }
+          } else {
+            console.warn(
+              `Could not extract transaction hash from receipt for contest ${contestId}`,
+              receipt,
+            );
+          }
+
+          onSuccess?.(txHash);
         },
         onError: error => {
           console.error(
@@ -62,8 +94,6 @@ export function useProcessPayouts() {
           onError?.(error as Error);
         },
       });
-
-      return result;
     } catch (err) {
       console.error("Error processing payouts:", err);
       const error = err as Error;
