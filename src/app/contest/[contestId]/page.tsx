@@ -19,6 +19,7 @@ import {
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useFetchGameData } from "@/hooks/useFetchGameData";
+import { useFetchScoreChanges } from "@/hooks/useFetchScoreChanges";
 import { useProcessPayouts } from "@/hooks/useProcessPayouts";
 import { useRandomNumbers } from "@/hooks/useRandomNumbers";
 
@@ -179,6 +180,11 @@ export default function ContestPage() {
 
   const { handleFetchGameData, isLoading: isSyncingScoresOnchain } =
     useFetchGameData();
+
+  const {
+    handleFetchScoreChanges: fetchScoreChanges,
+    isLoading: isFetchingScoreChanges,
+  } = useFetchScoreChanges();
 
   const handleClaimBoxes = async () => {
     if (!selectedBoxes || selectedBoxes.length === 0) {
@@ -416,6 +422,38 @@ export default function ContestPage() {
     }
   };
 
+  const handleFetchScoreChangesOnchain = async () => {
+    if (!contest) {
+      console.warn("No contest data available");
+      return;
+    }
+
+    try {
+      await fetchScoreChanges(
+        contest.gameId,
+        // onSuccess callback
+        async () => {
+          toast.success(
+            "Score changes fetch initiated successfully! This may take a few minutes to complete.",
+          );
+        },
+        // onError callback
+        error => {
+          console.error("Failed to fetch score changes:", error);
+          toast.error(
+            error.message || "Failed to fetch score changes. Please try again.",
+          );
+        },
+      );
+    } catch (error) {
+      console.error("Failed to fetch score changes:", error);
+      toast.error(
+        (error as Error).message ||
+          "Failed to fetch score changes. Please try again.",
+      );
+    }
+  };
+
   const handleViewTransactionHistory = () => {
     // TODO: Implement transaction history view logic
     console.log("Viewing transaction history for contest:", contestId);
@@ -492,11 +530,13 @@ export default function ContestPage() {
             {/* Contest Actions */}
             <ContestActions
               contest={contest}
+              isFetchingScoreChanges={isFetchingScoreChanges}
               isProcessingPayouts={isProcessingPayouts}
               isRefreshingContestData={refreshingContestData}
               isRefreshingGameScores={refreshingGameScores}
               isRequestingRandomNumbers={isRequestingRandomNumbers}
               isSyncingScoresOnchain={isSyncingScoresOnchain}
+              onFetchScoreChanges={handleFetchScoreChangesOnchain}
               onProcessPayouts={handleProcessPayouts}
               onRefreshContestData={handleRefreshContestData}
               onRefreshGameScores={handleRefreshGameScores}

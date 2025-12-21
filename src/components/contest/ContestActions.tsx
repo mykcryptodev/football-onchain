@@ -11,12 +11,14 @@ interface ContestActionsProps {
   onRefreshContestData?: () => void;
   onProcessPayouts?: () => void;
   onSyncScoresOnchain?: () => Promise<void>;
+  onFetchScoreChanges?: () => Promise<void>;
   onViewTransactionHistory?: () => void;
   isRequestingRandomNumbers?: boolean;
   isRefreshingContestData?: boolean;
   isRefreshingGameScores?: boolean;
   isProcessingPayouts?: boolean;
   isSyncingScoresOnchain?: boolean;
+  isFetchingScoreChanges?: boolean;
 }
 
 export function ContestActions({
@@ -26,12 +28,14 @@ export function ContestActions({
   onRefreshContestData,
   onProcessPayouts,
   onSyncScoresOnchain,
+  onFetchScoreChanges,
   onViewTransactionHistory,
   isRequestingRandomNumbers = false,
   isRefreshingContestData = false,
   isRefreshingGameScores = false,
   isProcessingPayouts = false,
   isSyncingScoresOnchain = false,
+  isFetchingScoreChanges = false,
 }: ContestActionsProps) {
   const strategyType = getPayoutStrategyType(contest.payoutStrategy);
 
@@ -77,6 +81,19 @@ export function ContestActions({
         >
           {isSyncingScoresOnchain ? "Syncing..." : "Sync Scores Onchain"}
         </Button>
+        {strategyType === PayoutStrategyType.SCORE_CHANGES &&
+          contest.randomValuesSet && (
+            <Button
+              className="w-full"
+              disabled={isFetchingScoreChanges}
+              variant="outline"
+              onClick={onFetchScoreChanges}
+            >
+              {isFetchingScoreChanges
+                ? "Fetching..."
+                : "Fetch Score Changes"}
+            </Button>
+          )}
         {contest.randomValuesSet && (
           <Button
             className="w-full"
