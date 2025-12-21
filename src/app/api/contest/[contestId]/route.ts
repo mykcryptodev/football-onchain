@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createThirdwebClient, getContract, readContract } from "thirdweb";
+import {
+  createThirdwebClient,
+  getContract,
+  readContract,
+  ZERO_ADDRESS,
+} from "thirdweb";
 import { stringify } from "thirdweb/utils";
 
 import { BoxOwner } from "@/components/contest/types";
@@ -26,8 +31,10 @@ export async function GET(
   // Check if this is a force refresh request
   const url = new URL(request.url);
   const forceRefresh = url.searchParams.get("forceRefresh") === "true";
+  let contestId: string | undefined;
   try {
-    const { contestId } = await params;
+    const resolvedParams = await params;
+    contestId = resolvedParams.contestId;
 
     if (!contestId) {
       return NextResponse.json(
@@ -46,34 +53,43 @@ export async function GET(
     // Check Redis cache first (if configured and not force refresh)
     let cachedContest = null;
     if (redis && !forceRefresh) {
-      const cacheKey = getContestCacheKey(contestId, chain.id);
-      cachedContest = await redis.get(cacheKey);
+      try {
+        const cacheKey = getContestCacheKey(contestId, chain.id);
+        cachedContest = await redis.get(cacheKey);
 
-      if (cachedContest) {
-        const parsedContest =
-          typeof cachedContest === "string"
-            ? JSON.parse(cachedContest)
-            : cachedContest;
+        if (cachedContest) {
+          const parsedContest =
+            typeof cachedContest === "string"
+              ? JSON.parse(cachedContest)
+              : cachedContest;
 
-        // If cached data doesn't have boxes, invalidate cache and fetch fresh
-        if (
-          !("boxes" in parsedContest) ||
-          !parsedContest.boxes ||
-          parsedContest.boxes.length === 0
-        ) {
-          await redis.del(cacheKey);
-        } else {
-          // Disable Next.js caching for cached responses too
-          const response = NextResponse.json(parsedContest);
-          response.headers.set(
-            "Cache-Control",
-            "no-store, no-cache, must-revalidate, proxy-revalidate",
-          );
-          response.headers.set("Pragma", "no-cache");
-          response.headers.set("Expires", "0");
-          response.headers.set("Surrogate-Control", "no-store");
-          return response;
+          // If cached data doesn't have boxes, invalidate cache and fetch fresh
+          if (
+            !("boxes" in parsedContest) ||
+            !parsedContest.boxes ||
+            parsedContest.boxes.length === 0
+          ) {
+            try {
+              await redis.del(cacheKey);
+            } catch (delError) {
+              console.warn("Error deleting cache key:", delError);
+            }
+          } else {
+            // Disable Next.js caching for cached responses too
+            const response = NextResponse.json(parsedContest);
+            response.headers.set(
+              "Cache-Control",
+              "no-store, no-cache, must-revalidate, proxy-revalidate",
+            );
+            response.headers.set("Pragma", "no-cache");
+            response.headers.set("Expires", "0");
+            response.headers.set("Surrogate-Control", "no-store");
+            return response;
+          }
         }
+      } catch (redisError) {
+        console.error("Redis error (continuing without cache):", redisError);
+        // Continue without cache if Redis fails
       }
     } else if (forceRefresh) {
       console.log(
@@ -95,11 +111,50 @@ export async function GET(
     });
 
     // Call the getContestData function to get contest data
-    const contestData = await readContract({
-      contract,
-      method: "getContestData",
-      params: [parseInt(contestId)],
-    });
+    let contestData;
+    try {
+      contestData = await readContract({
+        contract,
+        method: "getContestData",
+        params: [parseInt(contestId)],
+      });
+
+      // Validate that we got valid contest data
+      if (!contestData) {
+        throw new Error("Contest data is null or undefined");
+      }
+
+      // Check if contest exists (creator should not be zero address for valid contests)
+      if (!contestData.creator || contestData.creator === ZERO_ADDRESS) {
+        return NextResponse.json(
+          { error: "Contest not found" },
+          { status: 404 },
+        );
+      }
+    } catch (contractError) {
+      console.error("Error calling getContestData:", contractError);
+      console.error("Contest ID:", contestId);
+      console.error("Contract address:", CONTRACTS_ADDRESS);
+      console.error("Chain ID:", chain.id);
+
+      // If it's a revert error, return 404 instead of 500
+      const errorMessage =
+        contractError instanceof Error
+          ? contractError.message
+          : String(contractError);
+      if (
+        errorMessage.includes("revert") ||
+        errorMessage.includes("not found") ||
+        errorMessage.includes("does not exist")
+      ) {
+        return NextResponse.json(
+          { error: "Contest not found" },
+          { status: 404 },
+        );
+      }
+
+      throw contractError;
+    }
 
     // Extract the data from the returned ContestView struct
     const {
@@ -113,6 +168,7 @@ export async function GET(
       payoutsPaid,
       totalRewards,
       boxesClaimed,
+      randomValues,
       randomValuesSet,
       title,
       description,
@@ -163,12 +219,17 @@ export async function GET(
 
     // Cache the contest data with 1 hour TTL (if Redis is configured)
     if (redis) {
-      const cacheKey = getContestCacheKey(contestId, chain.id);
-      await redis.setex(
-        cacheKey,
-        CACHE_TTL.CONTEST,
-        JSON.stringify(formattedContestData),
-      );
+      try {
+        const cacheKey = getContestCacheKey(contestId, chain.id);
+        await redis.setex(
+          cacheKey,
+          CACHE_TTL.CONTEST,
+          JSON.stringify(formattedContestData),
+        );
+      } catch (redisError) {
+        console.warn("Error caching contest data:", redisError);
+        // Continue even if caching fails
+      }
     }
 
     // Disable Next.js caching to ensure fresh data
@@ -184,8 +245,22 @@ export async function GET(
     return response;
   } catch (error) {
     console.error("Error fetching contest data:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", {
+      message: errorMessage,
+      stack: errorStack,
+      contestId: contestId || "unknown",
+      contractAddress: CONTRACTS_ADDRESS,
+      chainId: chain.id,
+    });
     return NextResponse.json(
-      { error: "Failed to fetch contest data" },
+      {
+        error: "Failed to fetch contest data",
+        details:
+          process.env.NODE_ENV === "development" ? errorMessage : undefined,
+      },
       { status: 500 },
     );
   }

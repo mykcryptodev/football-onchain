@@ -4,7 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { getContract, prepareContractCall, toUnits } from "thirdweb";
+import {
+  getContract,
+  prepareContractCall,
+  toUnits,
+  ZERO_ADDRESS,
+} from "thirdweb";
 import { TokenIcon, TokenProvider, TransactionButton } from "thirdweb/react";
 import { z } from "zod";
 
@@ -184,9 +189,7 @@ export function CreateContestForm() {
 
     // Get currency address (use zero address for native ETH)
     const currencyAddress =
-      selectedToken.symbol === "ETH"
-        ? "0x0000000000000000000000000000000000000000"
-        : selectedToken.address;
+      selectedToken.symbol === "ETH" ? ZERO_ADDRESS : selectedToken.address;
 
     // Get payout strategy address based on selection
     const payoutStrategyAddress =
