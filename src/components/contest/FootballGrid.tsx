@@ -184,29 +184,25 @@ export function FootballGrid({
                       }
                     }}
                   >
-                    <div className="font-mono text-xs">{boxPosition}</div>
-                    {box?.owner && box.owner !== ZERO_ADDRESS && (
-                      <div className="flex flex-col items-center gap-1">
-                        {isRealUser(box.owner) && (
-                          <AccountProvider address={box.owner} client={client}>
-                            <div className="flex flex-col items-center gap-1">
-                              <AccountAvatar
-                                fallbackComponent={
-                                  <Blobbie
-                                    address={box.owner}
-                                    className="size-6 rounded-full"
-                                  />
-                                }
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  borderRadius: "100%",
-                                }}
-                              />
-                            </div>
-                          </AccountProvider>
-                        )}
-                      </div>
+                    {!isClaimedByUser && (
+                      <div className="font-mono text-xs">{boxPosition}</div>
+                    )}
+                    {isClaimedByUser && (
+                      <AccountProvider address={box.owner} client={client}>
+                        <AccountAvatar
+                          fallbackComponent={
+                            <Blobbie
+                              address={box.owner}
+                              className="size-6 rounded-full"
+                            />
+                          }
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "100%",
+                          }}
+                        />
+                      </AccountProvider>
                     )}
                   </div>
                 );
