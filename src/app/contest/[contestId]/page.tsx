@@ -15,6 +15,7 @@ import {
   GameScore,
   GameScores,
   PayoutsCard,
+  UserProfileModal,
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
@@ -33,6 +34,10 @@ export default function ContestPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingContestData, setRefreshingContestData] = useState(false);
   const [refreshingGameScores, setRefreshingGameScores] = useState(false);
+  const [selectedUserAddress, setSelectedUserAddress] = useState<string | null>(
+    null,
+  );
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Fetch contest data from API
   useEffect(() => {
@@ -165,6 +170,11 @@ export default function ContestPage() {
         return [...prev, boxPosition];
       }
     });
+  };
+
+  const handleClaimedBoxClick = (address: string) => {
+    setSelectedUserAddress(address);
+    setIsProfileModalOpen(true);
   };
 
   const { handleRequestRandomNumbers, isLoading: isRequestingRandomNumbers } =
@@ -509,6 +519,7 @@ export default function ContestPage() {
               isClaimingBoxes={isClaimingBoxes}
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
+              onClaimedBoxClick={handleClaimedBoxClick}
               onClaimBoxes={handleClaimBoxes}
             />
           </div>
@@ -549,6 +560,13 @@ export default function ContestPage() {
           </div>
         </div>
       </main>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        address={selectedUserAddress}
+        open={isProfileModalOpen}
+        onOpenChange={setIsProfileModalOpen}
+      />
     </div>
   );
 }

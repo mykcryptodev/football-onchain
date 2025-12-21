@@ -10,7 +10,12 @@ import { stringify } from "thirdweb/utils";
 import { BoxOwner } from "@/components/contest/types";
 import { boxes, chain, contests } from "@/constants";
 import { abi } from "@/constants/abis/contests";
-import { CACHE_TTL, getContestCacheKey, redis } from "@/lib/redis";
+import {
+  CACHE_TTL,
+  getContestCacheKey,
+  redis,
+  safeRedisOperation,
+} from "@/lib/redis";
 import { getBoxOwnersFromThirdweb } from "@/lib/thirdweb-api";
 
 // Disable Next.js caching for this route
@@ -53,43 +58,39 @@ export async function GET(
     // Check Redis cache first (if configured and not force refresh)
     let cachedContest = null;
     if (redis && !forceRefresh) {
-      try {
-        const cacheKey = getContestCacheKey(contestId, chain.id);
-        cachedContest = await redis.get(cacheKey);
+      const redisClient = redis; // Capture for TypeScript narrowing
+      const cacheKey = getContestCacheKey(contestId, chain.id);
+      cachedContest = await safeRedisOperation(
+        () => redisClient.get(cacheKey),
+        null,
+      );
 
-        if (cachedContest) {
-          const parsedContest =
-            typeof cachedContest === "string"
-              ? JSON.parse(cachedContest)
-              : cachedContest;
+      if (cachedContest) {
+        const parsedContest =
+          typeof cachedContest === "string"
+            ? JSON.parse(cachedContest)
+            : cachedContest;
 
-          // If cached data doesn't have boxes, invalidate cache and fetch fresh
-          if (
-            !("boxes" in parsedContest) ||
-            !parsedContest.boxes ||
-            parsedContest.boxes.length === 0
-          ) {
-            try {
-              await redis.del(cacheKey);
-            } catch (delError) {
-              console.warn("Error deleting cache key:", delError);
-            }
-          } else {
-            // Disable Next.js caching for cached responses too
-            const response = NextResponse.json(parsedContest);
-            response.headers.set(
-              "Cache-Control",
-              "no-store, no-cache, must-revalidate, proxy-revalidate",
-            );
-            response.headers.set("Pragma", "no-cache");
-            response.headers.set("Expires", "0");
-            response.headers.set("Surrogate-Control", "no-store");
-            return response;
-          }
+        // If cached data doesn't have boxes, invalidate cache and fetch fresh
+        if (
+          !("boxes" in parsedContest) ||
+          !parsedContest.boxes ||
+          parsedContest.boxes.length === 0
+        ) {
+          // Try to delete the invalid cache entry
+          await safeRedisOperation(() => redisClient.del(cacheKey), null);
+        } else {
+          // Disable Next.js caching for cached responses too
+          const response = NextResponse.json(parsedContest);
+          response.headers.set(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+          );
+          response.headers.set("Pragma", "no-cache");
+          response.headers.set("Expires", "0");
+          response.headers.set("Surrogate-Control", "no-store");
+          return response;
         }
-      } catch (redisError) {
-        console.error("Redis error (continuing without cache):", redisError);
-        // Continue without cache if Redis fails
       }
     } else if (forceRefresh) {
       console.log(
@@ -219,17 +220,17 @@ export async function GET(
 
     // Cache the contest data with 1 hour TTL (if Redis is configured)
     if (redis) {
-      try {
-        const cacheKey = getContestCacheKey(contestId, chain.id);
-        await redis.setex(
-          cacheKey,
-          CACHE_TTL.CONTEST,
-          JSON.stringify(formattedContestData),
-        );
-      } catch (redisError) {
-        console.warn("Error caching contest data:", redisError);
-        // Continue even if caching fails
-      }
+      const redisClient = redis; // Capture for TypeScript narrowing
+      const cacheKey = getContestCacheKey(contestId, chain.id);
+      await safeRedisOperation(
+        () =>
+          redisClient.setex(
+            cacheKey,
+            CACHE_TTL.CONTEST,
+            JSON.stringify(formattedContestData),
+          ),
+        null,
+      );
     }
 
     // Disable Next.js caching to ensure fresh data
