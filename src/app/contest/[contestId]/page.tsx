@@ -7,6 +7,7 @@ import { ZERO_ADDRESS } from "thirdweb";
 
 import {
   BoxOwner,
+  CommentSection,
   Contest,
   ContestActions,
   ContestHeader,
@@ -15,10 +16,12 @@ import {
   GameScore,
   GameScores,
   PayoutsCard,
+  UserProfileModal,
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useFetchGameData } from "@/hooks/useFetchGameData";
+import { useFetchScoreChanges } from "@/hooks/useFetchScoreChanges";
 import { useProcessPayouts } from "@/hooks/useProcessPayouts";
 import { useRandomNumbers } from "@/hooks/useRandomNumbers";
 
@@ -32,6 +35,10 @@ export default function ContestPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingContestData, setRefreshingContestData] = useState(false);
   const [refreshingGameScores, setRefreshingGameScores] = useState(false);
+  const [selectedUserAddress, setSelectedUserAddress] = useState<string | null>(
+    null,
+  );
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Fetch contest data from API
   useEffect(() => {
@@ -79,6 +86,7 @@ export default function ContestPage() {
           title: contestData.title,
           description: contestData.description,
           payoutStrategy: contestData.payoutStrategy,
+          payoutTransactionHash: contestData.payoutTransactionHash || null,
         };
 
         // Fetch real game score from oracle
@@ -166,6 +174,11 @@ export default function ContestPage() {
     });
   };
 
+  const handleClaimedBoxClick = (address: string) => {
+    setSelectedUserAddress(address);
+    setIsProfileModalOpen(true);
+  };
+
   const { handleRequestRandomNumbers, isLoading: isRequestingRandomNumbers } =
     useRandomNumbers();
 
@@ -179,6 +192,11 @@ export default function ContestPage() {
 
   const { handleFetchGameData, isLoading: isSyncingScoresOnchain } =
     useFetchGameData();
+
+  const {
+    handleFetchScoreChanges: fetchScoreChanges,
+    isLoading: isFetchingScoreChanges,
+  } = useFetchScoreChanges();
 
   const handleClaimBoxes = async () => {
     if (!selectedBoxes || selectedBoxes.length === 0) {
@@ -299,6 +317,7 @@ export default function ContestPage() {
         title: contestData.title,
         description: contestData.description,
         payoutStrategy: contestData.payoutStrategy,
+        payoutTransactionHash: contestData.payoutTransactionHash || null,
       };
 
       // Update box owners with fresh data
@@ -416,6 +435,38 @@ export default function ContestPage() {
     }
   };
 
+  const handleFetchScoreChangesOnchain = async () => {
+    if (!contest) {
+      console.warn("No contest data available");
+      return;
+    }
+
+    try {
+      await fetchScoreChanges(
+        contest.gameId,
+        // onSuccess callback
+        async () => {
+          toast.success(
+            "Score changes fetch initiated successfully! This may take a few minutes to complete.",
+          );
+        },
+        // onError callback
+        error => {
+          console.error("Failed to fetch score changes:", error);
+          toast.error(
+            error.message || "Failed to fetch score changes. Please try again.",
+          );
+        },
+      );
+    } catch (error) {
+      console.error("Failed to fetch score changes:", error);
+      toast.error(
+        (error as Error).message ||
+          "Failed to fetch score changes. Please try again.",
+      );
+    }
+  };
+
   const handleViewTransactionHistory = () => {
     // TODO: Implement transaction history view logic
     console.log("Viewing transaction history for contest:", contestId);
@@ -472,6 +523,7 @@ export default function ContestPage() {
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
               onClaimBoxes={handleClaimBoxes}
+              onClaimedBoxClick={handleClaimedBoxClick}
             />
           </div>
 
@@ -492,11 +544,13 @@ export default function ContestPage() {
             {/* Contest Actions */}
             <ContestActions
               contest={contest}
+              isFetchingScoreChanges={isFetchingScoreChanges}
               isProcessingPayouts={isProcessingPayouts}
               isRefreshingContestData={refreshingContestData}
               isRefreshingGameScores={refreshingGameScores}
               isRequestingRandomNumbers={isRequestingRandomNumbers}
               isSyncingScoresOnchain={isSyncingScoresOnchain}
+              onFetchScoreChanges={handleFetchScoreChangesOnchain}
               onProcessPayouts={handleProcessPayouts}
               onRefreshContestData={handleRefreshContestData}
               onRefreshGameScores={handleRefreshGameScores}
@@ -508,7 +562,19 @@ export default function ContestPage() {
             />
           </div>
         </div>
+
+        {/* Comments Section */}
+        <div className="mt-8">
+          <CommentSection contestId={contestId} />
+        </div>
       </main>
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        address={selectedUserAddress}
+        open={isProfileModalOpen}
+        onOpenChange={setIsProfileModalOpen}
+      />
     </div>
   );
 }

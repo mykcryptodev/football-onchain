@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # Football Boxes Foundry Deployment Script
-# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK] [RPC_URL] [--skip-estimation]
+# Usage: ./scripts/deploy_foundry.sh <PRIVATE_KEY> [NETWORK] [RPC_URL] [--skip-estimation] [--resume] [--no-delays]
+# 
+# Environment variables:
+#   ADD_DEPLOYMENT_DELAYS=true|false  - Enable/disable delays between deployments (default: true)
+#   DEPLOYMENT_DELAY_SECONDS=N       - Seconds to wait between deployments (default: 10)
 
 set -e
 
@@ -47,18 +51,33 @@ fi
 
 PRIVATE_KEY=$1
 NETWORK=${2:-"base-sepolia"}
-CUSTOM_RPC_URL=$3
 SKIP_ESTIMATION=false
+RESUME_FLAG=""
+CUSTOM_RPC_URL=""
 
-# Check for --skip-estimation flag
+# Parse all arguments for flags and RPC URL
 for arg in "$@"; do
     case $arg in
         --skip-estimation)
             SKIP_ESTIMATION=true
-            shift
+            ;;
+        --resume)
+            RESUME_FLAG="--resume"
+            ;;
+        --no-delays)
+            ADD_DEPLOYMENT_DELAYS=false
+            ;;
+        http*)
+            # If it looks like a URL, treat it as custom RPC URL
+            CUSTOM_RPC_URL="$arg"
             ;;
     esac
 done
+
+# If NETWORK is a flag, reset it
+if [[ "$NETWORK" == --* ]]; then
+    NETWORK="base-sepolia"
+fi
 
 # Validate private key format
 if [[ ! $PRIVATE_KEY =~ ^0x[0-9a-fA-F]{64}$ ]]; then
@@ -164,11 +183,40 @@ fi
 
 # Run the actual deployment
 print_info "Deploying contracts..."
-forge script script/Deploy.s.sol:Deploy \
-    --rpc-url $RPC_URL \
-    --broadcast \
-    --ffi \
-    -vvvv
+
+# Check if we should resume from previous deployment
+if [ -z "$RESUME_FLAG" ]; then
+    if [ -f "broadcast/Deploy.s.sol/8453/run-latest.json" ] || [ -f "broadcast/Deploy.s.sol/84532/run-latest.json" ]; then
+        print_warning "Previous deployment artifacts found."
+        print_info "If deployment failed due to nonce gap, use --resume flag to continue."
+        print_info "If you want to start fresh, delete the broadcast directory first."
+    fi
+else
+    print_info "Resuming from previous deployment..."
+fi
+
+# Build forge arguments
+# Use --slow flag to add delays between transactions (helps prevent nonce gaps)
+FORGE_ARGS="--rpc-url $RPC_URL --broadcast --ffi --slow -vvvv"
+
+print_info "Using --slow flag to add delays between transactions"
+print_info "This helps prevent 'gapped-nonce' errors with smart contract wallets"
+print_info ""
+print_warning "If you still encounter nonce gaps:"
+print_info "  1. Wait 2-5 minutes for pending transactions to be mined"
+print_info "  2. Use --resume flag to continue from last successful transaction"
+print_info "  3. Check your account's nonce: cast nonce <ADDRESS> --rpc-url $RPC_URL"
+print_info ""
+
+# Add --resume flag if specified
+if [ -n "$RESUME_FLAG" ]; then
+    FORGE_ARGS="$FORGE_ARGS $RESUME_FLAG"
+    print_info "Using --resume flag to continue from previous deployment"
+fi
+
+print_info "Deploying with sequential transaction delays to prevent nonce gaps..."
+
+forge script script/Deploy.s.sol:Deploy $FORGE_ARGS
 
 if [ $? -eq 0 ]; then
     print_success "Deployment completed successfully!"

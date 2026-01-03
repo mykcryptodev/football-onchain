@@ -25,6 +25,7 @@ interface FootballGridProps {
   gameScore: GameScore | null;
   selectedBoxes: number[];
   onBoxClick: (tokenId: number) => void;
+  onClaimedBoxClick?: (address: string) => void;
   onClaimBoxes?: () => void;
   isClaimingBoxes?: boolean;
 }
@@ -35,6 +36,7 @@ export function FootballGrid({
   gameScore,
   selectedBoxes,
   onBoxClick,
+  onClaimedBoxClick,
   onClaimBoxes,
   isClaimingBoxes = false,
 }: FootballGridProps) {
@@ -159,6 +161,11 @@ export function FootballGrid({
                   isScoreChangeWinner(row, col);
 
                 const isWinner = isQuarterWinner || isScoreChangeWinnerBox;
+                
+                // Check if box is claimed by a real user
+                const isClaimedByUser = box?.owner && 
+                  box.owner !== ZERO_ADDRESS && 
+                  isRealUser(box.owner);
 
                 return (
                   <div
@@ -167,32 +174,35 @@ export function FootballGrid({
                       aspect-square border border-gray-300 p-1 text-xs text-center flex flex-col justify-center items-center
                       ${getBoxColor(boxPosition, expectedTokenId)}
                       ${isWinner ? "ring-2 ring-yellow-400 bg-yellow-200" : ""}
+                      ${isClaimedByUser ? "cursor-pointer hover:bg-green-300" : ""}
                     `}
-                    onClick={() => onBoxClick(boxPosition)}
+                    onClick={() => {
+                      if (isClaimedByUser && onClaimedBoxClick) {
+                        onClaimedBoxClick(box.owner);
+                      } else {
+                        onBoxClick(boxPosition);
+                      }
+                    }}
                   >
-                    <div className="font-mono text-xs">{boxPosition}</div>
-                    {box?.owner && box.owner !== ZERO_ADDRESS && (
-                      <div className="flex flex-col items-center gap-1">
-                        {isRealUser(box.owner) && (
-                          <AccountProvider address={box.owner} client={client}>
-                            <div className="flex flex-col items-center gap-1">
-                              <AccountAvatar
-                                fallbackComponent={
-                                  <Blobbie
-                                    address={box.owner}
-                                    className="size-6 rounded-full"
-                                  />
-                                }
-                                style={{
-                                  width: "24px",
-                                  height: "24px",
-                                  borderRadius: "100%",
-                                }}
-                              />
-                            </div>
-                          </AccountProvider>
-                        )}
-                      </div>
+                    {!isClaimedByUser && (
+                      <div className="font-mono text-xs">{boxPosition}</div>
+                    )}
+                    {isClaimedByUser && (
+                      <AccountProvider address={box.owner} client={client}>
+                        <AccountAvatar
+                          fallbackComponent={
+                            <Blobbie
+                              address={box.owner}
+                              className="size-6 rounded-full"
+                            />
+                          }
+                          style={{
+                            width: "24px",
+                            height: "24px",
+                            borderRadius: "100%",
+                          }}
+                        />
+                      </AccountProvider>
                     )}
                   </div>
                 );

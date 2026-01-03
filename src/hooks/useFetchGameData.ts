@@ -109,13 +109,15 @@ export function useFetchGameData() {
         }
 
         // Check if score changes are already stored
-        const totalScoreChanges = await readContract({
+        // Use areScoreChangesAvailable instead of getTotalScoreChanges to check
+        // if the actual packed data exists, not just the count
+        const scoreChangesAvailable = await readContract({
           contract: oracleContract,
-          method: "function getTotalScoreChanges(uint256) view returns (uint8)",
+          method: "function areScoreChangesAvailable(uint256 gameId) external view returns (bool)",
           params: [BigInt(gameId)],
         });
 
-        if (Number(totalScoreChanges) > 0) {
+        if (scoreChangesAvailable) {
           throw new Error("Score changes are already stored for this game");
         }
       }

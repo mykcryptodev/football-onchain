@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import {
-  formatEther,
   getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
@@ -15,10 +15,137 @@ interface PayoutsCardProps {
   scoreChangeCount?: number; // Optional: number of score changes (for score-changes strategy)
 }
 
+interface PayoutsFooterProps {
+  totalRewards: number;
+  totalAmountPaid: number;
+  totalPayoutsMade: number;
+  currencyAddress: string;
+}
+
+function PayoutsFooter({
+  totalRewards,
+  totalAmountPaid,
+  totalPayoutsMade,
+  currencyAddress,
+}: PayoutsFooterProps) {
+  const {
+    formattedValue: treasuryFeeFormatted,
+    isLoading: treasuryFeeLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(Math.floor(totalRewards * 0.02)),
+    currencyAddress,
+  });
+  const { formattedValue: amountPaidFormatted, isLoading: amountPaidLoading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(totalAmountPaid)),
+      currencyAddress,
+    });
+
+  return (
+    <div className="pt-2 border-t">
+      <div className="flex justify-between text-sm text-muted-foreground">
+        <span>Treasury Fee (2%):</span>
+        <span>{treasuryFeeLoading ? "..." : treasuryFeeFormatted}</span>
+      </div>
+      <div className="flex justify-between font-semibold mt-1">
+        <span>Total Payouts Made:</span>
+        <span>{totalPayoutsMade}</span>
+      </div>
+      <div className="flex justify-between text-sm">
+        <span>Amount Paid:</span>
+        <span>{amountPaidLoading ? "..." : amountPaidFormatted}</span>
+      </div>
+    </div>
+  );
+}
+
 export function PayoutsCard({
   contest,
   scoreChangeCount = 0,
 }: PayoutsCardProps) {
+  const currencyAddress = contest.boxCost.currency;
+
+  // Calculate payouts for both strategies at the top level (before any returns)
+  const quartersOnlyPayouts = getQuartersOnlyPayouts(contest.totalRewards);
+  const scoreChangesPayouts = getScoreChangesPayouts(
+    contest.totalRewards,
+    scoreChangeCount,
+  );
+
+  // Format quarters-only payouts (always call hooks at top level before any returns)
+  const { formattedValue: q1Formatted, isLoading: q1Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(quartersOnlyPayouts.q1.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: q2Formatted, isLoading: q2Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(quartersOnlyPayouts.q2.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: q3Formatted, isLoading: q3Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(quartersOnlyPayouts.q3.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: q4Formatted, isLoading: q4Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(quartersOnlyPayouts.q4.amount)),
+      currencyAddress,
+    });
+
+  // Format score changes payouts (always call hooks at top level)
+  const {
+    formattedValue: scoreChangesTotalFormatted,
+    isLoading: scoreChangesTotalLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(
+      Math.floor(scoreChangesPayouts.scoreChanges.totalAllocation),
+    ),
+    currencyAddress,
+  });
+  const {
+    formattedValue: perScoreChangeFormatted,
+    isLoading: perScoreChangeLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(Math.floor(scoreChangesPayouts.scoreChanges.perScoreChange)),
+    currencyAddress,
+  });
+  const {
+    formattedValue: quartersTotalFormatted,
+    isLoading: quartersTotalLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(
+      Math.floor(
+        scoreChangesPayouts.quarters.q1.amount +
+          scoreChangesPayouts.quarters.q2.amount +
+          scoreChangesPayouts.quarters.q3.amount +
+          scoreChangesPayouts.quarters.q4.amount,
+      ),
+    ),
+    currencyAddress,
+  });
+  const { formattedValue: scQ1Formatted, isLoading: scQ1Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(scoreChangesPayouts.quarters.q1.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: scQ2Formatted, isLoading: scQ2Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(scoreChangesPayouts.quarters.q2.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: scQ3Formatted, isLoading: scQ3Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(scoreChangesPayouts.quarters.q3.amount)),
+      currencyAddress,
+    });
+  const { formattedValue: scQ4Formatted, isLoading: scQ4Loading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(scoreChangesPayouts.quarters.q4.amount)),
+      currencyAddress,
+    });
+
   if (!contest.payoutStrategy) {
     return null;
   }
@@ -27,49 +154,44 @@ export function PayoutsCard({
   const strategyName = getStrategyDisplayName(strategyType);
 
   const renderQuartersOnlyPayouts = () => {
-    const payouts = getQuartersOnlyPayouts(contest.totalRewards);
-
     return (
       <div className="space-y-2">
         <div className="flex justify-between">
           <span>Q1 (15%):</span>
-          <span>{formatEther(payouts.q1.amount)} ETH</span>
+          <span>{q1Loading ? "..." : q1Formatted}</span>
         </div>
         <div className="flex justify-between">
           <span>Q2 (20%):</span>
-          <span>{formatEther(payouts.q2.amount)} ETH</span>
+          <span>{q2Loading ? "..." : q2Formatted}</span>
         </div>
         <div className="flex justify-between">
           <span>Q3 (15%):</span>
-          <span>{formatEther(payouts.q3.amount)} ETH</span>
+          <span>{q3Loading ? "..." : q3Formatted}</span>
         </div>
         <div className="flex justify-between">
           <span>Final (50%):</span>
-          <span>{formatEther(payouts.q4.amount)} ETH</span>
+          <span>{q4Loading ? "..." : q4Formatted}</span>
         </div>
       </div>
     );
   };
 
   const renderScoreChangesPayouts = () => {
-    const payouts = getScoreChangesPayouts(
-      contest.totalRewards,
-      scoreChangeCount,
-    );
-
     return (
       <div className="space-y-3">
         {/* Score Changes Section */}
         <div className="space-y-2">
           <div className="flex justify-between font-medium">
             <span>Score Changes (50%):</span>
-            <span>{formatEther(payouts.scoreChanges.totalAllocation)} ETH</span>
+            <span>
+              {scoreChangesTotalLoading ? "..." : scoreChangesTotalFormatted}
+            </span>
           </div>
           <div className="pl-4 text-sm text-muted-foreground">
             {scoreChangeCount > 0 ? (
               <div>
                 {scoreChangeCount} changes ×{" "}
-                {formatEther(payouts.scoreChanges.perScoreChange)} ETH each
+                {perScoreChangeLoading ? "..." : perScoreChangeFormatted} each
               </div>
             ) : (
               <div>Pending game completion</div>
@@ -81,24 +203,24 @@ export function PayoutsCard({
         <div className="space-y-2">
           <div className="flex justify-between font-medium">
             <span>Quarters (50%):</span>
-            <span>{formatEther(payouts.scoreChanges.totalAllocation)} ETH</span>
+            <span>{quartersTotalLoading ? "..." : quartersTotalFormatted}</span>
           </div>
           <div className="pl-4 space-y-1 text-sm">
             <div className="flex justify-between">
               <span>Q1 (7.5%):</span>
-              <span>{formatEther(payouts.quarters.q1.amount)} ETH</span>
+              <span>{scQ1Loading ? "..." : scQ1Formatted}</span>
             </div>
             <div className="flex justify-between">
               <span>Q2 (10%):</span>
-              <span>{formatEther(payouts.quarters.q2.amount)} ETH</span>
+              <span>{scQ2Loading ? "..." : scQ2Formatted}</span>
             </div>
             <div className="flex justify-between">
               <span>Q3 (7.5%):</span>
-              <span>{formatEther(payouts.quarters.q3.amount)} ETH</span>
+              <span>{scQ3Loading ? "..." : scQ3Formatted}</span>
             </div>
             <div className="flex justify-between">
               <span>Final (25%):</span>
-              <span>{formatEther(payouts.quarters.q4.amount)} ETH</span>
+              <span>{scQ4Loading ? "..." : scQ4Formatted}</span>
             </div>
           </div>
         </div>
@@ -121,20 +243,12 @@ export function PayoutsCard({
           ? renderQuartersOnlyPayouts()
           : renderScoreChangesPayouts()}
 
-        <div className="pt-2 border-t">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Treasury Fee (2%):</span>
-            <span>{formatEther(contest.totalRewards * 0.02)} ETH</span>
-          </div>
-          <div className="flex justify-between font-semibold mt-1">
-            <span>Total Payouts Made:</span>
-            <span>{contest.payoutsPaid.totalPayoutsMade}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Amount Paid:</span>
-            <span>{formatEther(contest.payoutsPaid.totalAmountPaid)} ETH</span>
-          </div>
-        </div>
+        <PayoutsFooter
+          currencyAddress={currencyAddress}
+          totalAmountPaid={contest.payoutsPaid.totalAmountPaid}
+          totalPayoutsMade={contest.payoutsPaid.totalPayoutsMade}
+          totalRewards={contest.totalRewards}
+        />
       </CardContent>
     </Card>
   );

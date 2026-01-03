@@ -448,6 +448,15 @@ contract Contests is ConfirmedOwner, IERC721Receiver {
         randomNumbers = RandomNumbers(randomNumbers_);
     }
 
+    /**
+        Sets The Address Of The Game Score Oracle Contract
+        @param gameScoreOracle_ game score oracle contract address - cannot be 0
+     */
+    function setGameScoreOracle(address gameScoreOracle_) external onlyOwner {
+        if (gameScoreOracle_ == address(0)) revert ZeroAddress();
+        gameScoreOracle = GameScoreOracle(gameScoreOracle_);
+    }
+
     ////////////////////////////////////////////////
     ///////////      READ FUNCTIONS      ///////////
     ////////////////////////////////////////////////
