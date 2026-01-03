@@ -69,12 +69,17 @@ export function useAdminContests(): UseAdminContestsReturn {
       try {
         await claimAllPrizes(contest.id);
       } catch (error) {
-        console.error(`Failed to distribute prizes for contest ${contest.id}:`, error);
+        console.error(
+          `Failed to distribute prizes for contest ${contest.id}:`,
+          error,
+        );
       }
     }
 
     // Refresh the list after all distributions
-    await queryClient.invalidateQueries({ queryKey: queryKeys.adminContests() });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.adminContests(),
+    });
   };
 
   return {
@@ -83,8 +88,8 @@ export function useAdminContests(): UseAdminContestsReturn {
     error: query.error as Error | null,
     distributePrizes: distributeMutation.mutate,
     isDistributing: (contestId: number) =>
-      distributeMutation.isPending && distributeMutation.variables === contestId,
+      distributeMutation.isPending &&
+      distributeMutation.variables === contestId,
     distributeAll,
   };
 }
-
