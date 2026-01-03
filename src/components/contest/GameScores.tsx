@@ -71,7 +71,9 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-sm font-semibold text-red-600">Home Team</div>
+            <div className="text-sm font-semibold">
+              {gameScore.homeTeamName || "Home Team"}
+            </div>
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-sm">Q1:</span>
@@ -125,7 +127,9 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
           </div>
 
           <div>
-            <div className="text-sm font-semibold text-blue-600">Away Team</div>
+            <div className="text-sm font-semibold">
+              {gameScore.awayTeamName || "Away Team"}
+            </div>
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-sm">Q1:</span>
