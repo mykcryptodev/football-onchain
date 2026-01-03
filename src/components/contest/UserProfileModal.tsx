@@ -14,8 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { client } from "@/providers/Thirdweb";
-import { getPayoutStrategyType } from "@/lib/payout-utils";
+import {
+  getPayoutStrategyType,
+  getQuartersOnlyPayouts,
+  getScoreChangesPayouts,
+} from "@/lib/payout-utils";
 import { Contest, GameScore, PayoutStrategyType, ScoringPlay } from "./types";
 
 interface UserProfileModalProps {
@@ -37,6 +42,88 @@ export function UserProfileModal({
 }: UserProfileModalProps) {
   const { profile, isLoading } = useUserProfile(address);
   const { isInMiniApp } = useIsInMiniApp();
+
+  // Calculate prize amounts for quarters and scoring plays
+  const getPrizeAmounts = () => {
+    if (!contest) return null;
+
+    const strategyType = getPayoutStrategyType(contest.payoutStrategy);
+    const currencyAddress = contest.boxCost.currency;
+
+    if (strategyType === PayoutStrategyType.QUARTERS_ONLY) {
+      const payouts = getQuartersOnlyPayouts(contest.totalRewards);
+      return {
+        q1: payouts.q1.amount,
+        q2: payouts.q2.amount,
+        q3: payouts.q3.amount,
+        q4: payouts.q4.amount,
+        scoreChange: 0,
+        currencyAddress,
+      };
+    } else {
+      const scoreChangeCount = gameScore?.scoringPlays?.length || 0;
+      const payouts = getScoreChangesPayouts(
+        contest.totalRewards,
+        scoreChangeCount,
+      );
+      return {
+        q1: payouts.quarters.q1.amount,
+        q2: payouts.quarters.q2.amount,
+        q3: payouts.quarters.q3.amount,
+        q4: payouts.quarters.q4.amount,
+        scoreChange: payouts.scoreChanges.perScoreChange,
+        currencyAddress,
+      };
+    }
+  };
+
+  const prizeAmounts = getPrizeAmounts();
+  const currencyAddress = contest?.boxCost.currency || "";
+
+  // Format prize amounts (hooks must be called at top level)
+  const { formattedValue: q1PrizeFormatted, isLoading: q1PrizeLoading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(prizeAmounts?.q1 || 0)),
+      currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+    });
+  const { formattedValue: q2PrizeFormatted, isLoading: q2PrizeLoading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(prizeAmounts?.q2 || 0)),
+      currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+    });
+  const { formattedValue: q3PrizeFormatted, isLoading: q3PrizeLoading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(prizeAmounts?.q3 || 0)),
+      currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+    });
+  const { formattedValue: q4PrizeFormatted, isLoading: q4PrizeLoading } =
+    useFormattedCurrency({
+      amount: BigInt(Math.floor(prizeAmounts?.q4 || 0)),
+      currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+    });
+  const {
+    formattedValue: scoreChangePrizeFormatted,
+    isLoading: scoreChangePrizeLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(Math.floor(prizeAmounts?.scoreChange || 0)),
+    currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+  });
+
+  // Helper to get formatted prize for a quarter
+  const getQuarterPrize = (quarter: number) => {
+    switch (quarter) {
+      case 1:
+        return q1PrizeLoading ? "..." : q1PrizeFormatted;
+      case 2:
+        return q2PrizeLoading ? "..." : q2PrizeFormatted;
+      case 3:
+        return q3PrizeLoading ? "..." : q3PrizeFormatted;
+      case 4:
+        return q4PrizeLoading ? "..." : q4PrizeFormatted;
+      default:
+        return "";
+    }
+  };
 
   // Calculate which quarters and scoring plays this box won
   const getBoxWins = () => {
@@ -225,15 +312,22 @@ export function UserProfileModal({
                             <div className="text-sm font-medium mb-2">
                               Won Quarters
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="space-y-2">
                               {boxWins.quarters.map(quarter => (
-                                <Badge
+                                <div
                                   key={quarter}
-                                  variant="default"
-                                  className="bg-emerald-500 hover:bg-emerald-600"
+                                  className="flex items-center justify-between p-2 bg-muted rounded border border-border"
                                 >
-                                  Q{quarter === 4 ? "4 (Final)" : quarter}
-                                </Badge>
+                                  <Badge
+                                    variant="default"
+                                    className="bg-emerald-500 hover:bg-emerald-600"
+                                  >
+                                    Q{quarter === 4 ? "4 (Final)" : quarter}
+                                  </Badge>
+                                  <span className="text-sm font-medium">
+                                    {getQuarterPrize(quarter)}
+                                  </span>
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -250,8 +344,15 @@ export function UserProfileModal({
                                   key={index}
                                   className="text-sm p-2 bg-muted rounded border border-border"
                                 >
-                                  <div className="font-medium">
-                                    Score Change #{index}
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="font-medium">
+                                      Score Change #{index}
+                                    </div>
+                                    <span className="text-sm font-medium">
+                                      {scoreChangePrizeLoading
+                                        ? "..."
+                                        : scoreChangePrizeFormatted}
+                                    </span>
                                   </div>
                                   <div className="text-muted-foreground text-xs mt-1">
                                     {play.text ||
