@@ -1,25 +1,23 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 
 import {
-  BoxOwner,
   CommentSection,
-  Contest,
   ContestActions,
   ContestHeader,
   ContestStats,
   FootballGrid,
-  GameScore,
   GameScores,
   PayoutsCard,
   UserProfileModal,
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
+import { useContestData } from "@/hooks/useContestData";
 import { useFetchGameData } from "@/hooks/useFetchGameData";
 import { useFetchScoreChanges } from "@/hooks/useFetchScoreChanges";
 import { useProcessPayouts } from "@/hooks/useProcessPayouts";
@@ -28,125 +26,24 @@ import { useRandomNumbers } from "@/hooks/useRandomNumbers";
 export default function ContestPage() {
   const params = useParams();
   const contestId = params.contestId as string;
-  const [contest, setContest] = useState<Contest | null>(null);
-  const [gameScore, setGameScore] = useState<GameScore | null>(null);
-  const [boxOwners, setBoxOwners] = useState<BoxOwner[]>([]);
+
+  // Use the new useContestData hook for data fetching and caching
+  const {
+    contest,
+    gameScore,
+    boxOwners,
+    isLoading: loading,
+    isRefreshing,
+    refreshContestData,
+    refreshGameScores,
+  } = useContestData(contestId);
+
+  // Local UI state
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshingContestData, setRefreshingContestData] = useState(false);
-  const [refreshingGameScores, setRefreshingGameScores] = useState(false);
   const [selectedUserAddress, setSelectedUserAddress] = useState<string | null>(
     null,
   );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
-  // Fetch contest data from API
-  useEffect(() => {
-    const fetchContestData = async () => {
-      setLoading(true);
-
-      try {
-        // Fetch contest data from API with cache-busting
-        const response = await fetch(
-          `/api/contest/${contestId}?t=${Date.now()}`,
-          {
-            cache: "no-store",
-            headers: {
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-            },
-          },
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch contest data");
-        }
-
-        const contestData = await response.json();
-
-        // Convert the API response to our Contest type
-        const contest: Contest = {
-          id: parseInt(contestData.id),
-          gameId: parseInt(contestData.gameId),
-          creator: contestData.creator,
-          rows: contestData.rows,
-          cols: contestData.cols,
-          boxCost: {
-            currency: contestData.boxCost.currency,
-            amount: parseInt(contestData.boxCost.amount),
-          },
-          boxesCanBeClaimed: contestData.boxesCanBeClaimed,
-          payoutsPaid: {
-            totalPayoutsMade: contestData.payoutsPaid.totalPayoutsMade,
-            totalAmountPaid: parseInt(contestData.payoutsPaid.totalAmountPaid),
-          },
-          totalRewards: parseInt(contestData.totalRewards),
-          boxesClaimed: parseInt(contestData.boxesClaimed),
-          randomValuesSet: contestData.randomValuesSet,
-          title: contestData.title,
-          description: contestData.description,
-          payoutStrategy: contestData.payoutStrategy,
-          payoutTransactionHash: contestData.payoutTransactionHash || null,
-        };
-
-        // Fetch real game score from oracle
-        let gameScore: GameScore | null = null;
-        try {
-          const gameScoreResponse = await fetch(
-            `/api/games/${contestData.gameId}/scores`,
-          );
-          if (gameScoreResponse.ok) {
-            gameScore = await gameScoreResponse.json();
-          } else {
-            console.warn("Failed to fetch game scores, using fallback");
-            // Fallback to mock data if oracle is unavailable
-            gameScore = {
-              id: parseInt(contestData.gameId),
-              homeQ1LastDigit: 0,
-              homeQ2LastDigit: 0,
-              homeQ3LastDigit: 0,
-              homeFLastDigit: 0,
-              awayQ1LastDigit: 0,
-              awayQ2LastDigit: 0,
-              awayQ3LastDigit: 0,
-              awayFLastDigit: 0,
-              qComplete: 0,
-              requestInProgress: false,
-            };
-          }
-        } catch (error) {
-          console.error("Error fetching game scores:", error);
-          // Fallback to mock data if oracle is unavailable
-          gameScore = {
-            id: parseInt(contestData.gameId),
-            homeQ1LastDigit: 0,
-            homeQ2LastDigit: 0,
-            homeQ3LastDigit: 0,
-            homeFLastDigit: 0,
-            awayQ1LastDigit: 0,
-            awayQ2LastDigit: 0,
-            awayQ3LastDigit: 0,
-            awayFLastDigit: 0,
-            qComplete: 0,
-            requestInProgress: false,
-          };
-        }
-
-        // Use real box owners data from API
-        const boxOwnersData: BoxOwner[] = contestData.boxes || [];
-        setContest(contest);
-        setGameScore(gameScore);
-        setBoxOwners(boxOwnersData);
-      } catch (error) {
-        console.error("Error fetching contest data:", error);
-        // Keep contest as null to show error state
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContestData();
-  }, [contestId]);
 
   const handleBoxClick = (boxPosition: number) => {
     if (!contest?.boxesCanBeClaimed) return;
@@ -224,18 +121,7 @@ export default function ContestPage() {
         async () => {
           // Clear selected boxes after successful claim
           setSelectedBoxes([]);
-
-          // Invalidate cache and refresh contest data to show updated box ownership
-          try {
-            await invalidateContestCache();
-            await handleRefreshContestData();
-            toast.success("Boxes claimed successfully!");
-          } catch (error) {
-            console.error("Error refreshing after claim:", error);
-            toast.success(
-              "Boxes claimed successfully! (Refresh may be delayed)",
-            );
-          }
+          toast.success("Boxes claimed successfully!");
         },
         // onError callback
         error => {
@@ -246,124 +132,6 @@ export default function ContestPage() {
     } catch (error) {
       console.error("Failed to claim boxes:", error);
       toast.error("Failed to claim boxes. Please try again.");
-    }
-  };
-
-  const invalidateContestCache = async () => {
-    try {
-      const response = await fetch(`/api/contest/${contestId}/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ chainId: 8453 }), // Base mainnet
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to invalidate cache");
-      }
-
-      await response.json();
-    } catch (error) {
-      console.error("Error invalidating cache:", error);
-      throw error;
-    }
-  };
-
-  const handleRefreshContestData = async () => {
-    setRefreshingContestData(true);
-
-    try {
-      // First invalidate the cache and wait for it to complete
-      await invalidateContestCache();
-
-      // Fetch fresh contest data with force refresh
-      const response = await fetch(
-        `/api/contest/${contestId}?forceRefresh=true&t=${Date.now()}`,
-        {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch contest data");
-      }
-
-      const contestData = await response.json();
-
-      // Convert the API response to our Contest type
-      const refreshedContest: Contest = {
-        id: parseInt(contestData.id),
-        gameId: parseInt(contestData.gameId),
-        creator: contestData.creator,
-        rows: contestData.rows,
-        cols: contestData.cols,
-        boxCost: {
-          currency: contestData.boxCost.currency,
-          amount: parseInt(contestData.boxCost.amount),
-        },
-        boxesCanBeClaimed: contestData.boxesCanBeClaimed,
-        payoutsPaid: {
-          totalPayoutsMade: contestData.payoutsPaid.totalPayoutsMade,
-          totalAmountPaid: parseInt(contestData.payoutsPaid.totalAmountPaid),
-        },
-        totalRewards: parseInt(contestData.totalRewards),
-        boxesClaimed: parseInt(contestData.boxesClaimed),
-        randomValuesSet: contestData.randomValuesSet,
-        title: contestData.title,
-        description: contestData.description,
-        payoutStrategy: contestData.payoutStrategy,
-        payoutTransactionHash: contestData.payoutTransactionHash || null,
-      };
-
-      // Update box owners with fresh data
-      const boxOwnersData: BoxOwner[] = contestData.boxes || [];
-
-      // Update state with fresh data
-      setContest(refreshedContest);
-      setBoxOwners(boxOwnersData);
-
-      toast.success("Contest data refreshed successfully!");
-    } catch (error) {
-      console.error("Error refreshing contest data:", error);
-      toast.error("Failed to refresh contest data. Please try again.");
-    } finally {
-      setRefreshingContestData(false);
-    }
-  };
-
-  const handleRefreshGameScores = async () => {
-    if (!contest) return;
-
-    setRefreshingGameScores(true);
-    try {
-      const response = await fetch(
-        `/api/games/${contest.gameId}/scores/refresh`,
-        {
-          method: "POST",
-        },
-      );
-
-      if (response.ok) {
-        // Refresh successful, get updated scores from response
-        const refreshData = await response.json();
-        if (refreshData.gameScore) {
-          setGameScore(refreshData.gameScore);
-        }
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to refresh game scores:", errorData.error);
-        // You could show a toast notification here
-      }
-    } catch (error) {
-      console.error("Error refreshing game scores:", error);
-      // You could show a toast notification here
-    } finally {
-      setRefreshingGameScores(false);
     }
   };
 
@@ -378,17 +146,7 @@ export default function ContestPage() {
         contest.id,
         // onSuccess callback
         async () => {
-          // Refresh contest data to show updated payout information
-          try {
-            await invalidateContestCache();
-            await handleRefreshContestData();
-            toast.success("Payouts processed successfully!");
-          } catch (error) {
-            console.error("Error refreshing after payout processing:", error);
-            toast.success(
-              "Payouts processed successfully! (Refresh may be delayed)",
-            );
-          }
+          toast.success("Payouts processed successfully!");
         },
         // onError callback
         error => {
@@ -546,14 +304,14 @@ export default function ContestPage() {
               contest={contest}
               isFetchingScoreChanges={isFetchingScoreChanges}
               isProcessingPayouts={isProcessingPayouts}
-              isRefreshingContestData={refreshingContestData}
-              isRefreshingGameScores={refreshingGameScores}
+              isRefreshingContestData={isRefreshing}
+              isRefreshingGameScores={isRefreshing}
               isRequestingRandomNumbers={isRequestingRandomNumbers}
               isSyncingScoresOnchain={isSyncingScoresOnchain}
               onFetchScoreChanges={handleFetchScoreChangesOnchain}
               onProcessPayouts={handleProcessPayouts}
-              onRefreshContestData={handleRefreshContestData}
-              onRefreshGameScores={handleRefreshGameScores}
+              onRefreshContestData={refreshContestData}
+              onRefreshGameScores={refreshGameScores}
               onSyncScoresOnchain={handleSyncScoresOnchain}
               onViewTransactionHistory={handleViewTransactionHistory}
               onRequestRandomNumbers={() =>

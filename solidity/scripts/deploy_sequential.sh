@@ -133,3 +133,4 @@ print_info ""
 print_info "Or use --resume to continue from where it left off:"
 print_info "./scripts/deploy_foundry.sh $PRIVATE_KEY $NETWORK --resume"
 
+

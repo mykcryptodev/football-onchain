@@ -5,7 +5,7 @@ import { AlertCircle, ArrowLeft, Clock, Share2, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
@@ -41,6 +41,8 @@ import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { usePickemPicks } from "@/hooks/usePickemPicks";
+import { useWeekGames } from "@/hooks/useWeekGames";
 import { formatKickoffTime } from "@/lib/date";
 import { toCaip19 } from "@/lib/utils";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
@@ -125,12 +127,27 @@ export default function PickemContestClient({
   const { isInMiniApp } = useIsInMiniApp();
 
   const [mounted, setMounted] = useState(false);
-  const [games, setGames] = useState<GameInfo[]>([]);
-  const [picks, setPicks] = useState<Record<string, number>>({});
-  const [tiebreakerPoints, setTiebreakerPoints] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+
+  // Use the new hooks for games and picks management
+  const { games } = useWeekGames({
+    year: contest.year,
+    seasonType: contest.seasonType,
+    weekNumber: contest.weekNumber,
+    gameIds: contest.gameIds,
+  });
+
+  const {
+    picks,
+    setPick,
+    pickAtRandom,
+    tiebreakerPoints,
+    setTiebreakerPoints,
+    getPickedCount,
+    allPicksMade,
+  } = usePickemPicks(contest.gameIds);
 
   // Prevent hydration mismatch by waiting for client mount
   useEffect(() => {
@@ -157,74 +174,27 @@ export default function PickemContestClient({
     currencyAddress: contest.currency,
   });
 
-  const fetchGameInfo = useCallback(
-    async (gameIds: string[]) => {
-      try {
-        // Use the week-games API instead of contest-games API
-        const response = await fetch(
-          `/api/week-games?year=${contest.year}&seasonType=${contest.seasonType}&week=${contest.weekNumber}`,
-        );
-        if (!response.ok) {
-          throw new Error(`Failed to fetch games: ${response.statusText}`);
-        }
-
-        const allWeekGames: GameInfo[] = await response.json();
-
-        // Filter to only the games in this contest
-        const games: GameInfo[] = allWeekGames.filter(weekGame =>
-          gameIds.some(contestGameId => contestGameId === weekGame.gameId),
-        );
-
-        // Sort games by ID to match oracle's sorted order
-        setGames(games.sort((a, b) => a.gameId.localeCompare(b.gameId)));
-      } catch (error) {
-        console.error("Error fetching game info:", error);
-        toast.error("Failed to load game information");
-      }
-    },
-    [contest.year, contest.seasonType, contest.weekNumber],
-  );
-
-  useEffect(() => {
-    // Initialize picks
-    const initialPicks: Record<string, number> = {};
-    contest.gameIds.forEach(id => {
-      initialPicks[id] = -1; // -1 means no pick yet
-    });
-    setPicks(initialPicks);
-
-    // Fetch game info (mock for now)
-    fetchGameInfo(contest.gameIds);
-  }, [contest, fetchGameInfo]);
-
   // Pre-select winners for finished games
   useEffect(() => {
     if (games.length === 0) return;
 
-    setPicks(currentPicks => {
-      const updatedPicks: Record<string, number> = { ...currentPicks };
-      let hasChanges = false;
+    games.forEach(game => {
+      // Check if game is finished
+      if (
+        game.status === "STATUS_FINAL" &&
+        game.homeScore !== undefined &&
+        game.awayScore !== undefined
+      ) {
+        // Determine winner (1 = home, 0 = away)
+        const winner = game.homeScore > game.awayScore ? 1 : 0;
 
-      games.forEach(game => {
-        // Check if game is finished
-        if (
-          game.status === "STATUS_FINAL" &&
-          game.homeScore !== undefined &&
-          game.awayScore !== undefined
-        ) {
-          // Determine winner (1 = home, 0 = away)
-          const winner = game.homeScore > game.awayScore ? 1 : 0;
-
-          // Only update if not already set
-          if (updatedPicks[game.gameId] === -1) {
-            updatedPicks[game.gameId] = winner;
-            hasChanges = true;
-          }
+        // Only update if not already set
+        if (picks[game.gameId] === -1) {
+          setPick(game.gameId, winner);
         }
-      });
-
-      return hasChanges ? updatedPicks : currentPicks;
+      }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [games]);
 
   const shareMessage = useMemo(() => {
@@ -290,8 +260,7 @@ export default function PickemContestClient({
     if (!contest || !account) return;
 
     // Validate all picks are made
-    const allPicked = Object.values(picks).every(pick => pick !== -1);
-    if (!allPicked) {
+    if (!allPicksMade) {
       toast.error("Please make a pick for every game");
       return;
     }
@@ -346,24 +315,6 @@ export default function PickemContestClient({
     if (days > 0) return `${days}d ${hours}h`;
     if (hours > 0) return `${hours}h remaining`;
     return `${minutes}m remaining`;
-  };
-
-  const getPickedCount = () => {
-    return Object.values(picks).filter(pick => pick !== -1).length;
-  };
-
-  const pickAtRandom = () => {
-    const randomPicks: Record<string, number> = {};
-    contest.gameIds.forEach(id => {
-      randomPicks[id] = Math.random() < 0.5 ? 0 : 1;
-    });
-    setPicks(randomPicks);
-
-    // Also generate a random tiebreaker between 20-70 points
-    const randomTiebreaker = Math.floor(Math.random() * 51) + 20; // 20-70
-    setTiebreakerPoints(randomTiebreaker.toString());
-
-    toast.success("Random picks generated!");
   };
 
   const formatMoneyLine = (moneyLine: number | undefined) => {
@@ -527,10 +478,10 @@ export default function PickemContestClient({
                 <CardTitle>Games ({games.length})</CardTitle>
                 <Badge
                   variant={
-                    getPickedCount() === games.length ? "default" : "secondary"
+                    allPicksMade ? "default" : "secondary"
                   }
                 >
-                  {getPickedCount() === games.length
+                  {allPicksMade
                     ? "Ready to Submit"
                     : "Incomplete"}
                 </Badge>
@@ -564,24 +515,24 @@ export default function PickemContestClient({
                       </span>
                     </div>
 
-                    <RadioGroup
-                      value={picks[game.gameId]?.toString()}
-                      onValueChange={(value: string) =>
-                        setPicks({ ...picks, [game.gameId]: parseInt(value) })
-                      }
-                    >
-                      <div className="grid grid-cols-2 gap-3">
-                        <div
-                          className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                            picks[game.gameId] === 0
-                              ? "border-primary bg-primary/10"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            selectionChanged();
-                            setPicks({ ...picks, [game.gameId]: 0 });
-                          }}
-                        >
+                  <RadioGroup
+                    value={picks[game.gameId]?.toString()}
+                    onValueChange={(value: string) =>
+                      setPick(game.gameId, parseInt(value))
+                    }
+                  >
+                    <div className="grid grid-cols-2 gap-3">
+                      <div
+                        className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          picks[game.gameId] === 0
+                            ? "border-primary bg-primary/10"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          selectionChanged();
+                          setPick(game.gameId, 0);
+                        }}
+                      >
                           <RadioGroupItem
                             className="mt-1"
                             id={`${game.gameId}-away`}
@@ -642,17 +593,17 @@ export default function PickemContestClient({
                           </Label>
                         </div>
 
-                        <div
-                          className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                            picks[game.gameId] === 1
-                              ? "border-primary bg-primary/10"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            selectionChanged();
-                            setPicks({ ...picks, [game.gameId]: 1 });
-                          }}
-                        >
+                      <div
+                        className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                          picks[game.gameId] === 1
+                            ? "border-primary bg-primary/10"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          selectionChanged();
+                          setPick(game.gameId, 1);
+                        }}
+                      >
                           <RadioGroupItem
                             className="mt-1"
                             id={`${game.gameId}-home`}
@@ -775,7 +726,7 @@ export default function PickemContestClient({
                     !account ||
                     submitting ||
                     isSubmissionClosed ||
-                    getPickedCount() !== games.length
+                    !allPicksMade
                   }
                   onClick={handleSubmit}
                 >
@@ -783,7 +734,7 @@ export default function PickemContestClient({
                     ? "Submitting..."
                     : isSubmissionClosed
                       ? "Submissions Closed"
-                      : getPickedCount() !== games.length
+                      : !allPicksMade
                         ? "Complete All Picks"
                         : "Submit Picks"}
                 </Button>

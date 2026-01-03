@@ -1,7 +1,6 @@
 "use client";
 
 import { Calendar, CheckCircle, Clock, DollarSign, Trophy } from "lucide-react";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
@@ -10,19 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePickemContract } from "@/hooks/usePickemContract";
-
-interface ContestInfo {
-  id: number;
-  seasonType: number;
-  weekNumber: number;
-  year: number;
-  totalPrizePool: bigint;
-  totalEntries: number;
-  gamesFinalized: boolean;
-  payoutComplete: boolean;
-  payoutDeadline: number;
-}
+import {
+  ContestInfo,
+  useAdminContests,
+} from "@/hooks/useAdminContests";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
@@ -32,69 +22,22 @@ const SEASON_TYPE_LABELS: Record<number, string> = {
 
 export default function AdminActions() {
   const account = useActiveAccount();
-  const { getContest, getNextContestId, claimAllPrizes } = usePickemContract();
-
-  const [contests, setContests] = useState<ContestInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [distributing, setDistributing] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    if (account?.address) {
-      fetchContests();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account]);
-
-  const fetchContests = async () => {
-    try {
-      setLoading(true);
-      const nextId = await getNextContestId();
-      const contestPromises = [];
-
-      // Fetch all contests
-      for (let i = 0; i < nextId; i++) {
-        contestPromises.push(getContest(i));
-      }
-
-      const allContests = await Promise.all(contestPromises);
-
-      // Filter for contests that are finalized but payout not complete
-      const pendingPayouts = allContests
-        .map((contest, index) => ({
-          id: index,
-          seasonType: Number(contest.seasonType),
-          weekNumber: Number(contest.weekNumber),
-          year: Number(contest.year),
-          totalPrizePool: contest.totalPrizePool,
-          totalEntries: Number(contest.totalEntries),
-          gamesFinalized: contest.gamesFinalized,
-          payoutComplete: contest.payoutComplete,
-          payoutDeadline: Number(contest.payoutDeadline),
-        }))
-        .filter(contest => contest.gamesFinalized && !contest.payoutComplete);
-
-      setContests(pendingPayouts);
-    } catch (error) {
-      console.error("Error fetching contests:", error);
-      toast.error("Failed to fetch contests");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    contests,
+    isLoading: loading,
+    distributePrizes,
+    isDistributing,
+    distributeAll,
+  } = useAdminContests();
 
   const handleDistributePrizes = async (contestId: number) => {
-    setDistributing(prev => ({ ...prev, [contestId]: true }));
-
     try {
-      await claimAllPrizes(contestId);
+      distributePrizes(contestId);
       toast.success(`Prizes distributed for Contest #${contestId}!`);
-      await fetchContests(); // Refresh
     } catch (error) {
       const e = error as Error;
       console.error("Error distributing prizes:", e);
       toast.error("Failed to distribute prizes: " + e.message);
-    } finally {
-      setDistributing(prev => ({ ...prev, [contestId]: false }));
     }
   };
 
@@ -108,38 +51,13 @@ export default function AdminActions() {
       return;
     }
 
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const contest of eligibleContests) {
-      setDistributing(prev => ({ ...prev, [contest.id]: true }));
-      try {
-        await claimAllPrizes(contest.id);
-        successCount++;
-        toast.success(
-          `Contest #${contest.id} prizes distributed (${successCount}/${eligibleContests.length})`,
-        );
-      } catch (error) {
-        console.error(
-          `Error distributing prizes for contest ${contest.id}:`,
-          error,
-        );
-        failCount++;
-      }
-      setDistributing(prev => ({ ...prev, [contest.id]: false }));
+    try {
+      await distributeAll();
+      toast.success("Successfully distributed prizes for all eligible contests!");
+    } catch (error) {
+      console.error("Error distributing all prizes:", error);
+      toast.error("Failed to distribute some prizes");
     }
-
-    if (successCount > 0) {
-      toast.success(
-        `Successfully distributed prizes for ${successCount} contest(s)!`,
-      );
-    }
-
-    if (failCount > 0) {
-      toast.error(`Failed to distribute prizes for ${failCount} contest(s)`);
-    }
-
-    await fetchContests();
   };
 
   const getPayoutStatus = (contest: ContestInfo) => {
@@ -268,12 +186,12 @@ export default function AdminActions() {
                   size="sm"
                   variant="secondary"
                   disabled={
-                    distributing[contest.id] ||
+                    isDistributing(contest.id) ||
                     Date.now() < contest.payoutDeadline * 1000
                   }
                   onClick={() => handleDistributePrizes(contest.id)}
                 >
-                  {distributing[contest.id] ? (
+                  {isDistributing(contest.id) ? (
                     <>
                       <Clock className="h-4 w-4 mr-2 animate-spin" />
                       Distributing...

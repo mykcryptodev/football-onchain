@@ -12,6 +12,7 @@ import {
 } from "@/lib/farcaster-metadata";
 import { DisplayTokenProvider } from "@/providers/DisplayTokenProvider";
 import { FarcasterProvider } from "@/providers/Farcaster";
+import { QueryProvider } from "@/providers/QueryProvider";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
 import "./globals.css";
@@ -88,14 +89,16 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
         >
-          <ThirdwebProvider>
-            <DisplayTokenProvider>
-              <FarcasterProvider>
-                <Navigation />
-                {children}
-              </FarcasterProvider>
-            </DisplayTokenProvider>
-          </ThirdwebProvider>
+          <QueryProvider>
+            <ThirdwebProvider>
+              <DisplayTokenProvider>
+                <FarcasterProvider>
+                  <Navigation />
+                  {children}
+                </FarcasterProvider>
+              </DisplayTokenProvider>
+            </ThirdwebProvider>
+          </QueryProvider>
           <Toaster />
         </ThemeProvider>
       </body>

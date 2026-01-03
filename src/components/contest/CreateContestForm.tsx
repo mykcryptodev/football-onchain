@@ -47,6 +47,7 @@ import {
   usdc,
 } from "@/constants";
 import { abi } from "@/constants/abis/contests";
+import { useNFLGames } from "@/hooks/useNFLGames";
 import { type Token, useTokens } from "@/hooks/useTokens";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
@@ -55,32 +56,10 @@ import { TokenPicker } from "./TokenPicker";
 import { PayoutStrategyType } from "./types";
 
 // Types for API responses
-type Game = {
-  id: string;
-  name: string;
-  shortName: string;
-  date: string;
-  competitions: {
-    competitors: Array<{
-      team: {
-        name: string;
-        abbreviation: string;
-      };
-      homeAway: string;
-    }>;
-  } | null;
-};
-
 type CurrentWeekResponse = {
   week: number;
   season: number;
   seasonYear: number;
-};
-
-type GamesResponse = {
-  games: Game[];
-  week: number;
-  season: { year: number; type: number };
 };
 
 // Form validation schema
@@ -142,8 +121,6 @@ const createContestSchema = z.object({
 type CreateContestFormValues = z.infer<typeof createContestSchema>;
 
 export function CreateContestForm() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [loadingGames, setLoadingGames] = useState(false);
   const [, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
@@ -164,6 +141,14 @@ export function CreateContestForm() {
       payoutStrategy: PayoutStrategyType.QUARTERS_ONLY,
     },
   });
+
+  // Watch for changes in season type or week
+  const seasonType = form.watch("seasonType");
+  const week = form.watch("week");
+  const boxCost = form.watch("boxCost");
+
+  // Use the new useNFLGames hook
+  const { games, isLoading: loadingGames } = useNFLGames(seasonType, week);
 
   const createContestCreationTx = useCallback(async () => {
     const formData = form.getValues();
@@ -235,8 +220,6 @@ export function CreateContestForm() {
             data.season.toString() as "1" | "2" | "3",
           );
           form.setValue("week", data.week.toString());
-          // Fetch games for current week/season
-          await fetchGames(data.season.toString(), data.week.toString());
         }
       } catch (error) {
         console.error("Error fetching current week:", error);
@@ -250,29 +233,6 @@ export function CreateContestForm() {
     });
   }, [form, fetchTokens]);
 
-  // Function to fetch games based on season type and week
-  const fetchGames = async (seasonType: string, week: string) => {
-    if (!seasonType || !week) return;
-
-    setLoadingGames(true);
-    try {
-      const response = await fetch(
-        `/api/games?season=${seasonType}&week=${week}`,
-      );
-      if (response.ok) {
-        const data: GamesResponse = await response.json();
-        setGames(data.games);
-      } else {
-        toast.error("Failed to fetch games");
-      }
-    } catch (error) {
-      console.error("Error fetching games:", error);
-      toast.error("Error fetching games");
-    } finally {
-      setLoadingGames(false);
-    }
-  };
-
   // Set default currency to USDC when tokens are loaded
   useEffect(() => {
     if (tokens.length > 0 && !selectedToken) {
@@ -285,11 +245,6 @@ export function CreateContestForm() {
       }
     }
   }, [tokens, selectedToken, form]);
-
-  // Watch for changes in season type or week
-  const seasonType = form.watch("seasonType");
-  const week = form.watch("week");
-  const boxCost = form.watch("boxCost");
 
   // Calculate USD estimation
   const calculateUsdEstimation = useCallback(() => {
@@ -313,10 +268,9 @@ export function CreateContestForm() {
     calculateUsdEstimation();
   }, [calculateUsdEstimation]);
 
+  // Reset game selection when season/week changes
   useEffect(() => {
     if (seasonType && week) {
-      fetchGames(seasonType, week);
-      // Reset game selection when season/week changes
       form.setValue("gameId", "");
     }
   }, [seasonType, week, form]);
