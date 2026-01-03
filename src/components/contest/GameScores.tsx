@@ -13,6 +13,7 @@ import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
+import { UserProfileModal } from "./UserProfileModal";
 
 interface GameScoresProps {
   gameScore: GameScore;
@@ -22,6 +23,11 @@ interface GameScoresProps {
 
 export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [selectedBoxTokenId, setSelectedBoxTokenId] = useState<number | null>(
+    null,
+  );
 
   // Function to calculate the winning box for a scoring play
   const getWinningBoxForPlay = (play: {
@@ -61,6 +67,18 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
     if (!boxOwners) return null;
     const owner = boxOwners.find(box => box.tokenId === tokenId);
     return owner;
+  };
+
+  // Handle clicking on a winning box
+  const handleBoxClick = (tokenId: number) => {
+    const boxOwner = getBoxOwner(tokenId);
+    const address =
+      boxOwner && boxOwner.owner !== ZERO_ADDRESS
+        ? boxOwner.owner
+        : null;
+    setSelectedAddress(address);
+    setSelectedBoxTokenId(tokenId);
+    setIsModalOpen(true);
   };
 
   return (
@@ -243,7 +261,10 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
                               boxOwner && boxOwner.owner !== ZERO_ADDRESS;
 
                             return (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                              <span
+                                onClick={() => handleBoxClick(winningBox.tokenId)}
+                                className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 cursor-pointer hover:bg-green-200 transition-colors"
+                              >
                                 {hasOwner ? (
                                   <AccountProvider
                                     address={boxOwner.owner}
@@ -272,6 +293,15 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
           </Collapsible>
         )}
       </CardContent>
+
+      <UserProfileModal
+        address={selectedAddress}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        contest={contest}
+        gameScore={gameScore}
+        boxTokenId={selectedBoxTokenId}
+      />
     </Card>
   );
 }
