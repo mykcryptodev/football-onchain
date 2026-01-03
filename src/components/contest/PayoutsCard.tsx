@@ -63,22 +63,16 @@ export function PayoutsCard({
   contest,
   scoreChangeCount = 0,
 }: PayoutsCardProps) {
-  if (!contest.payoutStrategy) {
-    return null;
-  }
-
-  const strategyType = getPayoutStrategyType(contest.payoutStrategy);
-  const strategyName = getStrategyDisplayName(strategyType);
   const currencyAddress = contest.boxCost.currency;
 
-  // Calculate payouts for both strategies at the top level
+  // Calculate payouts for both strategies at the top level (before any returns)
   const quartersOnlyPayouts = getQuartersOnlyPayouts(contest.totalRewards);
   const scoreChangesPayouts = getScoreChangesPayouts(
     contest.totalRewards,
     scoreChangeCount,
   );
 
-  // Format quarters-only payouts (always call hooks at top level)
+  // Format quarters-only payouts (always call hooks at top level before any returns)
   const { formattedValue: q1Formatted, isLoading: q1Loading } =
     useFormattedCurrency({
       amount: BigInt(Math.floor(quartersOnlyPayouts.q1.amount)),
@@ -151,6 +145,13 @@ export function PayoutsCard({
       amount: BigInt(Math.floor(scoreChangesPayouts.quarters.q4.amount)),
       currencyAddress,
     });
+
+  if (!contest.payoutStrategy) {
+    return null;
+  }
+
+  const strategyType = getPayoutStrategyType(contest.payoutStrategy);
+  const strategyName = getStrategyDisplayName(strategyType);
 
   const renderQuartersOnlyPayouts = () => {
     return (
@@ -243,10 +244,10 @@ export function PayoutsCard({
           : renderScoreChangesPayouts()}
 
         <PayoutsFooter
-          totalRewards={contest.totalRewards}
+          currencyAddress={currencyAddress}
           totalAmountPaid={contest.payoutsPaid.totalAmountPaid}
           totalPayoutsMade={contest.payoutsPaid.totalPayoutsMade}
-          currencyAddress={currencyAddress}
+          totalRewards={contest.totalRewards}
         />
       </CardContent>
     </Card>

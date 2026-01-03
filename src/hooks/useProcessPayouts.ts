@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { getContract, prepareContractCall } from "thirdweb";
-import {
-  useActiveAccount,
-  useSendAndConfirmTransaction,
-} from "thirdweb/react";
+import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 
 import { chain, contests } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
@@ -70,9 +67,13 @@ export function useProcessPayouts() {
 
             // Store transaction hash in Redis if available
             if (redis) {
-              const payoutTxKey = getPayoutTxKey(contestId.toString(), chain.id);
+              const payoutTxKey = getPayoutTxKey(
+                contestId.toString(),
+                chain.id,
+              );
+              const redisClient = redis; // Capture redis to satisfy TypeScript
               await safeRedisOperation(
-                () => redis.set(payoutTxKey, txHash),
+                () => redisClient.set(payoutTxKey, txHash),
                 null,
               );
             }

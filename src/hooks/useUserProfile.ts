@@ -1,7 +1,7 @@
 "use client";
 
-import { getSocialProfiles } from "thirdweb/social";
 import { useEffect, useState } from "react";
+import { getSocialProfiles } from "thirdweb/social";
 
 import { client } from "@/providers/Thirdweb";
 

@@ -69,10 +69,10 @@ export function ContestActions({
             {contest.payoutTransactionHash && (
               <div className="text-center">
                 <a
-                  href={getExplorerUrl(contest.payoutTransactionHash)}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="text-sm text-primary hover:underline break-all"
+                  href={getExplorerUrl(contest.payoutTransactionHash)}
+                  rel="noopener noreferrer"
+                  target="_blank"
                 >
                   View Payout Transaction
                 </a>

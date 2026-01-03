@@ -2,8 +2,8 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
-import { createThirdwebClient } from "thirdweb";
 
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,14 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useUserProfile } from "@/hooks/useUserProfile";
-
-// Create Thirdweb client for AccountProvider
-const client = createThirdwebClient({
-  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
-});
+import { client } from "@/providers/Thirdweb";
 
 interface UserProfileModalProps {
   address: string | null;
@@ -108,7 +103,7 @@ export function UserProfileModal({
               )}
 
               {isInMiniApp && profile?.fid && (
-                <Button onClick={handleViewProfile} className="mt-4">
+                <Button className="mt-4" onClick={handleViewProfile}>
                   View Farcaster Profile
                 </Button>
               )}
@@ -119,4 +114,3 @@ export function UserProfileModal({
     </Dialog>
   );
 }
-

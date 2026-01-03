@@ -7,6 +7,7 @@ import { ZERO_ADDRESS } from "thirdweb";
 
 import {
   BoxOwner,
+  CommentSection,
   Contest,
   ContestActions,
   ContestHeader,
@@ -521,8 +522,8 @@ export default function ContestPage() {
               isClaimingBoxes={isClaimingBoxes}
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
-              onClaimedBoxClick={handleClaimedBoxClick}
               onClaimBoxes={handleClaimBoxes}
+              onClaimedBoxClick={handleClaimedBoxClick}
             />
           </div>
 
@@ -560,6 +561,11 @@ export default function ContestPage() {
               }
             />
           </div>
+        </div>
+
+        {/* Comments Section */}
+        <div className="mt-8">
+          <CommentSection contestId={contestId} />
         </div>
       </main>
 
