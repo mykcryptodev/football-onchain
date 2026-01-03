@@ -1,8 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 
-import { getContestCacheKey, redis } from "./redis";
-import { queryKeys } from "./query-keys";
 import { chain } from "@/constants";
+
+import { queryKeys } from "./query-keys";
+import { getContestCacheKey, redis } from "./redis";
 
 /**
  * Invalidate contest cache by contest ID (Redis only)
@@ -25,7 +26,7 @@ export async function invalidateContestCache(
 export async function invalidateContestCaches(
   contestId: string,
   queryClient: QueryClient,
-  chainId: number = chain.id
+  chainId: number = chain.id,
 ): Promise<void> {
   // 1. Invalidate Redis cache via API (existing logic)
   await fetch(`/api/contest/${contestId}/refresh`, {
@@ -45,7 +46,7 @@ export async function invalidateContestCaches(
  */
 export async function invalidateGameScoresCache(
   gameId: string,
-  queryClient: QueryClient
+  queryClient: QueryClient,
 ): Promise<void> {
   await queryClient.invalidateQueries({
     queryKey: queryKeys.gameScores(gameId),

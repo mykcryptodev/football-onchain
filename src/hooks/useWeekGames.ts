@@ -53,7 +53,7 @@ export function useWeekGames(params: UseWeekGamesParams): UseWeekGamesReturn {
     queryKey: queryKeys.weekGames(params.year, params.seasonType, params.weekNumber),
     queryFn: async () => {
       const response = await fetch(
-        `/api/week-games?year=${params.year}&seasonType=${params.seasonType}&week=${params.weekNumber}`
+        `/api/week-games?year=${params.year}&seasonType=${params.seasonType}&week=${params.weekNumber}`,
       );
       if (!response.ok) throw new Error("Failed to fetch games");
       const allGames = await response.json();

@@ -5,7 +5,7 @@ import { AlertCircle, ArrowLeft, Clock, Share2, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { FC, useCallback, useEffect, useMemo, useState } from "react";
+import { FC, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
@@ -132,7 +132,7 @@ export default function PickemContestClient({
   const [shareLoading, setShareLoading] = useState(false);
 
   // Use the new hooks for games and picks management
-  const { games, isLoading: gamesLoading } = useWeekGames({
+  const { games } = useWeekGames({
     year: contest.year,
     seasonType: contest.seasonType,
     weekNumber: contest.weekNumber,

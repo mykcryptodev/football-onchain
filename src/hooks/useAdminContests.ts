@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/lib/query-keys";
+
 import { usePickemContract } from "./usePickemContract";
 
-interface ContestInfo {
+export interface ContestInfo {
   id: number;
   seasonType: number;
   weekNumber: number;
@@ -33,7 +34,7 @@ export function useAdminContests(): UseAdminContestsReturn {
     queryFn: async () => {
       const nextId = await getNextContestId();
       const contests = await Promise.all(
-        Array.from({ length: nextId }, (_, i) => getContest(i))
+        Array.from({ length: nextId }, (_, i) => getContest(i)),
       );
       return contests
         .map((c, i) => ({

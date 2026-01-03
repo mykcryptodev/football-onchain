@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { BoxOwner, Contest, GameScore } from "@/components/contest/types";
-import { queryKeys } from "@/lib/query-keys";
 import { invalidateContestCaches } from "@/lib/cache-utils";
+import { queryKeys } from "@/lib/query-keys";
 
 interface UseContestDataReturn {
   contest: Contest | null;

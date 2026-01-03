@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminContests } from "@/hooks/useAdminContests";
+import {
+  ContestInfo,
+  useAdminContests,
+} from "@/hooks/useAdminContests";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
