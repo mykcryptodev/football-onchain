@@ -11,23 +11,110 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { client } from "@/providers/Thirdweb";
+import { getPayoutStrategyType } from "@/lib/payout-utils";
+import { Contest, GameScore, PayoutStrategyType, ScoringPlay } from "./types";
 
 interface UserProfileModalProps {
   address: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  contest?: Contest | null;
+  gameScore?: GameScore | null;
+  boxTokenId?: number | null;
 }
 
 export function UserProfileModal({
   address,
   open,
   onOpenChange,
+  contest,
+  gameScore,
+  boxTokenId,
 }: UserProfileModalProps) {
   const { profile, isLoading } = useUserProfile(address);
   const { isInMiniApp } = useIsInMiniApp();
+
+  // Calculate which quarters and scoring plays this box won
+  const getBoxWins = () => {
+    if (
+      !contest ||
+      !gameScore ||
+      boxTokenId === null ||
+      boxTokenId === undefined
+    ) {
+      return { quarters: [], scoringPlays: [] };
+    }
+
+    // Calculate box position (0-99) from tokenId
+    const boxPosition = boxTokenId % 100;
+    const row = Math.floor(boxPosition / 10);
+    const col = boxPosition % 10;
+
+    // Get the row and col scores for this box
+    const boxRowScore = contest.rows[row];
+    const boxColScore = contest.cols[col];
+
+    const wonQuarters: number[] = [];
+    const wonScoringPlays: Array<{ index: number; play: ScoringPlay }> = [];
+
+    // Check quarter wins
+    if (gameScore.qComplete >= 1) {
+      if (
+        gameScore.homeQ1LastDigit === boxRowScore &&
+        gameScore.awayQ1LastDigit === boxColScore
+      ) {
+        wonQuarters.push(1);
+      }
+    }
+    if (gameScore.qComplete >= 2) {
+      if (
+        gameScore.homeQ2LastDigit === boxRowScore &&
+        gameScore.awayQ2LastDigit === boxColScore
+      ) {
+        wonQuarters.push(2);
+      }
+    }
+    if (gameScore.qComplete >= 3) {
+      if (
+        gameScore.homeQ3LastDigit === boxRowScore &&
+        gameScore.awayQ3LastDigit === boxColScore
+      ) {
+        wonQuarters.push(3);
+      }
+    }
+    if (gameScore.qComplete >= 4) {
+      if (
+        gameScore.homeFLastDigit === boxRowScore &&
+        gameScore.awayFLastDigit === boxColScore
+      ) {
+        wonQuarters.push(4);
+      }
+    }
+
+    // Check scoring play wins (only for score-changes strategy)
+    if (
+      contest &&
+      gameScore.scoringPlays &&
+      getPayoutStrategyType(contest.payoutStrategy) ===
+        PayoutStrategyType.SCORE_CHANGES
+    ) {
+      gameScore.scoringPlays.forEach((play, index) => {
+        const homeLastDigit = play.homeScore % 10;
+        const awayLastDigit = play.awayScore % 10;
+        if (homeLastDigit === boxRowScore && awayLastDigit === boxColScore) {
+          wonScoringPlays.push({ index: index + 1, play });
+        }
+      });
+    }
+
+    return { quarters: wonQuarters, scoringPlays: wonScoringPlays };
+  };
+
+  const boxWins = getBoxWins();
 
   const handleViewProfile = async () => {
     if (!profile?.fid) {
@@ -108,6 +195,89 @@ export function UserProfileModal({
                 </Button>
               )}
             </div>
+
+            {/* Box Winning Information */}
+            {contest &&
+              gameScore &&
+              boxTokenId !== null &&
+              boxTokenId !== undefined && (
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="font-semibold mb-3">Box Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-sm font-medium mb-1">
+                        Box Position
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {gameScore.awayTeamName || "Away"}:{" "}
+                        {contest.cols[(boxTokenId % 100) % 10]}
+                        {" - "}
+                        {gameScore.homeTeamName || "Home"}:{" "}
+                        {contest.rows[Math.floor((boxTokenId % 100) / 10)]}
+                      </div>
+                    </div>
+
+                    {(boxWins.quarters.length > 0 ||
+                      boxWins.scoringPlays.length > 0) && (
+                      <>
+                        {boxWins.quarters.length > 0 && (
+                          <div>
+                            <div className="text-sm font-medium mb-2">
+                              Won Quarters
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {boxWins.quarters.map(quarter => (
+                                <Badge
+                                  key={quarter}
+                                  variant="default"
+                                  className="bg-emerald-500 hover:bg-emerald-600"
+                                >
+                                  Q{quarter === 4 ? "4 (Final)" : quarter}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {boxWins.scoringPlays.length > 0 && (
+                          <div>
+                            <div className="text-sm font-medium mb-2">
+                              Won Scoring Plays
+                            </div>
+                            <div className="space-y-2">
+                              {boxWins.scoringPlays.map(({ index, play }) => (
+                                <div
+                                  key={index}
+                                  className="text-sm p-2 bg-muted rounded border border-border"
+                                >
+                                  <div className="font-medium">
+                                    Score Change #{index}
+                                  </div>
+                                  <div className="text-muted-foreground text-xs mt-1">
+                                    {play.text ||
+                                      play.type?.text ||
+                                      "Scoring play"}
+                                  </div>
+                                  <div className="text-xs mt-1">
+                                    Score: {play.awayScore} - {play.homeScore}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {boxWins.quarters.length === 0 &&
+                      boxWins.scoringPlays.length === 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          This box has not won any quarters or scoring plays.
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
           </div>
         )}
       </DialogContent>

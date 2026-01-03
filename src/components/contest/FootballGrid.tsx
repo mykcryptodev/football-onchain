@@ -19,7 +19,7 @@ interface FootballGridProps {
   gameScore: GameScore | null;
   selectedBoxes: number[];
   onBoxClick: (tokenId: number) => void;
-  onClaimedBoxClick?: (address: string) => void;
+  onClaimedBoxClick?: (address: string, tokenId: number) => void;
   onClaimBoxes?: () => void;
   isClaimingBoxes?: boolean;
 }
@@ -214,8 +214,8 @@ export function FootballGrid({
                        ${isMyBox && !isWinner ? "" : ""}
                      `}
                     onClick={() => {
-                      if (isClaimedByUser && onClaimedBoxClick) {
-                        onClaimedBoxClick(box.owner);
+                      if (isClaimedByUser && onClaimedBoxClick && box) {
+                        onClaimedBoxClick(box.owner, expectedTokenId);
                       } else {
                         onBoxClick(boxPosition);
                       }
