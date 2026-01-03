@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { getContract, prepareContractCall } from "thirdweb";
 import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 
 import { chain, contests } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
+import { invalidateContestCaches } from "@/lib/cache-utils";
 import { getPayoutTxKey, redis, safeRedisOperation } from "@/lib/redis";
 import { client } from "@/providers/Thirdweb";
 
@@ -17,6 +19,7 @@ export function useProcessPayouts() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const account = useActiveAccount();
+  const queryClient = useQueryClient();
   const { mutate: sendTransaction } = useSendAndConfirmTransaction();
 
   const contestsContract = getContract({
@@ -83,6 +86,9 @@ export function useProcessPayouts() {
               receipt,
             );
           }
+
+          // Invalidate both Redis and React Query caches
+          await invalidateContestCaches(contestId.toString(), queryClient);
 
           onSuccess?.(txHash);
         },

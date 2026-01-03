@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   encode,
   getContract,
@@ -15,6 +16,7 @@ import {
 
 import { chain, contests } from "@/constants";
 import { abi as contestsAbi } from "@/constants/abis/contests";
+import { invalidateContestCaches } from "@/lib/cache-utils";
 import { client } from "@/providers/Thirdweb";
 
 interface ContestData {
@@ -37,6 +39,7 @@ export function useClaimBoxes() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const account = useActiveAccount();
+  const queryClient = useQueryClient();
   const { mutate: sendTransaction } = useSendAndConfirmTransaction();
   const { mutate: sendCalls } = useSendAndConfirmCalls();
   const { data: capabilities, isLoading: capabilitiesLoading } =
@@ -98,7 +101,9 @@ export function useClaimBoxes() {
           });
 
           const result = sendTransaction(transaction, {
-            onSuccess: () => {
+            onSuccess: async () => {
+              // Invalidate both Redis and React Query caches
+              await invalidateContestCaches(contestId.toString(), queryClient);
               onSuccess?.();
             },
             onError: error => {
@@ -156,7 +161,9 @@ export function useClaimBoxes() {
                 calls: [approvalTx, claimCall],
               },
               {
-                onSuccess: () => {
+                onSuccess: async () => {
+                  // Invalidate both Redis and React Query caches
+                  await invalidateContestCaches(contestId.toString(), queryClient);
                   onSuccess?.();
                 },
                 onError: error => {
@@ -195,7 +202,9 @@ export function useClaimBoxes() {
                 });
 
                 const claimResult = sendTransaction(claimTx, {
-                  onSuccess: () => {
+                  onSuccess: async () => {
+                    // Invalidate both Redis and React Query caches
+                    await invalidateContestCaches(contestId.toString(), queryClient);
                     onSuccess?.();
                   },
                   onError: error => {
@@ -244,7 +253,9 @@ export function useClaimBoxes() {
 
               // Execute claim transaction
               const claimResult = sendTransaction(claimTx, {
-                onSuccess: () => {
+                onSuccess: async () => {
+                  // Invalidate both Redis and React Query caches
+                  await invalidateContestCaches(contestId.toString(), queryClient);
                   onSuccess?.();
                 },
                 onError: error => {

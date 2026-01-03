@@ -1,4 +1,4 @@
-import { createThirdwebClient, ZERO_ADDRESS } from "thirdweb";
+import { ZERO_ADDRESS } from "thirdweb";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,9 @@ import {
 } from "@/components/ui/card";
 import { chain, contests } from "@/constants";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
+import { client } from "@/providers/Thirdweb";
 
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
-
-// Create Thirdweb client for AccountProvider
-const client = createThirdwebClient({
-  clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!,
-});
 
 interface FootballGridProps {
   contest: Contest;

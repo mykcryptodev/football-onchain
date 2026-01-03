@@ -2,42 +2,21 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import { MessageCircle, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useComments } from "@/hooks/useComments";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
-
-interface CastAuthor {
-  fid: number;
-  username: string;
-  display_name: string;
-  pfp_url: string;
-}
-
-interface Cast {
-  hash: string;
-  author: CastAuthor;
-  text: string;
-  timestamp: string;
-  reactions: {
-    likes_count: number;
-    recasts_count: number;
-  };
-}
 
 interface CommentSectionProps {
   contestId: string;
 }
 
 export function CommentSection({ contestId }: CommentSectionProps) {
-  const [comments, setComments] = useState<Cast[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const { comments, isLoading: loading, isRefreshing: refreshing, refresh } = useComments(contestId);
   const { isInMiniApp } = useIsInMiniApp();
 
   const baseUrl =
@@ -45,48 +24,6 @@ export function CommentSection({ contestId }: CommentSectionProps) {
       ? window.location.origin
       : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const contestUrl = `${baseUrl}/contest/${contestId}`;
-
-  const fetchComments = useCallback(
-    async (cursor?: string, isRefresh = false) => {
-      try {
-        if (isRefresh) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-
-        const url = `/api/comments/${contestId}${cursor ? `?cursor=${cursor}` : ""}`;
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch comments");
-        }
-
-        const data = await response.json();
-
-        if (isRefresh) {
-          setComments(data.casts || []);
-        } else if (cursor) {
-          setComments(prev => [...prev, ...(data.casts || [])]);
-        } else {
-          setComments(data.casts || []);
-        }
-
-        setNextCursor(data.next?.cursor || null);
-      } catch (error) {
-        console.error("Error fetching comments:", error);
-        toast.error("Failed to load comments");
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [contestId],
-  );
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
 
   const handleAddComment = async () => {
     if (isInMiniApp) {
@@ -104,7 +41,7 @@ export function CommentSection({ contestId }: CommentSectionProps) {
             "Cast posted! It may take a moment to appear as a comment.",
           );
           // Refresh comments after posting
-          setTimeout(() => fetchComments(undefined, true), 3000);
+          setTimeout(() => refresh(), 3000);
         } else {
           toast.info("Comment cancelled");
         }
@@ -118,10 +55,6 @@ export function CommentSection({ contestId }: CommentSectionProps) {
       window.open(warpcastUrl, "_blank");
       toast.info("Opening Warpcast to compose comment");
     }
-  };
-
-  const handleRefresh = () => {
-    fetchComments(undefined, true);
   };
 
   const formatRelativeTime = (timestamp: string) => {
@@ -156,7 +89,7 @@ export function CommentSection({ contestId }: CommentSectionProps) {
             disabled={refreshing}
             size="sm"
             variant="outline"
-            onClick={handleRefresh}
+            onClick={refresh}
           >
             <RefreshCw
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -220,15 +153,7 @@ export function CommentSection({ contestId }: CommentSectionProps) {
                 </div>
               </div>
             ))}
-            {nextCursor && (
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => fetchComments(nextCursor)}
-              >
-                Load More
-              </Button>
-            )}
+            {/* Note: Load More functionality would need pagination support in the hook */}
           </div>
         )}
       </CardContent>
