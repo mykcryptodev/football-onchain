@@ -1,5 +1,10 @@
 import { ZERO_ADDRESS } from "thirdweb";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+import {
+  AccountAvatar,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +41,9 @@ export function FootballGrid({
   onClaimBoxes,
   isClaimingBoxes = false,
 }: FootballGridProps) {
+  const account = useActiveAccount();
+  const currentUserAddress = account?.address?.toLowerCase();
+
   const isRealUser = (address: string) => {
     if (address === ZERO_ADDRESS) return false;
     // Check if it's the contest contract address (not a real user)
@@ -47,23 +55,46 @@ export function FootballGrid({
     return (wei / 1e18).toFixed(4);
   };
 
-  const getBoxColor = (boxPosition: number, actualTokenId: number) => {
+  const getBoxColor = (
+    boxPosition: number,
+    actualTokenId: number,
+    boxOwner?: string,
+  ) => {
     const box = boxOwners.find(b => b.tokenId === actualTokenId);
-    if (!box) return "bg-gray-100";
+    if (!box) {
+      // Default neutral styling for unclaimed boxes
+      return contest?.boxesCanBeClaimed
+        ? "bg-background border-border hover:bg-muted/50 cursor-pointer"
+        : "bg-background border-border";
+    }
 
-    if (selectedBoxes.includes(boxPosition)) return "bg-blue-500 text-white";
+    // Selected boxes - keep blue for selection feedback
+    if (selectedBoxes.includes(boxPosition)) {
+      return "bg-blue-500 text-white border-blue-600";
+    }
 
-    // If owned by a real user (not contest contract), show as claimed
+    // Check if this box belongs to the current user
+    const isMyBox =
+      currentUserAddress &&
+      boxOwner &&
+      boxOwner.toLowerCase() === currentUserAddress;
+
+    // If owned by a real user, use neutral colors unless it's the current user's box
     if (box.owner !== ZERO_ADDRESS && isRealUser(box.owner)) {
-      return "bg-green-200";
+      if (isMyBox) {
+        // Highlight current user's boxes with a subtle accent
+        return "bg-muted/30 border-primary/30";
+      }
+      // Neutral for other users' boxes
+      return "bg-background border-border";
     }
 
     // If owned by contest contract or zero address, it's claimable
     if (contest?.boxesCanBeClaimed) {
-      return "bg-gray-50 hover:bg-blue-100 cursor-pointer";
+      return "bg-background border-border hover:bg-muted/50 cursor-pointer";
     }
 
-    return "bg-gray-100";
+    return "bg-background border-border";
   };
 
   const isWinningBox = (row: number, col: number, quarter: number) => {
@@ -117,11 +148,11 @@ export function FootballGrid({
       <CardContent>
         <div className="grid grid-cols-11 gap-1 max-w-2xl">
           {/* Header row with away team scores */}
-          <div className="bg-blue-100 p-2 text-center font-semibold text-sm" />
+          <div className="aspect-square bg-muted p-2 text-center font-semibold text-sm border-2 border-border rounded flex items-center justify-center" />
           {contest.cols.map((col, i) => (
             <div
               key={i}
-              className="bg-blue-100 p-2 text-center font-semibold text-sm"
+              className="aspect-square bg-muted p-2 text-center font-semibold text-sm border-2 border-border rounded flex items-center justify-center"
             >
               {col}
             </div>
@@ -131,7 +162,7 @@ export function FootballGrid({
           {Array.from({ length: 10 }, (_, row) => (
             <div key={row} className="contents">
               {/* Home team score header */}
-              <div className="bg-red-100 p-2 text-center font-semibold text-sm">
+              <div className="aspect-square bg-muted p-2 text-center font-semibold text-sm border-2 border-border rounded flex items-center justify-center">
                 {contest.rows[row]}
               </div>
 
@@ -163,14 +194,23 @@ export function FootballGrid({
                   box.owner !== ZERO_ADDRESS && 
                   isRealUser(box.owner);
 
+                // Check if this is the current user's box
+                const isMyBox =
+                  currentUserAddress &&
+                  box?.owner &&
+                  box.owner.toLowerCase() === currentUserAddress;
+
                 return (
                   <div
                     key={col}
                     className={`
-                      aspect-square border border-gray-300 p-1 text-xs text-center flex flex-col justify-center items-center
-                      ${getBoxColor(boxPosition, expectedTokenId)}
-                      ${isWinner ? "ring-2 ring-yellow-400 bg-yellow-200" : ""}
-                      ${isClaimedByUser ? "cursor-pointer hover:bg-green-300" : ""}
+                      aspect-square border-2 p-1 text-xs text-center flex flex-col justify-center items-center transition-colors rounded
+                      ${isWinner 
+                        ? "bg-emerald-100 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-500 shadow-sm" 
+                        : getBoxColor(boxPosition, expectedTokenId, box?.owner)
+                      }
+                      ${isClaimedByUser && !isWinner && !isMyBox ? "cursor-pointer hover:bg-muted/70" : ""}
+                      ${isMyBox && !isWinner ? "ring-1 ring-primary/20" : ""}
                     `}
                     onClick={() => {
                       if (isClaimedByUser && onClaimedBoxClick) {
@@ -208,7 +248,7 @@ export function FootballGrid({
         </div>
 
         {selectedBoxes.length > 0 && contest.boxesCanBeClaimed && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold">
