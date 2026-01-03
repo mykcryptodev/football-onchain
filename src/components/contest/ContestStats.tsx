@@ -12,27 +12,27 @@ export function ContestStats({ contest }: ContestStatsProps) {
   };
 
   return (
-    <div className="grid md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
       <Card>
-        <CardContent className="p-4">
-          <div className="text-sm text-muted-foreground">Box Cost</div>
-          <div className="text-2xl font-bold">
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-xs sm:text-sm text-muted-foreground">Box Cost</div>
+          <div className="text-lg sm:text-2xl font-bold">
             {formatEther(contest.boxCost.amount)} ETH
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="text-sm text-muted-foreground">Boxes Claimed</div>
-          <div className="text-2xl font-bold">{contest.boxesClaimed}/100</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-xs sm:text-sm text-muted-foreground">Boxes Claimed</div>
+          <div className="text-lg sm:text-2xl font-bold">{contest.boxesClaimed}/100</div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardContent className="p-4">
-          <div className="text-sm text-muted-foreground">Total Prize Pool</div>
-          <div className="text-2xl font-bold">
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-xs sm:text-sm text-muted-foreground">Total Prize Pool</div>
+          <div className="text-lg sm:text-2xl font-bold">
             {formatEther(contest.totalRewards)} ETH
           </div>
         </CardContent>
