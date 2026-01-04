@@ -3,7 +3,6 @@
 import { Award, Medal, Trophy, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
 
@@ -34,6 +34,26 @@ interface PickemLeaderboardProps {
   onClose: () => void;
 }
 
+// Helper component to display formatted prize
+function PrizeDisplay({
+  prize,
+  currency,
+}: {
+  prize: bigint;
+  currency: string;
+}) {
+  const { formattedValue, isLoading } = useFormattedCurrency({
+    amount: prize,
+    currencyAddress: currency,
+  });
+
+  return (
+    <p className="font-bold text-green-600 dark:text-green-400">
+      {isLoading ? "..." : formattedValue}
+    </p>
+  );
+}
+
 export default function PickemLeaderboard({
   contestId,
   onClose,
@@ -45,6 +65,7 @@ export default function PickemLeaderboard({
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
+  const [currency, setCurrency] = useState<string>("");
 
   useEffect(() => {
     fetchLeaderboard();
@@ -56,6 +77,7 @@ export default function PickemLeaderboard({
       // Fetch contest data
       const contest = await getContest(contestId);
       setPrizePool(contest.totalPrizePool);
+      setCurrency(contest.currency);
 
       // Fetch leaderboard entries
       const leaderboard = await getContestLeaderboard(contestId);
@@ -140,6 +162,12 @@ export default function PickemLeaderboard({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  const { formattedValue: prizePoolFormatted, isLoading: prizePoolLoading } =
+    useFormattedCurrency({
+      amount: prizePool,
+      currencyAddress: currency,
+    });
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -159,7 +187,7 @@ export default function PickemLeaderboard({
                   Total Prize Pool
                 </p>
                 <p className="text-2xl font-bold">
-                  {formatEther(prizePool)} ETH
+                  {prizePoolLoading || !currency ? "..." : prizePoolFormatted}
                 </p>
               </div>
               <div className="text-right">
@@ -245,12 +273,10 @@ export default function PickemLeaderboard({
                     </div>
 
                     {/* Prize */}
-                    {entry.prize > 0 && (
+                    {entry.prize > 0 && currency && (
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">Prize</p>
-                        <p className="font-bold text-green-600 dark:text-green-400">
-                          {formatEther(entry.prize)} ETH
-                        </p>
+                        <PrizeDisplay prize={entry.prize} currency={currency} />
                       </div>
                     )}
                   </div>

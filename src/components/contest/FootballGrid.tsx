@@ -8,6 +8,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
@@ -45,9 +46,13 @@ export function FootballGrid({
     return address.toLowerCase() !== contestAddress.toLowerCase();
   };
 
-  const formatEther = (wei: number) => {
-    return (wei / 1e18).toFixed(4);
-  };
+  const totalCost =
+    BigInt(contest.boxCost.amount) * BigInt(selectedBoxes.length);
+  const { formattedValue: totalCostFormatted, isLoading: totalCostLoading } =
+    useFormattedCurrency({
+      amount: totalCost,
+      currencyAddress: contest.boxCost.currency,
+    });
 
   const getBoxColor = (
     boxPosition: number,
@@ -335,8 +340,7 @@ export function FootballGrid({
                 {selectedBoxes.length} boxes selected
               </p>
               <p className="text-sm text-muted-foreground">
-                Total cost:{" "}
-                {formatEther(contest.boxCost.amount * selectedBoxes.length)} ETH
+                Total cost: {totalCostLoading ? "..." : totalCostFormatted}
               </p>
             </div>
             <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
