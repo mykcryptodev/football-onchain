@@ -78,6 +78,10 @@ export interface GameScore {
   awayFLastDigit: number;
   qComplete: number;
   requestInProgress: boolean;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  homeTeamColor?: string;
+  awayTeamColor?: string;
   scoringPlays?: ScoringPlay[];
 }
 

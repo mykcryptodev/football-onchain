@@ -4,6 +4,7 @@ export const queryKeys = {
   // Contest data
   contest: (contestId: string) => ["contest", chain.id, contestId] as const,
   gameScores: (gameId: string) => ["gameScores", gameId] as const,
+  boxesContests: () => ["boxesContests", chain.id] as const,
 
   // Comments
   comments: (contestId: string) => ["comments", contestId] as const,

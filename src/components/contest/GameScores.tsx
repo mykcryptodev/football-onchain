@@ -9,10 +9,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTeamColors } from "@/hooks/useTeamColors";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
+import { UserProfileModal } from "./UserProfileModal";
 
 interface GameScoresProps {
   gameScore: GameScore;
@@ -22,6 +24,16 @@ interface GameScoresProps {
 
 export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [selectedBoxTokenId, setSelectedBoxTokenId] = useState<number | null>(
+    null,
+  );
+
+  // Get team colors with dark mode support
+  const formatTeamColor = useTeamColors();
+  const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
+  const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
 
   // Function to calculate the winning box for a scoring play
   const getWinningBoxForPlay = (play: {
@@ -63,6 +75,18 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
     return owner;
   };
 
+  // Handle clicking on a winning box
+  const handleBoxClick = (tokenId: number) => {
+    const boxOwner = getBoxOwner(tokenId);
+    const address =
+      boxOwner && boxOwner.owner !== ZERO_ADDRESS
+        ? boxOwner.owner
+        : null;
+    setSelectedAddress(address);
+    setSelectedBoxTokenId(tokenId);
+    setIsModalOpen(true);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -71,7 +95,16 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-sm font-semibold text-red-600">Home Team</div>
+            <div
+              className="text-sm font-semibold"
+              style={
+                homeTeamColor
+                  ? { color: homeTeamColor, display: "inline-block" }
+                  : undefined
+              }
+            >
+              {gameScore.homeTeamName || "Home Team"}
+            </div>
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-sm">Q1:</span>
@@ -125,7 +158,16 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
           </div>
 
           <div>
-            <div className="text-sm font-semibold text-blue-600">Away Team</div>
+            <div
+              className="text-sm font-semibold"
+              style={
+                awayTeamColor
+                  ? { color: awayTeamColor, display: "inline-block" }
+                  : undefined
+              }
+            >
+              {gameScore.awayTeamName || "Away Team"}
+            </div>
             <div className="space-y-1">
               <div className="flex justify-between">
                 <span className="text-sm">Q1:</span>
@@ -239,7 +281,10 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
                               boxOwner && boxOwner.owner !== ZERO_ADDRESS;
 
                             return (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 cursor-pointer hover:bg-green-200 transition-colors"
+                                onClick={() => handleBoxClick(winningBox.tokenId)}
+                              >
                                 {hasOwner ? (
                                   <AccountProvider
                                     address={boxOwner.owner}
@@ -268,6 +313,15 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
           </Collapsible>
         )}
       </CardContent>
+
+      <UserProfileModal
+        address={selectedAddress}
+        boxTokenId={selectedBoxTokenId}
+        contest={contest}
+        gameScore={gameScore}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
     </Card>
   );
 }

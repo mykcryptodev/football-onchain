@@ -43,6 +43,9 @@ export default function ContestPage() {
   const [selectedUserAddress, setSelectedUserAddress] = useState<string | null>(
     null,
   );
+  const [selectedBoxTokenId, setSelectedBoxTokenId] = useState<number | null>(
+    null,
+  );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleBoxClick = (boxPosition: number) => {
@@ -71,8 +74,9 @@ export default function ContestPage() {
     });
   };
 
-  const handleClaimedBoxClick = (address: string) => {
+  const handleClaimedBoxClick = (address: string, tokenId: number) => {
     setSelectedUserAddress(address);
+    setSelectedBoxTokenId(tokenId);
     setIsProfileModalOpen(true);
   };
 
@@ -330,8 +334,17 @@ export default function ContestPage() {
       {/* User Profile Modal */}
       <UserProfileModal
         address={selectedUserAddress}
+        boxTokenId={selectedBoxTokenId}
+        contest={contest}
+        gameScore={gameScore}
         open={isProfileModalOpen}
-        onOpenChange={setIsProfileModalOpen}
+        onOpenChange={(open) => {
+          setIsProfileModalOpen(open);
+          if (!open) {
+            setSelectedUserAddress(null);
+            setSelectedBoxTokenId(null);
+          }
+        }}
       />
     </div>
   );
