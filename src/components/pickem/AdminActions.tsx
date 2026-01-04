@@ -3,22 +3,35 @@
 import { Calendar, CheckCircle, Clock, DollarSign, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
-import { formatEther } from "viem";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ContestInfo,
-  useAdminContests,
-} from "@/hooks/useAdminContests";
+import { ContestInfo, useAdminContests } from "@/hooks/useAdminContests";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
   2: "Regular Season",
   3: "Postseason",
 };
+
+// Helper component to display formatted prize pool
+function PrizePoolDisplay({
+  prizePool,
+  currency,
+}: {
+  prizePool: bigint;
+  currency: string;
+}) {
+  const { formattedValue, isLoading } = useFormattedCurrency({
+    amount: prizePool,
+    currencyAddress: currency,
+  });
+
+  return <>{isLoading ? "..." : formattedValue}</>;
+}
 
 export default function AdminActions() {
   const account = useActiveAccount();
@@ -53,7 +66,9 @@ export default function AdminActions() {
 
     try {
       await distributeAll();
-      toast.success("Successfully distributed prizes for all eligible contests!");
+      toast.success(
+        "Successfully distributed prizes for all eligible contests!",
+      );
     } catch (error) {
       console.error("Error distributing all prizes:", error);
       toast.error("Failed to distribute some prizes");
@@ -177,7 +192,10 @@ export default function AdminActions() {
                     </div>
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
-                      {formatEther(contest.totalPrizePool)} ETH
+                      <PrizePoolDisplay
+                        currency={contest.currency}
+                        prizePool={contest.totalPrizePool}
+                      />
                     </div>
                   </div>
                 </div>
