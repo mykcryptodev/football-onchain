@@ -1,11 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
   getContract,
+  parseEventLogs,
   prepareContractCall,
   toUnits,
   ZERO_ADDRESS,
@@ -49,6 +52,7 @@ import {
 import { abi } from "@/constants/abis/contests";
 import { useNFLGames } from "@/hooks/useNFLGames";
 import { type Token, useTokens } from "@/hooks/useTokens";
+import { queryKeys } from "@/lib/query-keys";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -121,6 +125,8 @@ const createContestSchema = z.object({
 type CreateContestFormValues = z.infer<typeof createContestSchema>;
 
 export function CreateContestForm() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
@@ -689,12 +695,55 @@ export function CreateContestForm() {
                       "An error occurred while creating the contest.",
                   });
                 }}
-                onTransactionConfirmed={() => {
-                  toast.success("Contest created successfully!", {
-                    description: "Your contest has been created onchain.",
-                  });
-                  // Reset form after successful creation
-                  form.reset();
+                onTransactionConfirmed={async receipt => {
+                  try {
+                    // Parse ContestCreated event to get the new contest ID
+                    const events = parseEventLogs({
+                      logs: receipt.logs,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      events: abi.filter(item => item.type === "event") as any,
+                    });
+
+                    const contestCreatedEvent = events.find(
+                      e => e.eventName === "ContestCreated",
+                    );
+
+                    if (contestCreatedEvent && contestCreatedEvent.args) {
+                      const args = contestCreatedEvent.args as {
+                        contestId: bigint;
+                        creator: string;
+                      };
+                      const contestId = args.contestId;
+
+                      toast.success("Contest created successfully!", {
+                        description: "Your contest has been created onchain.",
+                      });
+
+                      // Invalidate the contests cache to refresh the join page
+                      await queryClient.invalidateQueries({
+                        queryKey: queryKeys.boxesContests(),
+                      });
+
+                      // Reset form
+                      form.reset();
+
+                      // Redirect to the new contest page
+                      router.push(`/contest/${contestId}`);
+                    } else {
+                      console.error(
+                        "ContestCreated event not found in receipt",
+                      );
+                      toast.success("Contest created successfully!");
+                      form.reset();
+                    }
+                  } catch (error) {
+                    console.error(
+                      "Error processing transaction receipt:",
+                      error,
+                    );
+                    toast.success("Contest created successfully!");
+                    form.reset();
+                  }
                 }}
               >
                 Create Contest
