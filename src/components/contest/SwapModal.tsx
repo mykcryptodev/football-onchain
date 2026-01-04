@@ -31,7 +31,7 @@ type SwapModalProps = {
  */
 export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
   const { resolvedTheme } = useTheme();
-  
+
   if (!tokenInfo) return null;
 
   // Check if the contest's token is USDC
@@ -51,7 +51,7 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl px-0 sm:px-6">
         <DialogHeader>
           <DialogTitle>Get {tokenInfo.symbol}</DialogTitle>
         </DialogHeader>
@@ -84,4 +84,3 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
     </Dialog>
   );
 }
-
