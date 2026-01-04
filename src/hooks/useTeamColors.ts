@@ -15,7 +15,7 @@ function formatTeamColor(
   if (!color) return undefined;
 
   // Ensure color has # prefix
-  let hex = color.startsWith("#") ? color.slice(1) : color;
+  const hex = color.startsWith("#") ? color.slice(1) : color;
   if (hex.length !== 6) return `#${hex}`; // Invalid hex, return as-is
 
   // Convert hex to RGB

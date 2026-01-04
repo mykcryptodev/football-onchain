@@ -160,23 +160,23 @@ export function FootballGrid({
       {(awayTeamName || homeTeamName) && (
         <div className="mb-4 text-center text-lg sm:text-xl font-semibold">
           <span
+            className={awayTeamColor ? undefined : "text-foreground"}
             style={
               awayTeamColor
                 ? { color: awayTeamColor, display: "inline-block" }
                 : undefined
             }
-            className={awayTeamColor ? undefined : "text-foreground"}
           >
             {awayTeamName}
           </span>
           <span className="text-muted-foreground mx-2">@</span>
           <span
+            className={homeTeamColor ? undefined : "text-foreground"}
             style={
               homeTeamColor
                 ? { color: homeTeamColor, display: "inline-block" }
                 : undefined
             }
-            className={homeTeamColor ? undefined : "text-foreground"}
           >
             {homeTeamName}
           </span>

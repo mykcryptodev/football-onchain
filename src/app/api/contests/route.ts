@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createThirdwebClient, getContract, readContract } from "thirdweb";
-import { stringify } from "thirdweb/utils";
 
 import { chain, contests } from "@/constants";
 import { abi } from "@/constants/abis/contests";
@@ -116,7 +115,7 @@ export async function GET() {
     // Filter out null values (contests that failed to fetch) and format
     const formattedContests: ContestListItem[] = contestsData
       .filter((contestData): contestData is NonNullable<typeof contestData> => 
-        contestData !== null
+        contestData !== null,
       )
       .map(contestData => ({
         id: Number(contestData.id),

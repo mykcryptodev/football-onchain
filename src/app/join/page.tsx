@@ -3,6 +3,7 @@
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
 
+import type { ContestListItem } from "@/app/api/contests/route";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 
-function ContestCard({ contest }: { contest: any }) {
+function ContestCard({ contest }: { contest: ContestListItem }) {
   const { formattedValue: boxCostFormatted } = useFormattedCurrency({
     amount: BigInt(contest.boxCost.amount),
     currencyAddress: contest.boxCost.currency,
@@ -69,7 +70,7 @@ function ContestCard({ contest }: { contest: any }) {
           </div>
 
           {/* Action Button */}
-          <Link href={`/contest/${contest.id}`} className="block">
+          <Link className="block" href={`/contest/${contest.id}`}>
             <Button className="w-full" size="lg" variant="default">
               {isOpen ? "Join Contest" : "View Contest"}
             </Button>

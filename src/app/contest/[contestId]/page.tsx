@@ -334,6 +334,9 @@ export default function ContestPage() {
       {/* User Profile Modal */}
       <UserProfileModal
         address={selectedUserAddress}
+        boxTokenId={selectedBoxTokenId}
+        contest={contest}
+        gameScore={gameScore}
         open={isProfileModalOpen}
         onOpenChange={(open) => {
           setIsProfileModalOpen(open);
@@ -342,9 +345,6 @@ export default function ContestPage() {
             setSelectedBoxTokenId(null);
           }
         }}
-        contest={contest}
-        gameScore={gameScore}
-        boxTokenId={selectedBoxTokenId}
       />
     </div>
   );

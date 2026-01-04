@@ -3,19 +3,20 @@
 import { sdk } from "@farcaster/miniapp-sdk";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
-import { client } from "@/providers/Thirdweb";
 import {
   getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
 } from "@/lib/payout-utils";
+import { client } from "@/providers/Thirdweb";
+
 import { Contest, GameScore, PayoutStrategyType, ScoringPlay } from "./types";
 
 interface UserProfileModalProps {
@@ -238,6 +239,9 @@ export function UserProfileModal({
     }
   };
 
+  // Get team colors with dark mode support - must be called before early return
+  const formatTeamColor = useTeamColors();
+
   if (
     !address ||
     !contest ||
@@ -327,8 +331,6 @@ export function UserProfileModal({
   const hasWins =
     boxWins.quarters.length > 0 || boxWins.scoringPlays.length > 0;
 
-  // Get team colors with dark mode support
-  const formatTeamColor = useTeamColors();
   const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
   const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
 
@@ -449,8 +451,8 @@ export function UserProfileModal({
                   </div>
                 </div>
                 <Badge
-                  variant="default"
                   className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm px-3 py-1"
+                  variant="default"
                 >
                   {boxWins.quarters.length + boxWins.scoringPlays.length} Win
                   {boxWins.quarters.length + boxWins.scoringPlays.length !== 1
@@ -472,8 +474,8 @@ export function UserProfileModal({
                     className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border"
                   >
                     <Badge
-                      variant="default"
                       className="bg-emerald-500 hover:bg-emerald-600"
+                      variant="default"
                     >
                       Q{quarter === 4 ? "4 (Final)" : quarter}
                     </Badge>
@@ -497,7 +499,7 @@ export function UserProfileModal({
                     className="p-3 bg-muted rounded-lg border border-border"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <Badge variant="outline" className="font-medium">
+                      <Badge className="font-medium" variant="outline">
                         Score Change #{index}
                       </Badge>
                       <span className="text-sm font-semibold">

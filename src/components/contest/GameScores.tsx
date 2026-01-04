@@ -282,8 +282,8 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
 
                             return (
                               <span
-                                onClick={() => handleBoxClick(winningBox.tokenId)}
                                 className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 cursor-pointer hover:bg-green-200 transition-colors"
+                                onClick={() => handleBoxClick(winningBox.tokenId)}
                               >
                                 {hasOwner ? (
                                   <AccountProvider
@@ -316,11 +316,11 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
 
       <UserProfileModal
         address={selectedAddress}
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        boxTokenId={selectedBoxTokenId}
         contest={contest}
         gameScore={gameScore}
-        boxTokenId={selectedBoxTokenId}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
       />
     </Card>
   );
