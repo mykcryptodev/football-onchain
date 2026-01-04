@@ -2,6 +2,7 @@
 
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
+import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import type { ContestListItem } from "@/app/api/contests/route";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { client } from "@/providers/Thirdweb";
 
 function ContestCard({ contest }: { contest: ContestListItem }) {
   const { formattedValue: boxCostFormatted } = useFormattedCurrency({
     amount: BigInt(contest.boxCost.amount),
     currencyAddress: contest.boxCost.currency,
   });
+
+  const { profile, isLoading: profileLoading } = useUserProfile(
+    contest.creator,
+  );
 
   const totalBoxes = 100;
   const spotsRemaining = totalBoxes - contest.boxesClaimed;
@@ -34,8 +41,34 @@ function ContestCard({ contest }: { contest: ContestListItem }) {
                 {contest.description}
               </p>
             )}
+            {/* Creator Info */}
+            <div className="flex items-center gap-2 mt-2">
+              <AccountProvider address={contest.creator} client={client}>
+                <AccountAvatar
+                  fallbackComponent={
+                    <Blobbie
+                      address={contest.creator}
+                      className="size-5 rounded-full"
+                    />
+                  }
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "100%",
+                  }}
+                />
+              </AccountProvider>
+              <span className="text-xs text-muted-foreground">
+                {profileLoading
+                  ? "Loading..."
+                  : profile?.name ||
+                    `${contest.creator.slice(0, 6)}…${contest.creator.slice(-4)}`}
+              </span>
+            </div>
           </div>
-          <Badge variant={isOpen ? "default" : isFull ? "secondary" : "outline"}>
+          <Badge
+            variant={isOpen ? "default" : isFull ? "secondary" : "outline"}
+          >
             {isOpen ? "Open" : isFull ? "Full" : "Closed"}
           </Badge>
         </div>
@@ -162,9 +195,7 @@ export default function JoinContestPage() {
         {!isLoading && contests.length > 0 && (
           <Tabs className="space-y-6" defaultValue="all">
             <TabsList>
-              <TabsTrigger value="all">
-                All ({contests.length})
-              </TabsTrigger>
+              <TabsTrigger value="all">All ({contests.length})</TabsTrigger>
               <TabsTrigger value="open">
                 Open ({openContests.length})
               </TabsTrigger>
@@ -217,4 +248,3 @@ export default function JoinContestPage() {
     </div>
   );
 }
-
