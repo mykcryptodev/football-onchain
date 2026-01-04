@@ -31,7 +31,7 @@ export async function GET() {
       ogTitle: appName,
       ogDescription: appDescription,
       ogImageUrl: `${URL}/og.png`,
-      noindex: true,
+      noindex: false,
     },
   });
 }
