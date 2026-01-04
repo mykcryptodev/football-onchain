@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const pathname = headersList.get("x-pathname") || "/";
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${pathname}`;
-  const ogImageUrl = `${baseUrl}/api/og`;
+  const ogImageUrl = `${baseUrl}/og.png`;
 
   const title = "Football - Ultimate Football Squares and Pick'em Experience";
   const description =
@@ -66,7 +66,7 @@ export async function generateMetadata(): Promise<Metadata> {
     other: generateFarcasterMetadata({
       appName,
       imageUrl: ogImageUrl,
-      splashImageUrl: `${baseUrl}/splash-image.png`,
+      splashImageUrl: `${baseUrl}/icon.png`,
       splashBackgroundColor: "#000000",
       url: fullUrl,
     }),
