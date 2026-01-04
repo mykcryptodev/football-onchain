@@ -9,6 +9,7 @@ export interface ContestInfo {
   seasonType: number;
   weekNumber: number;
   year: number;
+  currency: string;
   totalPrizePool: bigint;
   totalEntries: number;
   gamesFinalized: boolean;
@@ -42,6 +43,7 @@ export function useAdminContests(): UseAdminContestsReturn {
           seasonType: Number(c.seasonType),
           weekNumber: Number(c.weekNumber),
           year: Number(c.year),
+          currency: c.currency,
           totalPrizePool: c.totalPrizePool,
           totalEntries: Number(c.totalEntries),
           gamesFinalized: c.gamesFinalized,
