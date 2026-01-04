@@ -1,6 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -49,6 +51,7 @@ import {
 import { abi } from "@/constants/abis/contests";
 import { useNFLGames } from "@/hooks/useNFLGames";
 import { type Token, useTokens } from "@/hooks/useTokens";
+import { queryKeys } from "@/lib/query-keys";
 import { resolveTokenIcon } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -121,6 +124,8 @@ const createContestSchema = z.object({
 type CreateContestFormValues = z.infer<typeof createContestSchema>;
 
 export function CreateContestForm() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [, setCurrentWeek] = useState<CurrentWeekResponse | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
@@ -149,6 +154,17 @@ export function CreateContestForm() {
 
   // Use the new useNFLGames hook
   const { games, isLoading: loadingGames } = useNFLGames(seasonType, week);
+
+  // Store contract instance in state so we can use it for event parsing
+  const [contestContract] = useState(() =>
+    getContract({
+      client,
+      chain,
+      address: contests[chain.id],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abi: abi as any,
+    }),
+  );
 
   const createContestCreationTx = useCallback(async () => {
     const formData = form.getValues();
@@ -182,18 +198,9 @@ export function CreateContestForm() {
         ? quartersOnlyPayoutStrategy[chain.id]
         : scoreChangesPayoutStrategy[chain.id];
 
-    // Get the contract instance
-    const contract = getContract({
-      client,
-      chain,
-      address: contests[chain.id],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      abi: abi as any, // Type assertion needed for complex contract ABI
-    });
-
     // Prepare the contract call
     return prepareContractCall({
-      contract,
+      contract: contestContract,
       method: "createContest",
       params: [
         BigInt(formData.gameId), // gameId
@@ -204,7 +211,7 @@ export function CreateContestForm() {
         payoutStrategyAddress, // payoutStrategy
       ],
     });
-  }, [form, selectedToken]);
+  }, [form, selectedToken, contestContract]);
 
   // Fetch current week/season on component mount
   useEffect(() => {
@@ -689,12 +696,57 @@ export function CreateContestForm() {
                       "An error occurred while creating the contest.",
                   });
                 }}
-                onTransactionConfirmed={() => {
-                  toast.success("Contest created successfully!", {
-                    description: "Your contest has been created onchain.",
-                  });
-                  // Reset form after successful creation
-                  form.reset();
+                onTransactionConfirmed={async receipt => {
+                  try {
+                    // Filter logs for our contract address
+                    const contractLogs = receipt.logs.filter(
+                      log =>
+                        log.address.toLowerCase() ===
+                        contestContract.address.toLowerCase(),
+                    );
+
+                    // ContestCreated event has signature: event ContestCreated(uint256 indexed contestId, address indexed creator)
+                    // The contestId is in topics[1] as an indexed parameter
+                    const contestCreatedLog = contractLogs.find(
+                      log => log.topics && log.topics.length >= 2,
+                    );
+
+                    if (contestCreatedLog && contestCreatedLog.topics[1]) {
+                      // Decode the contestId from the second topic (topics[1])
+                      // It's a uint256, so we can convert the hex string to bigint
+                      const contestId = BigInt(contestCreatedLog.topics[1]);
+
+                      toast.success("Contest created successfully!", {
+                        description: "Your contest has been created onchain.",
+                      });
+
+                      // Invalidate the contests cache to refresh the join page
+                      await queryClient.invalidateQueries({
+                        queryKey: queryKeys.boxesContests(),
+                      });
+
+                      // Reset form
+                      form.reset();
+
+                      // Redirect to the new contest page
+                      router.push(`/contest/${contestId}`);
+                    } else {
+                      console.error(
+                        "ContestCreated event not found in receipt",
+                        "Contract logs:",
+                        contractLogs,
+                      );
+                      toast.success("Contest created successfully!");
+                      form.reset();
+                    }
+                  } catch (error) {
+                    console.error(
+                      "Error processing transaction receipt:",
+                      error,
+                    );
+                    toast.success("Contest created successfully!");
+                    form.reset();
+                  }
                 }}
               >
                 Create Contest
