@@ -51,21 +51,9 @@ export function Navigation() {
             </Link>
             <Link
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/games"
+              href="/join"
             >
-              Games
-            </Link>
-            <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/leaderboard"
-            >
-              Leaderboard
-            </Link>
-            <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/how-to-play"
-            >
-              How to Play
+              Join Contest
             </Link>
           </div>
         </div>
