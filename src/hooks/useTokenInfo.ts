@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getContract, ZERO_ADDRESS } from "thirdweb";
 import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
 import { erc20Abi } from "viem";
@@ -23,78 +23,50 @@ type UseTokenInfoResult = {
 /**
  * Hook to fetch token metadata (symbol, decimals, etc.) for a given token address.
  * Handles both native ETH and ERC20 tokens.
+ * Uses React Query for caching and automatic refetching.
  */
 export function useTokenInfo(tokenAddress: string): UseTokenInfoResult {
-  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["tokens", "metadata", tokenAddress],
+    queryFn: async () => {
+      const isNative =
+        tokenAddress.toLowerCase() === ZERO_ADDRESS.toLowerCase();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchTokenInfo() {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const isNative =
-          tokenAddress.toLowerCase() === ZERO_ADDRESS.toLowerCase();
-
-        if (isNative) {
-          if (isMounted) {
-            setTokenInfo({
-              address: ZERO_ADDRESS,
-              symbol: "ETH",
-              chainId: chain.id,
-            });
-          }
-          return;
-        }
-
-        const contract = getContract({
-          client,
-          chain,
-          address: tokenAddress as `0x${string}`,
-          abi: erc20Abi,
-        });
-
-        const metadata = await getCurrencyMetadata({ contract });
-
-        if (isMounted) {
-          setTokenInfo({
-            address: tokenAddress,
-            symbol: metadata.symbol,
-            chainId: chain.id,
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching token info:", err);
-        if (isMounted) {
-          setError(
-            err instanceof Error
-              ? err
-              : new Error("Failed to fetch token info"),
-          );
-          // Fallback to generic token
-          setTokenInfo({
-            address: tokenAddress,
-            symbol: "TOKEN",
-            chainId: chain.id,
-          });
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      if (isNative) {
+        return {
+          address: ZERO_ADDRESS,
+          symbol: "ETH",
+          chainId: chain.id,
+        };
       }
-    }
 
-    fetchTokenInfo();
+      const contract = getContract({
+        client,
+        chain,
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+      });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [tokenAddress]);
+      const metadata = await getCurrencyMetadata({ contract });
 
-  return { tokenInfo, isLoading, error };
+      return {
+        address: tokenAddress,
+        symbol: metadata.symbol,
+        chainId: chain.id,
+      };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - token metadata rarely changes
+    retry: 2, // Retry twice on failure
+    placeholderData: {
+      address: tokenAddress,
+      symbol: "TOKEN",
+      chainId: chain.id,
+    },
+  });
+
+  return {
+    tokenInfo: data ?? null,
+    isLoading,
+    error: error as Error | null,
+  };
 }
