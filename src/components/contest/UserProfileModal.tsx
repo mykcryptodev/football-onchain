@@ -4,13 +4,7 @@ import { sdk } from "@farcaster/miniapp-sdk";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -40,7 +34,7 @@ export function UserProfileModal({
   gameScore,
   boxTokenId,
 }: UserProfileModalProps) {
-  const { profile, isLoading } = useUserProfile(address);
+  const { profile, isLoading: profileLoading } = useUserProfile(address);
   const { isInMiniApp } = useIsInMiniApp();
 
   // Calculate prize amounts for quarters and scoring plays
@@ -203,6 +197,30 @@ export function UserProfileModal({
 
   const boxWins = getBoxWins();
 
+  // Calculate total winnings
+  const calculateTotalWinnings = () => {
+    let total = 0;
+    boxWins.quarters.forEach(quarter => {
+      const prize = prizeAmounts?.[
+        `q${quarter}` as keyof typeof prizeAmounts
+      ] as number;
+      if (prize) total += prize;
+    });
+    if (prizeAmounts?.scoreChange) {
+      total += prizeAmounts.scoreChange * boxWins.scoringPlays.length;
+    }
+    return total;
+  };
+
+  const totalWinnings = calculateTotalWinnings();
+  const {
+    formattedValue: totalWinningsFormatted,
+    isLoading: totalWinningsLoading,
+  } = useFormattedCurrency({
+    amount: BigInt(Math.floor(totalWinnings)),
+    currencyAddress: prizeAmounts?.currencyAddress || currencyAddress,
+  });
+
   const handleViewProfile = async () => {
     if (!profile?.fid) {
       console.warn("No FID available for this user");
@@ -212,175 +230,281 @@ export function UserProfileModal({
     if (isInMiniApp) {
       try {
         await sdk.actions.viewProfile({ fid: profile.fid });
-        onOpenChange(false); // Close modal after opening profile
+        onOpenChange(false);
       } catch (error) {
         console.error("Error viewing profile:", error);
       }
-    } else {
-      // If not in mini app, could open Farcaster profile in new tab
-      // For now, just show the modal
-      console.log("Not in mini app, showing modal instead");
     }
   };
 
-  if (!address) return null;
+  if (
+    !address ||
+    !contest ||
+    !gameScore ||
+    boxTokenId === null ||
+    boxTokenId === undefined
+  ) {
+    return null;
+  }
+
+  // Calculate box position
+  const boxPosition = boxTokenId % 100;
+  const row = Math.floor(boxPosition / 10);
+  const col = boxPosition % 10;
+  const boxRowScore = contest.rows[row];
+  const boxColScore = contest.cols[col];
+
+  // Extract team info from scoring plays
+  const getTeamInfo = () => {
+    if (!gameScore?.scoringPlays || gameScore.scoringPlays.length === 0) {
+      return {
+        awayAbbreviation: gameScore.awayTeamName || "Away",
+        awayLogo: undefined,
+        homeAbbreviation: gameScore.homeTeamName || "Home",
+        homeLogo: undefined,
+      };
+    }
+
+    // Find away and home teams from scoring plays
+    let awayTeam = null;
+    let homeTeam = null;
+
+    // Look through scoring plays to find team info
+    for (const play of gameScore.scoringPlays) {
+      if (play.team) {
+        // Check if this team matches the away team name
+        if (!awayTeam && play.team.displayName === gameScore.awayTeamName) {
+          awayTeam = play.team;
+        }
+        // Check if this team matches the home team name
+        if (!homeTeam && play.team.displayName === gameScore.homeTeamName) {
+          homeTeam = play.team;
+        }
+        // If we found both, break early
+        if (awayTeam && homeTeam) break;
+      }
+    }
+
+    // Fallback: if we didn't find teams by name, use the first two unique teams
+    if (!awayTeam || !homeTeam) {
+      const uniqueTeams = new Map<string, ScoringPlay["team"]>();
+      for (const play of gameScore.scoringPlays) {
+        if (play.team && !uniqueTeams.has(play.team.id)) {
+          uniqueTeams.set(play.team.id, play.team);
+        }
+      }
+      const teams = Array.from(uniqueTeams.values());
+      if (teams.length >= 2) {
+        awayTeam = awayTeam || teams[0];
+        homeTeam = homeTeam || teams[1];
+      } else if (teams.length === 1) {
+        // If only one team found, try to determine which is which based on score
+        const firstPlay = gameScore.scoringPlays[0];
+        if (
+          firstPlay &&
+          firstPlay.awayScore !== undefined &&
+          firstPlay.homeScore !== undefined
+        ) {
+          // Can't definitively determine, but use what we have
+          awayTeam = awayTeam || teams[0];
+          homeTeam = homeTeam || teams[0];
+        }
+      }
+    }
+
+    return {
+      awayAbbreviation:
+        awayTeam?.abbreviation || gameScore.awayTeamName || "Away",
+      awayLogo: awayTeam?.logo,
+      homeAbbreviation:
+        homeTeam?.abbreviation || gameScore.homeTeamName || "Home",
+      homeLogo: homeTeam?.logo,
+    };
+  };
+
+  const teamInfo = getTeamInfo();
+  const hasWins =
+    boxWins.quarters.length > 0 || boxWins.scoringPlays.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>User Profile</DialogTitle>
-          <DialogDescription>
-            {isInMiniApp && profile?.fid
-              ? "Click the button below to view this user's Farcaster profile"
-              : "View user information"}
-          </DialogDescription>
-        </DialogHeader>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Loading profile...</div>
-          </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <div className="flex flex-col items-center gap-4">
-              <AccountProvider address={address} client={client}>
-                <AccountAvatar
-                  fallbackComponent={
-                    <Blobbie
-                      address={address}
-                      className="size-20 rounded-full"
+      <DialogContent className="max-w-2xl">
+        <div className="space-y-6 py-4">
+          {/* Box Owner - At Top */}
+          <div>
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+              {profileLoading ? (
+                <div className="flex-1 text-sm text-muted-foreground">
+                  Loading owner...
+                </div>
+              ) : (
+                <>
+                  <AccountProvider address={address} client={client}>
+                    <AccountAvatar
+                      fallbackComponent={
+                        <Blobbie
+                          address={address}
+                          className="size-10 rounded-full"
+                        />
+                      }
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        borderRadius: "100%",
+                      }}
                     />
-                  }
-                  style={{
-                    width: "80px",
-                    height: "80px",
-                    borderRadius: "100%",
-                  }}
-                />
-              </AccountProvider>
-
-              {profile?.name && (
-                <div className="text-center">
-                  <div className="text-lg font-semibold">{profile.name}</div>
-                </div>
-              )}
-
-              <div className="text-center text-sm text-muted-foreground">
-                <div className="font-mono break-all">{address}</div>
-              </div>
-
-              {profile?.fid && (
-                <div className="text-center text-sm text-muted-foreground">
-                  <div>Farcaster ID: {profile.fid}</div>
-                </div>
-              )}
-
-              {isInMiniApp && profile?.fid && (
-                <Button className="mt-4" onClick={handleViewProfile}>
-                  View Farcaster Profile
-                </Button>
+                  </AccountProvider>
+                  <div className="flex-1 min-w-0">
+                    {profile?.name && (
+                      <div className="text-sm font-medium truncate">
+                        {profile.name}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground font-mono truncate">
+                      {address}
+                    </div>
+                    {profile?.fid && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Farcaster ID: {profile.fid}
+                      </div>
+                    )}
+                  </div>
+                  {isInMiniApp && profile?.fid && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleViewProfile}
+                    >
+                      View Profile
+                    </Button>
+                  )}
+                </>
               )}
             </div>
+          </div>
 
-            {/* Box Winning Information */}
-            {contest &&
-              gameScore &&
-              boxTokenId !== null &&
-              boxTokenId !== undefined && (
-                <div className="border-t pt-4 mt-4">
-                  <h3 className="font-semibold mb-3">Box Information</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-sm font-medium mb-1">
-                        Box Position
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {gameScore.awayTeamName || "Away"}:{" "}
-                        {contest.cols[(boxTokenId % 100) % 10]}
-                        {" - "}
-                        {gameScore.homeTeamName || "Home"}:{" "}
-                        {contest.rows[Math.floor((boxTokenId % 100) / 10)]}
-                      </div>
-                    </div>
+          {/* Box Value - With Team Icons and Abbreviations */}
+          <div className="text-center py-4">
+            <div className="flex items-center justify-center gap-4 text-4xl font-bold">
+              <div className="flex items-center gap-2">
+                {teamInfo.awayLogo && (
+                  <img
+                    alt={teamInfo.awayAbbreviation}
+                    className="h-8 w-8"
+                    src={teamInfo.awayLogo}
+                  />
+                )}
+                <span>{teamInfo.awayAbbreviation}</span>
+              </div>
+              <span className="text-muted-foreground">:</span>
+              <span>{boxColScore}</span>
+              <span className="text-muted-foreground">,</span>
+              <div className="flex items-center gap-2">
+                {teamInfo.homeLogo && (
+                  <img
+                    alt={teamInfo.homeAbbreviation}
+                    className="h-8 w-8"
+                    src={teamInfo.homeLogo}
+                  />
+                )}
+                <span>{teamInfo.homeAbbreviation}</span>
+              </div>
+              <span className="text-muted-foreground">:</span>
+              <span>{boxRowScore}</span>
+            </div>
+          </div>
 
-                    {(boxWins.quarters.length > 0 ||
-                      boxWins.scoringPlays.length > 0) && (
-                      <>
-                        {boxWins.quarters.length > 0 && (
-                          <div>
-                            <div className="text-sm font-medium mb-2">
-                              Won Quarters
-                            </div>
-                            <div className="space-y-2">
-                              {boxWins.quarters.map(quarter => (
-                                <div
-                                  key={quarter}
-                                  className="flex items-center justify-between p-2 bg-muted rounded border border-border"
-                                >
-                                  <Badge
-                                    variant="default"
-                                    className="bg-emerald-500 hover:bg-emerald-600"
-                                  >
-                                    Q{quarter === 4 ? "4 (Final)" : quarter}
-                                  </Badge>
-                                  <span className="text-sm font-medium">
-                                    {getQuarterPrize(quarter)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {boxWins.scoringPlays.length > 0 && (
-                          <div>
-                            <div className="text-sm font-medium mb-2">
-                              Won Scoring Plays
-                            </div>
-                            <div className="space-y-2">
-                              {boxWins.scoringPlays.map(({ index, play }) => (
-                                <div
-                                  key={index}
-                                  className="text-sm p-2 bg-muted rounded border border-border"
-                                >
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="font-medium">
-                                      Score Change #{index}
-                                    </div>
-                                    <span className="text-sm font-medium">
-                                      {scoreChangePrizeLoading
-                                        ? "..."
-                                        : scoreChangePrizeFormatted}
-                                    </span>
-                                  </div>
-                                  <div className="text-muted-foreground text-xs mt-1">
-                                    {play.text ||
-                                      play.type?.text ||
-                                      "Scoring play"}
-                                  </div>
-                                  <div className="text-xs mt-1">
-                                    Score: {play.awayScore} - {play.homeScore}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {boxWins.quarters.length === 0 &&
-                      boxWins.scoringPlays.length === 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          This box has not won any quarters or scoring plays.
-                        </div>
-                      )}
+          {/* Winnings Summary */}
+          {hasWins && (
+            <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-900">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-emerald-900 dark:text-emerald-100 mb-1">
+                    Total Winnings
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+                    {totalWinningsLoading ? "..." : totalWinningsFormatted}
                   </div>
                 </div>
-              )}
-          </div>
-        )}
+                <Badge
+                  variant="default"
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm px-3 py-1"
+                >
+                  {boxWins.quarters.length + boxWins.scoringPlays.length} Win
+                  {boxWins.quarters.length + boxWins.scoringPlays.length !== 1
+                    ? "s"
+                    : ""}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Quarter Wins */}
+          {boxWins.quarters.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Quarter Wins</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {boxWins.quarters.map(quarter => (
+                  <div
+                    key={quarter}
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border"
+                  >
+                    <Badge
+                      variant="default"
+                      className="bg-emerald-500 hover:bg-emerald-600"
+                    >
+                      Q{quarter === 4 ? "4 (Final)" : quarter}
+                    </Badge>
+                    <span className="text-sm font-semibold">
+                      {getQuarterPrize(quarter)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scoring Play Wins */}
+          {boxWins.scoringPlays.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Scoring Play Wins</h3>
+              <div className="space-y-2">
+                {boxWins.scoringPlays.map(({ index, play }) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-muted rounded-lg border border-border"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className="font-medium">
+                        Score Change #{index}
+                      </Badge>
+                      <span className="text-sm font-semibold">
+                        {scoreChangePrizeLoading
+                          ? "..."
+                          : scoreChangePrizeFormatted}
+                      </span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mb-1">
+                      {play.text || play.type?.text || "Scoring play"}
+                    </div>
+                    <div className="text-xs font-mono">
+                      Score: {play.awayScore} - {play.homeScore}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No Wins Message */}
+          {!hasWins && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-sm">
+                This box has not won any quarters or scoring plays yet.
+              </div>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
