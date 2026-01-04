@@ -83,7 +83,7 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           <p className="text-muted-foreground mt-1">Contest #{contest.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleShare}>
+          <Button size="sm" variant="outline" onClick={handleShare}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
           </Button>
