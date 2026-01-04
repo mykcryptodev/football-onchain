@@ -5,8 +5,8 @@ import { useState } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
 
 import { chain } from "@/constants";
+import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { toCaip19 } from "@/lib/utils";
-import { useFarcasterContext } from "./useFarcasterContext";
 
 type SwapTokenResult = {
   success: boolean;

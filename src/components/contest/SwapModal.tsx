@@ -3,14 +3,14 @@
 import { useTheme } from "next-themes";
 import { BridgeWidget } from "thirdweb/react";
 
-import { chain, usdc } from "@/constants";
-import { client } from "@/providers/Thirdweb";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { chain, usdc } from "@/constants";
+import { client } from "@/providers/Thirdweb";
 
 type TokenInfo = {
   address: string;
@@ -61,12 +61,13 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
           </p>
           <div className="w-full flex justify-center">
             <BridgeWidget
+              client={client}
+              showThirdwebBranding={false}
+              theme={resolvedTheme === "dark" ? "dark" : "light"}
               buy={{
                 chainId: tokenInfo.chainId,
                 tokenAddress: tokenInfo.address,
               }}
-              client={client}
-              showThirdwebBranding={false}
               swap={{
                 prefill: {
                   buyToken: {
@@ -76,7 +77,6 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
                   sellToken,
                 },
               }}
-              theme={resolvedTheme === "dark" ? "dark" : "light"}
             />
           </div>
         </div>
