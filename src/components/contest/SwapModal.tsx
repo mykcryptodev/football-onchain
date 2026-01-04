@@ -51,15 +51,15 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Get {tokenInfo.symbol}</DialogTitle>
         </DialogHeader>
         <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-4 text-center">
             Swap tokens or buy with card to claim boxes
           </p>
-          <div className="w-full">
+          <div className="w-full flex justify-center">
             <BridgeWidget
               buy={{
                 chainId: tokenInfo.chainId,
