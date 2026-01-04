@@ -112,6 +112,8 @@ export async function POST(
       requestInProgress: false, // Always false since we're fetching directly
       homeTeamName: homeTeam.team?.displayName || homeTeam.team?.name || "Home Team",
       awayTeamName: awayTeam.team?.displayName || awayTeam.team?.name || "Away Team",
+      homeTeamColor: homeTeam.team?.color,
+      awayTeamColor: awayTeam.team?.color,
       scoringPlays: scoringPlays.map(
         (play: {
           id: string;

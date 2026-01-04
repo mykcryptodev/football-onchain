@@ -9,6 +9,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useTeamColors } from "@/hooks/useTeamColors";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -28,6 +29,11 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const [selectedBoxTokenId, setSelectedBoxTokenId] = useState<number | null>(
     null,
   );
+
+  // Get team colors with dark mode support
+  const formatTeamColor = useTeamColors();
+  const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
+  const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
 
   // Function to calculate the winning box for a scoring play
   const getWinningBoxForPlay = (play: {
@@ -89,7 +95,14 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-sm font-semibold">
+            <div
+              className="text-sm font-semibold"
+              style={
+                homeTeamColor
+                  ? { color: homeTeamColor, display: "inline-block" }
+                  : undefined
+              }
+            >
               {gameScore.homeTeamName || "Home Team"}
             </div>
             <div className="space-y-1">
@@ -145,7 +158,14 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
           </div>
 
           <div>
-            <div className="text-sm font-semibold">
+            <div
+              className="text-sm font-semibold"
+              style={
+                awayTeamColor
+                  ? { color: awayTeamColor, display: "inline-block" }
+                  : undefined
+              }
+            >
               {gameScore.awayTeamName || "Away Team"}
             </div>
             <div className="space-y-1">

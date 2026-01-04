@@ -8,6 +8,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
+import { useTeamColors } from "@/hooks/useTeamColors";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -128,8 +129,59 @@ export function FootballGrid({
     });
   };
 
+  // Get team colors with dark mode support
+  const formatTeamColor = useTeamColors();
+  const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
+  const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
+  const awayTeamName = gameScore?.awayTeamName || "Away";
+  const homeTeamName = gameScore?.homeTeamName || "Home";
+
+  // Helper function to get text color class based on background color (for contrast)
+  const getTextColorClass = (bgColor: string | undefined) => {
+    if (!bgColor) return "text-foreground";
+    try {
+      // Convert hex to RGB
+      const hex = bgColor.replace("#", "");
+      if (hex.length !== 6) return "text-foreground";
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      // Calculate luminance
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      return luminance > 0.5 ? "text-black" : "text-white";
+    } catch {
+      return "text-foreground";
+    }
+  };
+
   return (
     <div className="w-full">
+      {/* Team names header */}
+      {(awayTeamName || homeTeamName) && (
+        <div className="mb-4 text-center text-lg sm:text-xl font-semibold">
+          <span
+            style={
+              awayTeamColor
+                ? { color: awayTeamColor, display: "inline-block" }
+                : undefined
+            }
+            className={awayTeamColor ? undefined : "text-foreground"}
+          >
+            {awayTeamName}
+          </span>
+          <span className="text-muted-foreground mx-2">@</span>
+          <span
+            style={
+              homeTeamColor
+                ? { color: homeTeamColor, display: "inline-block" }
+                : undefined
+            }
+            className={homeTeamColor ? undefined : "text-foreground"}
+          >
+            {homeTeamName}
+          </span>
+        </div>
+      )}
       {contest.boxesCanBeClaimed && (
         <p className="text-sm text-muted-foreground mt-1">
           Click on empty squares to select them for purchase
@@ -142,7 +194,18 @@ export function FootballGrid({
           {contest.cols.map((col, i) => (
             <div
               key={i}
-              className="aspect-square bg-muted p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0"
+              className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
+                awayTeamColor
+                  ? getTextColorClass(awayTeamColor)
+                  : "bg-muted text-foreground"
+              }`}
+              style={
+                awayTeamColor
+                  ? {
+                      backgroundColor: awayTeamColor,
+                    }
+                  : {}
+              }
             >
               {col}
             </div>
@@ -152,7 +215,20 @@ export function FootballGrid({
           {Array.from({ length: 10 }, (_, row) => (
             <div key={row} className="contents">
               {/* Home team score header */}
-              <div className="aspect-square bg-muted p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0">
+              <div
+                className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
+                  homeTeamColor
+                    ? getTextColorClass(homeTeamColor)
+                    : "bg-muted text-foreground"
+                }`}
+                style={
+                  homeTeamColor
+                    ? {
+                        backgroundColor: homeTeamColor,
+                      }
+                    : {}
+                }
+              >
                 {contest.rows[row]}
               </div>
 

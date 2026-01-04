@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
+import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { client } from "@/providers/Thirdweb";
@@ -326,6 +327,11 @@ export function UserProfileModal({
   const hasWins =
     boxWins.quarters.length > 0 || boxWins.scoringPlays.length > 0;
 
+  // Get team colors with dark mode support
+  const formatTeamColor = useTeamColors();
+  const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
+  const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -394,7 +400,15 @@ export function UserProfileModal({
                     src={teamInfo.awayLogo}
                   />
                 )}
-                <span>{teamInfo.awayAbbreviation}</span>
+                <span
+                  style={
+                    awayTeamColor
+                      ? { color: awayTeamColor, display: "inline-block" }
+                      : undefined
+                  }
+                >
+                  {teamInfo.awayAbbreviation}
+                </span>
               </div>
               <span className="text-muted-foreground">:</span>
               <span>{boxColScore}</span>
@@ -407,7 +421,15 @@ export function UserProfileModal({
                     src={teamInfo.homeLogo}
                   />
                 )}
-                <span>{teamInfo.homeAbbreviation}</span>
+                <span
+                  style={
+                    homeTeamColor
+                      ? { color: homeTeamColor, display: "inline-block" }
+                      : undefined
+                  }
+                >
+                  {teamInfo.homeAbbreviation}
+                </span>
               </div>
               <span className="text-muted-foreground">:</span>
               <span>{boxRowScore}</span>
