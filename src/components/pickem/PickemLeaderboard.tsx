@@ -276,7 +276,7 @@ export default function PickemLeaderboard({
                     {entry.prize > 0 && currency && (
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">Prize</p>
-                        <PrizeDisplay prize={entry.prize} currency={currency} />
+                        <PrizeDisplay currency={currency} prize={entry.prize} />
                       </div>
                     )}
                   </div>

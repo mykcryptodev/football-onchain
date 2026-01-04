@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card";
-
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 
 import { Contest } from "./types";

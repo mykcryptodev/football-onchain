@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { ContestInfo, useAdminContests } from "@/hooks/useAdminContests";
+import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
@@ -193,8 +193,8 @@ export default function AdminActions() {
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-4 w-4" />
                       <PrizePoolDisplay
-                        prizePool={contest.totalPrizePool}
                         currency={contest.currency}
+                        prizePool={contest.totalPrizePool}
                       />
                     </div>
                   </div>
