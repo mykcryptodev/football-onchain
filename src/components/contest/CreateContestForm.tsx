@@ -8,7 +8,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
   getContract,
-  parseEventLogs,
   prepareContractCall,
   toUnits,
   ZERO_ADDRESS,
@@ -156,6 +155,17 @@ export function CreateContestForm() {
   // Use the new useNFLGames hook
   const { games, isLoading: loadingGames } = useNFLGames(seasonType, week);
 
+  // Store contract instance in state so we can use it for event parsing
+  const [contestContract] = useState(() =>
+    getContract({
+      client,
+      chain,
+      address: contests[chain.id],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abi: abi as any,
+    }),
+  );
+
   const createContestCreationTx = useCallback(async () => {
     const formData = form.getValues();
 
@@ -188,18 +198,9 @@ export function CreateContestForm() {
         ? quartersOnlyPayoutStrategy[chain.id]
         : scoreChangesPayoutStrategy[chain.id];
 
-    // Get the contract instance
-    const contract = getContract({
-      client,
-      chain,
-      address: contests[chain.id],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      abi: abi as any, // Type assertion needed for complex contract ABI
-    });
-
     // Prepare the contract call
     return prepareContractCall({
-      contract,
+      contract: contestContract,
       method: "createContest",
       params: [
         BigInt(formData.gameId), // gameId
@@ -210,7 +211,7 @@ export function CreateContestForm() {
         payoutStrategyAddress, // payoutStrategy
       ],
     });
-  }, [form, selectedToken]);
+  }, [form, selectedToken, contestContract]);
 
   // Fetch current week/season on component mount
   useEffect(() => {
@@ -697,23 +698,23 @@ export function CreateContestForm() {
                 }}
                 onTransactionConfirmed={async receipt => {
                   try {
-                    // Parse ContestCreated event to get the new contest ID
-                    const events = parseEventLogs({
-                      logs: receipt.logs,
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      events: abi.filter(item => item.type === "event") as any,
-                    });
-
-                    const contestCreatedEvent = events.find(
-                      e => e.eventName === "ContestCreated",
+                    // Filter logs for our contract address
+                    const contractLogs = receipt.logs.filter(
+                      log =>
+                        log.address.toLowerCase() ===
+                        contestContract.address.toLowerCase(),
                     );
 
-                    if (contestCreatedEvent && contestCreatedEvent.args) {
-                      const args = contestCreatedEvent.args as {
-                        contestId: bigint;
-                        creator: string;
-                      };
-                      const contestId = args.contestId;
+                    // ContestCreated event has signature: event ContestCreated(uint256 indexed contestId, address indexed creator)
+                    // The contestId is in topics[1] as an indexed parameter
+                    const contestCreatedLog = contractLogs.find(
+                      log => log.topics && log.topics.length >= 2,
+                    );
+
+                    if (contestCreatedLog && contestCreatedLog.topics[1]) {
+                      // Decode the contestId from the second topic (topics[1])
+                      // It's a uint256, so we can convert the hex string to bigint
+                      const contestId = BigInt(contestCreatedLog.topics[1]);
 
                       toast.success("Contest created successfully!", {
                         description: "Your contest has been created onchain.",
@@ -732,6 +733,8 @@ export function CreateContestForm() {
                     } else {
                       console.error(
                         "ContestCreated event not found in receipt",
+                        "Contract logs:",
+                        contractLogs,
                       );
                       toast.success("Contest created successfully!");
                       form.reset();
