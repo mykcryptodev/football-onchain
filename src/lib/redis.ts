@@ -24,9 +24,15 @@ export const getPayoutTxKey = (contestId: string, chainId?: number) => {
   return `contest:payoutTx:${currentChainId}:${contestId}`;
 };
 
+export const getContestsListCacheKey = (chainId?: number) => {
+  const currentChainId = chainId || chain.id;
+  return `contests:list:${currentChainId}`;
+};
+
 // Cache TTL constants
 export const CACHE_TTL = {
   CONTEST: 3600, // 1 hour in seconds
+  CONTESTS_LIST: 300, // 5 minutes in seconds
 } as const;
 
 /**

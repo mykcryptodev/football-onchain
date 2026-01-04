@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,12 +23,16 @@ export default function Home() {
             invite friends, and win big!
           </p>
           <div className="flex gap-4 justify-center flex-col sm:flex-row">
-            <Button className="text-lg px-8" size="lg">
-              Create Contest
-            </Button>
-            <Button className="text-lg px-8" size="lg" variant="outline">
-              Join Contest
-            </Button>
+            <Link href="/contest/create">
+              <Button className="text-lg px-8" size="lg">
+                Create Contest
+              </Button>
+            </Link>
+            <Link href="/join">
+              <Button className="text-lg px-8" size="lg" variant="outline">
+                Join Contest
+              </Button>
+            </Link>
           </div>
         </div>
 
