@@ -1,13 +1,7 @@
-import { useEffect, useState } from "react";
-import { getContract, ZERO_ADDRESS } from "thirdweb";
-import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
-import { erc20Abi } from "viem";
-
 import { Card, CardContent } from "@/components/ui/card";
-import { chain } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
-import { client } from "@/providers/Thirdweb";
+import { useTokenInfo } from "@/hooks/useTokenInfo";
 
 import { SwapModal } from "./SwapModal";
 import { Contest } from "./types";
@@ -31,54 +25,8 @@ export function ContestStats({ contest }: ContestStatsProps) {
     currencyAddress: contest.boxCost.currency,
   });
 
-  // Token info for swap functionality
-  const [tokenInfo, setTokenInfo] = useState<{
-    address: string;
-    symbol: string;
-    chainId: number;
-  } | null>(null);
-
-  // Fetch token metadata
-  useEffect(() => {
-    async function fetchTokenInfo() {
-      try {
-        const isNative =
-          contest.boxCost.currency.toLowerCase() === ZERO_ADDRESS.toLowerCase();
-
-        if (isNative) {
-          setTokenInfo({
-            address: ZERO_ADDRESS,
-            symbol: "ETH",
-            chainId: chain.id,
-          });
-          return;
-        }
-
-        const contract = getContract({
-          client,
-          chain,
-          address: contest.boxCost.currency as `0x${string}`,
-          abi: erc20Abi,
-        });
-
-        const metadata = await getCurrencyMetadata({ contract });
-        setTokenInfo({
-          address: contest.boxCost.currency,
-          symbol: metadata.symbol,
-          chainId: chain.id,
-        });
-      } catch (error) {
-        console.error("Error fetching token info:", error);
-        setTokenInfo({
-          address: contest.boxCost.currency,
-          symbol: "TOKEN",
-          chainId: chain.id,
-        });
-      }
-    }
-
-    fetchTokenInfo();
-  }, [contest.boxCost.currency]);
+  // Fetch token metadata using hook
+  const { tokenInfo } = useTokenInfo(contest.boxCost.currency);
 
   // Swap token hook
   const { swap, isSwapping, isModalOpen, closeModal, isInMiniApp } =

@@ -1,19 +1,17 @@
-import { useEffect, useState } from "react";
-import { getContract, ZERO_ADDRESS } from "thirdweb";
-import { getCurrencyMetadata } from "thirdweb/extensions/erc20";
+import { ZERO_ADDRESS } from "thirdweb";
 import {
   AccountAvatar,
   AccountProvider,
   Blobbie,
   useActiveAccount,
 } from "thirdweb/react";
-import { erc20Abi } from "viem";
 
 import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
 import { useTeamColors } from "@/hooks/useTeamColors";
+import { useTokenInfo } from "@/hooks/useTokenInfo";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -44,55 +42,8 @@ export function FootballGrid({
   const account = useActiveAccount();
   const currentUserAddress = account?.address?.toLowerCase();
 
-  // Token info for swap functionality
-  const [tokenInfo, setTokenInfo] = useState<{
-    address: string;
-    symbol: string;
-    chainId: number;
-  } | null>(null);
-
-  // Fetch token metadata
-  useEffect(() => {
-    async function fetchTokenInfo() {
-      try {
-        const isNative =
-          contest.boxCost.currency.toLowerCase() === ZERO_ADDRESS.toLowerCase();
-
-        if (isNative) {
-          setTokenInfo({
-            address: ZERO_ADDRESS,
-            symbol: "ETH",
-            chainId: chain.id,
-          });
-          return;
-        }
-
-        const contract = getContract({
-          client,
-          chain,
-          address: contest.boxCost.currency as `0x${string}`,
-          abi: erc20Abi,
-        });
-
-        const metadata = await getCurrencyMetadata({ contract });
-        setTokenInfo({
-          address: contest.boxCost.currency,
-          symbol: metadata.symbol,
-          chainId: chain.id,
-        });
-      } catch (error) {
-        console.error("Error fetching token info:", error);
-        // Fallback to generic token
-        setTokenInfo({
-          address: contest.boxCost.currency,
-          symbol: "TOKEN",
-          chainId: chain.id,
-        });
-      }
-    }
-
-    fetchTokenInfo();
-  }, [contest.boxCost.currency]);
+  // Fetch token metadata using hook
+  const { tokenInfo } = useTokenInfo(contest.boxCost.currency);
 
   // Swap token hook for both mini app and non-mini app users
   const { swap, isSwapping, swapError, isModalOpen, closeModal, isInMiniApp } =
