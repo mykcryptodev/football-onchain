@@ -1,10 +1,10 @@
 "use client";
 
-import { useTheme } from "next-themes";
+import Image from "next/image";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { ConnectButton, darkTheme, lightTheme } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
-import Image from "next/image";
 
 import { appDescription, appName, chain, usdc } from "@/constants";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
@@ -33,7 +33,7 @@ export function Navigation() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-8">
           <Link className="flex items-center space-x-2" href="/">
-            <Image src="/icon.png" alt={appName} width={32} height={32} />
+            <Image alt={appName} height={32} src="/icon.png" width={32} />
             <span className="font-bold text-xl">{appName}</span>
           </Link>
 
