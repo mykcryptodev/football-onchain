@@ -1,11 +1,10 @@
 "use client";
 
-/* eslint-disable simple-import-sort/imports */
 import { useTheme } from "next-themes";
 import Link from "next/link";
-/* eslint-enable simple-import-sort/imports */
 import { ConnectButton, darkTheme, lightTheme } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
+import Image from "next/image";
 
 import { appDescription, appName, chain, usdc } from "@/constants";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
@@ -34,11 +33,7 @@ export function Navigation() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center space-x-8">
           <Link className="flex items-center space-x-2" href="/">
-            <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">
-                FB
-              </span>
-            </div>
+            <Image src="/icon.png" alt={appName} width={32} height={32} />
             <span className="font-bold text-xl">{appName}</span>
           </Link>
 

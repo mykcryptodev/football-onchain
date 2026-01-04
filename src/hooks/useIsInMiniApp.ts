@@ -1,7 +1,6 @@
 "use client";
 
-import { sdk } from "@farcaster/miniapp-sdk";
-import { useEffect, useState } from "react";
+import { useFarcasterContext } from "./useFarcasterContext";
 
 interface UseIsInMiniAppResult {
   isInMiniApp: boolean;
@@ -10,6 +9,8 @@ interface UseIsInMiniAppResult {
 
 /**
  * Hook to detect if the app is running in a Farcaster Mini App context
+ *
+ * @deprecated Use `useFarcasterContext` instead for enhanced features including wallet readiness state
  *
  * @returns Object containing isInMiniApp boolean and isLoading state
  *
@@ -27,36 +28,7 @@ interface UseIsInMiniAppResult {
  * ```
  */
 export function useIsInMiniApp(): UseIsInMiniAppResult {
-  const [isInMiniApp, setIsInMiniApp] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkMiniAppContext = async () => {
-      try {
-        const result = await sdk.isInMiniApp();
-
-        if (isMounted) {
-          setIsInMiniApp(result);
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Error checking Mini App context:", error);
-
-        if (isMounted) {
-          setIsInMiniApp(false);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    checkMiniAppContext();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { isInMiniApp, isLoading } = useFarcasterContext();
 
   return { isInMiniApp, isLoading };
 }

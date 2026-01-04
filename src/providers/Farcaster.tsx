@@ -1,51 +1,27 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { useCallback, useEffect, useState } from "react";
-import { useConnect } from "thirdweb/react";
-import { EIP1193 } from "thirdweb/wallets";
+import { useEffect } from "react";
 
-import { client } from "@/providers/Thirdweb";
+import { useFarcasterAutoConnect } from "@/hooks/useFarcasterAutoConnect";
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
-  const [isSDKLoaded, setIsSDKLoaded] = useState(false);
-  const { connect } = useConnect();
-
-  const connectWallet = useCallback(async () => {
-    try {
-      await connect(async () => {
-        const wallet = EIP1193.fromProvider({
-          provider: sdk.wallet.ethProvider,
-        });
-        await wallet.connect({ client });
-        return wallet;
-      });
-      console.log("Farcaster wallet connected successfully");
-    } catch (error) {
-      console.error("Error connecting Farcaster wallet:", error);
-    }
-  }, [connect]);
+  // Auto-connect wallet and authenticate when in Farcaster mini app
+  const { autoConnectError } = useFarcasterAutoConnect();
 
   useEffect(() => {
-    // Initialize the Farcaster SDK when the component mounts
-    const initializeSDK = async () => {
-      try {
-        // Call ready when the app is ready to be displayed
-        // This will hide the Farcaster splash screen
-        await sdk.actions.ready();
+    // Signal to the Farcaster client that the app is ready to be displayed
+    sdk.actions.ready();
+  }, []);
 
-        // Check if we have a wallet available and automatically connect
-        if (sdk.wallet && !isSDKLoaded) {
-          setIsSDKLoaded(true);
-          await connectWallet();
-        }
-      } catch (error) {
-        console.error("Error initializing Farcaster SDK:", error);
-      }
-    };
+  // Log errors for debugging (in production, you might want to show a toast or handle differently)
+  useEffect(() => {
+    if (autoConnectError) {
+      console.error("Farcaster auto-connect error:", autoConnectError);
+    }
+  }, [autoConnectError]);
 
-    initializeSDK();
-  }, [isSDKLoaded, connectWallet]);
-
+  // You can optionally show a loading state while auto-connecting
+  // For now, we'll let the children render immediately for better UX
   return <>{children}</>;
 }
