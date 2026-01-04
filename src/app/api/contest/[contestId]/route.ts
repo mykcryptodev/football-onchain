@@ -123,7 +123,6 @@ export async function GET(
       payoutsPaid,
       totalRewards,
       boxesClaimed,
-      randomValues,
       randomValuesSet,
       title,
       description,
