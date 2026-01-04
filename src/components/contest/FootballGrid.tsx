@@ -354,60 +354,62 @@ export function FootballGrid({
         </div>
 
         {selectedBoxes.length > 0 && contest.boxesCanBeClaimed && (
-          <div className="mt-4 p-4 bg-muted rounded-lg border border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">
-                  {selectedBoxes.length} boxes selected
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Total cost:{" "}
-                  {totalCostLoading ? (
-                    "..."
-                  ) : (
-                    <>
-                      {totalCostFormatted.split(" ")[0]}{" "}
-                      {tokenInfo && (
-                        <button
-                          className="underline text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isSwapping}
-                          type="button"
-                          onClick={swap}
-                        >
-                          {tokenInfo.symbol}
-                        </button>
-                      )}
-                      {!tokenInfo && totalCostFormatted.split(" ")[1]}
-                    </>
-                  )}
-                </p>
-              </div>
-              <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
-                {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
-              </Button>
-            </div>
-
-            {/* Swap token button */}
-            {tokenInfo && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <Button
-                  className="w-full"
-                  disabled={isSwapping}
-                  type="button"
-                  variant="outline"
-                  onClick={swap}
-                >
-                  {isSwapping
-                    ? "Opening swap..."
-                    : `Swap to get ${tokenInfo.symbol}`}
-                </Button>
-                {swapError && (
-                  <p className="mt-2 text-xs text-destructive text-center">
-                    {swapError}
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-lg">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold">
+                    {selectedBoxes.length} boxes selected
                   </p>
-                )}
+                  <p className="text-sm text-muted-foreground">
+                    Total cost:{" "}
+                    {totalCostLoading ? (
+                      "..."
+                    ) : (
+                      <>
+                        {totalCostFormatted.split(" ")[0]}{" "}
+                        {tokenInfo && (
+                          <button
+                            className="underline text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isSwapping}
+                            type="button"
+                            onClick={swap}
+                          >
+                            {tokenInfo.symbol}
+                          </button>
+                        )}
+                        {!tokenInfo && totalCostFormatted.split(" ")[1]}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
+                  {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
+                </Button>
               </div>
-            )}
+
+              {/* Swap token button */}
+              {tokenInfo && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <Button
+                    className="w-full"
+                    disabled={isSwapping}
+                    type="button"
+                    variant="outline"
+                    onClick={swap}
+                  >
+                    {isSwapping
+                      ? "Opening swap..."
+                      : `Swap to get ${tokenInfo.symbol}`}
+                  </Button>
+                  {swapError && (
+                    <p className="mt-2 text-xs text-destructive text-center">
+                      {swapError}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
