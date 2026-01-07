@@ -231,7 +231,7 @@ export function FootballGrid({
                     : {}
                 }
               >
-                {col}
+                {contest.randomValuesSet ? col : ""}
               </div>
             ))}
 
@@ -253,7 +253,7 @@ export function FootballGrid({
                       : {}
                   }
                 >
-                  {contest.rows[row]}
+                  {contest.randomValuesSet ? contest.rows[row] : ""}
                 </div>
 
                 {/* Box cells */}

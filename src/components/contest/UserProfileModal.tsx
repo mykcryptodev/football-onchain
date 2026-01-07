@@ -126,6 +126,7 @@ export function UserProfileModal({
     if (
       !contest ||
       !gameScore ||
+      !contest.randomValuesSet ||
       boxTokenId === null ||
       boxTokenId === undefined
     ) {
@@ -256,8 +257,9 @@ export function UserProfileModal({
   const boxPosition = boxTokenId % 100;
   const row = Math.floor(boxPosition / 10);
   const col = boxPosition % 10;
-  const boxRowScore = contest.rows[row];
-  const boxColScore = contest.cols[col];
+  const hasRandomValues = contest.randomValuesSet;
+  const boxRowScore = hasRandomValues ? contest.rows[row] : undefined;
+  const boxColScore = hasRandomValues ? contest.cols[col] : undefined;
 
   // Extract team info from scoring plays
   const getTeamInfo = () => {
@@ -413,7 +415,7 @@ export function UserProfileModal({
                 </span>
               </div>
               <span className="text-muted-foreground">:</span>
-              <span>{boxColScore}</span>
+              <span>{hasRandomValues ? boxColScore : ""}</span>
               <span className="text-muted-foreground">,</span>
               <div className="flex items-center gap-2">
                 {teamInfo.homeLogo && (
@@ -434,8 +436,13 @@ export function UserProfileModal({
                 </span>
               </div>
               <span className="text-muted-foreground">:</span>
-              <span>{boxRowScore}</span>
+              <span>{hasRandomValues ? boxRowScore : ""}</span>
             </div>
+            {!hasRandomValues && (
+              <div className="mt-3 text-sm text-muted-foreground">
+                random values for boxes have not yet been assigned
+              </div>
+            )}
           </div>
 
           {/* Winnings Summary */}
