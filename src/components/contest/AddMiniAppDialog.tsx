@@ -46,26 +46,24 @@ export const AddMiniAppDialog: FC<AddMiniAppDialogProps> = ({
             <DialogTitle>Stay Updated with Notifications</DialogTitle>
           </div>
           <DialogDescription className="pt-2">
-            Add this mini app to your Farcaster client to receive notifications
-            about your contests, game results, and payouts. Never miss an
-            update!
+            Add this mini app to receive notifications about your contests, game
+            results, and payouts. Never miss an update!
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-3">
+        {/* <div className="py-4 space-y-3">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
             <Bell className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
             <div className="space-y-1">
               <p className="text-sm font-medium">What you&apos;ll get:</p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                <li>Real-time contest updates</li>
                 <li>Game score notifications</li>
                 <li>Payout alerts when you win</li>
                 <li>Reminders for upcoming contests</li>
               </ul>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <DialogFooter>
           <Button

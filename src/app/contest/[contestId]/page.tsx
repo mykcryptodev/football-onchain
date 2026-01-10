@@ -16,6 +16,7 @@ import {
   PayoutsCard,
   UserProfileModal,
 } from "@/components/contest";
+import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
@@ -164,6 +165,16 @@ export default function ContestPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
+        {/* Test Button - Remove in production */}
+        <div className="mb-4 flex justify-end">
+          <Button
+            variant="outline"
+            onClick={() => setIsAddMiniAppDialogOpen(true)}
+          >
+            Test: Open Add Mini App Dialog
+          </Button>
+        </div>
+
         {/* Header */}
         <ContestHeader contest={contest} />
 
