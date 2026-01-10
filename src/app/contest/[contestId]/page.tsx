@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 
 import {
+  BoxOwnersSection,
   CommentSection,
   ContestActions,
   ContestHeader,
@@ -323,6 +324,10 @@ export default function ContestPage() {
               }
             />
           </div>
+        </div>
+
+        <div className="mt-8">
+          <BoxOwnersSection boxOwners={boxOwners} contest={contest} />
         </div>
 
         {/* Comments Section */}

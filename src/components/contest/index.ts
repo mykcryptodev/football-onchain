@@ -1,3 +1,4 @@
+export { BoxOwnersSection } from "./BoxOwnersSection";
 export { CommentSection } from "./CommentSection";
 export { ContestActions } from "./ContestActions";
 export { ContestHeader } from "./ContestHeader";
