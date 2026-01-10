@@ -84,7 +84,7 @@ export function FootballGrid({
     balanceValue !== null && balanceValue < totalCost;
   const missingAmount = hasInsufficientFunds
     ? totalCost - balanceValue
-    : 0n;
+    : BigInt(0);
   const { formattedValue: missingAmountFormatted, isLoading: missingLoading } =
     useFormattedCurrency({
       amount: missingAmount,
