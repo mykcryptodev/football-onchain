@@ -11,6 +11,7 @@ import {
   ContestHeader,
   ContestStats,
   FootballGrid,
+  GamePlayersSection,
   GameScores,
   PayoutsCard,
   UserProfileModal,
@@ -323,6 +324,10 @@ export default function ContestPage() {
               }
             />
           </div>
+        </div>
+
+        <div className="mt-8">
+          <GamePlayersSection gameId={contest.gameId} />
         </div>
 
         {/* Comments Section */}

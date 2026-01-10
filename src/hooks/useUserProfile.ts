@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 interface UserProfile {
   fid?: number;
+  farcasterUsername?: string;
   name?: string;
   avatar?: string;
   address: string;
