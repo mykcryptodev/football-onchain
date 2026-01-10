@@ -11,8 +11,8 @@ import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
-  getPayoutStrategyType,
   getNetRewards,
+  getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
 } from "@/lib/payout-utils";

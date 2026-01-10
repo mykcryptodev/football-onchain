@@ -2,8 +2,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import {
-  getPayoutStrategyType,
   getNetRewards,
+  getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
   getStrategyDisplayName,
