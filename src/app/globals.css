@@ -44,6 +44,9 @@
 }
 
 :root {
+  --font-lexend-deca: "Lexend Deca", "Inter", "Segoe UI", sans-serif;
+  --font-geist-mono: "Geist Mono", "JetBrains Mono", "SFMono-Regular",
+    "Menlo", monospace;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

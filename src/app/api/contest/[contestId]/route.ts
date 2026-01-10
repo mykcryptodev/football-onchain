@@ -10,6 +10,7 @@ import { stringify } from "thirdweb/utils";
 import { BoxOwner } from "@/components/contest/types";
 import { boxes, chain, contests } from "@/constants";
 import { abi } from "@/constants/abis/contests";
+import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import {
   CACHE_TTL,
   getContestCacheKey,
@@ -18,7 +19,6 @@ import {
   redis,
   safeRedisOperation,
 } from "@/lib/redis";
-import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import { getBoxOwnersFromThirdweb } from "@/lib/thirdweb-api";
 
 // Disable Next.js caching for this route
@@ -272,7 +272,7 @@ export async function GET(
         ? parsedContest.boxes
             .map((box: BoxOwner) => box.owner)
             .filter(
-              owner =>
+              (owner: string) =>
                 owner &&
                 owner !== ZERO_ADDRESS &&
                 owner.toLowerCase() !== CONTRACTS_ADDRESS.toLowerCase(),

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSocialProfiles } from "thirdweb/social";
 
+import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import {
   CACHE_TTL,
   getUserProfileCacheKey,
   redis,
   safeRedisOperation,
 } from "@/lib/redis";
-import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import { client } from "@/providers/Thirdweb";
 
 interface UserProfileResponse {
