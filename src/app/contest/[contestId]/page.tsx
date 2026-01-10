@@ -18,6 +18,7 @@ import {
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
+import { useGameDetails } from "@/hooks/useGameDetails";
 
 export default function ContestPage() {
   const params = useParams();
@@ -30,6 +31,11 @@ export default function ContestPage() {
     boxOwners,
     isLoading: loading,
   } = useContestData(contestId);
+
+  // Fetch game details for additional game information
+  const { data: gameDetails, isLoading: isLoadingGameDetails } = useGameDetails(
+    contest?.gameId,
+  );
 
   // Local UI state
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
@@ -116,7 +122,6 @@ export default function ContestPage() {
     }
   };
 
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -179,13 +184,13 @@ export default function ContestPage() {
               <GameScores
                 boxOwners={boxOwners}
                 contest={contest}
+                gameDetails={gameDetails ?? null}
                 gameScore={gameScore}
               />
             )}
 
             {/* Payouts */}
             <PayoutsCard contest={contest} />
-
           </div>
         </div>
 
@@ -206,7 +211,7 @@ export default function ContestPage() {
         contest={contest}
         gameScore={gameScore}
         open={isProfileModalOpen}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           setIsProfileModalOpen(open);
           if (!open) {
             setSelectedUserAddress(null);

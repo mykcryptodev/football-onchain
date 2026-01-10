@@ -5,6 +5,7 @@ export { ContestHeader } from "./ContestHeader";
 export { ContestStats } from "./ContestStats";
 export { CreateContestForm } from "./CreateContestForm";
 export { FootballGrid } from "./FootballGrid";
+export { GameDetails } from "./GameDetails";
 export { GameScores } from "./GameScores";
 export { PayoutsCard } from "./PayoutsCard";
 export type { BoxOwner, Contest, GameScore } from "./types";

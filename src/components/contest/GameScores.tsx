@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Tv } from "lucide-react";
 import { useState } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
 import { AccountAvatar, AccountProvider } from "thirdweb/react";
@@ -9,7 +9,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { GameDetails as GameDetailsType } from "@/hooks/useGameDetails";
 import { useTeamColors } from "@/hooks/useTeamColors";
+import { formatKickoffTime } from "@/lib/date";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { client } from "@/providers/Thirdweb";
 
@@ -20,9 +22,15 @@ interface GameScoresProps {
   gameScore: GameScore;
   contest?: Contest;
   boxOwners?: BoxOwner[];
+  gameDetails?: GameDetailsType | null;
 }
 
-export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
+export function GameScores({
+  gameScore,
+  contest,
+  boxOwners,
+  gameDetails,
+}: GameScoresProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
@@ -79,9 +87,7 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
   const handleBoxClick = (tokenId: number) => {
     const boxOwner = getBoxOwner(tokenId);
     const address =
-      boxOwner && boxOwner.owner !== ZERO_ADDRESS
-        ? boxOwner.owner
-        : null;
+      boxOwner && boxOwner.owner !== ZERO_ADDRESS ? boxOwner.owner : null;
     setSelectedAddress(address);
     setSelectedBoxTokenId(tokenId);
     setIsModalOpen(true);
@@ -93,6 +99,48 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
         <CardTitle>Game Scores</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Game Date/Time and Broadcast Info */}
+        {(gameDetails?.date || gameDetails?.broadcasts?.length) && (
+          <div className="border-b pb-2 flex items-center justify-between gap-4">
+            {gameDetails.date && (
+              <div className="text-sm text-muted-foreground flex items-center">
+                {formatKickoffTime(gameDetails.date)}
+              </div>
+            )}
+            {gameDetails.broadcasts && gameDetails.broadcasts.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Tv className="h-4 w-4 shrink-0" />
+                <span>
+                  {(() => {
+                    // First try to find TV broadcasts
+                    const tvBroadcasts = gameDetails.broadcasts.filter(
+                      b =>
+                        b.type.abbreviation === "TV" ||
+                        b.type.abbreviation === "tv" ||
+                        b.type.name.toLowerCase().includes("tv") ||
+                        b.type.name.toLowerCase().includes("television"),
+                    );
+
+                    // If we found TV broadcasts, use those
+                    if (tvBroadcasts.length > 0) {
+                      return tvBroadcasts
+                        .map(b => b.media.shortName)
+                        .filter(Boolean)
+                        .join(", ");
+                    }
+
+                    // Otherwise, show all broadcasts
+                    return gameDetails.broadcasts
+                      .map(b => b.media.shortName)
+                      .filter(Boolean)
+                      .join(", ");
+                  })()}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div
@@ -283,7 +331,9 @@ export function GameScores({ gameScore, contest, boxOwners }: GameScoresProps) {
                             return (
                               <span
                                 className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 cursor-pointer hover:bg-green-200 transition-colors"
-                                onClick={() => handleBoxClick(winningBox.tokenId)}
+                                onClick={() =>
+                                  handleBoxClick(winningBox.tokenId)
+                                }
                               >
                                 {hasOwner ? (
                                   <AccountProvider
