@@ -137,7 +137,7 @@ export function CreateContestForm() {
     defaultValues: {
       title: "",
       description: "",
-      seasonType: "2", // Regular season
+      seasonType: "3", // Post season
       week: "",
       gameId: "",
       boxCost: "",
