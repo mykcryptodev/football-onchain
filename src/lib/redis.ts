@@ -29,10 +29,15 @@ export const getContestsListCacheKey = (chainId?: number) => {
   return `contests:list:${currentChainId}`;
 };
 
+export const getUserProfileCacheKey = (address: string) => {
+  return `user-profile:${address.toLowerCase()}`;
+};
+
 // Cache TTL constants
 export const CACHE_TTL = {
   CONTEST: 3600, // 1 hour in seconds
   CONTESTS_LIST: 300, // 5 minutes in seconds
+  USER_PROFILE: 900, // 15 minutes in seconds
 } as const;
 
 /**
