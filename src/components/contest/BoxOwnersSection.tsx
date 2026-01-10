@@ -101,7 +101,7 @@ export function BoxOwnersSection({
           No boxes have been claimed yet.
         </div>
       ) : (
-        <ScrollArea className="max-h-[320px]">
+        <ScrollArea className="max-h-[360px]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {owners.map(owner => (
               <button

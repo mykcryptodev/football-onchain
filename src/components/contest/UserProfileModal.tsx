@@ -386,17 +386,19 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
+                    {(profile?.farcasterUsername ||
+                      (isInMiniApp && profile?.fid)) && (
+                      <div className="mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleViewProfile}
+                        >
+                          View Profile
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {(profile?.farcasterUsername ||
-                    (isInMiniApp && profile?.fid)) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleViewProfile}
-                    >
-                      View Profile
-                    </Button>
-                  )}
                 </>
               )}
             </div>
