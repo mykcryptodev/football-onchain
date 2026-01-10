@@ -62,7 +62,6 @@ function OwnerItem({ owner, contest, onClick }: OwnerItemProps) {
           {owner.boxTokenIds.length === 1 ? "" : "es"}
         </div>
       </div>
-      <Badge variant="outline">#{contest.id}</Badge>
     </button>
   );
 }
@@ -133,7 +132,7 @@ export function BoxOwnersSection({
             Tap an owner to view their profile and boxes.
           </p>
         </div>
-        <Badge variant="secondary" className="whitespace-nowrap">
+        <Badge className="whitespace-nowrap" variant="secondary">
           {owners.length} owners
         </Badge>
       </div>
