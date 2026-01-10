@@ -10,8 +10,8 @@ import {
   ContestActions,
   ContestHeader,
   ContestStats,
+  BoxOwnersSection,
   FootballGrid,
-  GamePlayersSection,
   GameScores,
   PayoutsCard,
   UserProfileModal,
@@ -327,7 +327,7 @@ export default function ContestPage() {
         </div>
 
         <div className="mt-8">
-          <GamePlayersSection gameId={contest.gameId} />
+          <BoxOwnersSection boxOwners={boxOwners} contest={contest} />
         </div>
 
         {/* Comments Section */}
