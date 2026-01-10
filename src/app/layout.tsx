@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Lexend_Deca } from "next/font/google";
 import { headers } from "next/headers";
 
 import { Navigation } from "@/components/navigation";
@@ -16,18 +15,6 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import ThirdwebProvider from "@/providers/Thirdweb";
 
 import "./globals.css";
-
-const lexendDeca = Lexend_Deca({
-  variable: "--font-lexend-deca",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
@@ -80,9 +67,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning lang="en">
-      <body
-        className={`${lexendDeca.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <ThemeProvider
           disableTransitionOnChange
           enableSystem

@@ -11,6 +11,7 @@ import { client } from "@/providers/Thirdweb";
 
 interface UserProfileResponse {
   fid?: number;
+  farcasterUsername?: string;
   name?: string;
   avatar?: string;
   address: string;
@@ -64,9 +65,12 @@ export async function GET(
     const displayProfile = ensProfile || farcasterProfile || lensProfile;
 
     let fid: number | undefined;
+    let farcasterUsername: string | undefined;
     if (farcasterProfile) {
       const profileWithFid = farcasterProfile as typeof farcasterProfile & {
         fid?: string | number;
+        username?: string;
+        handle?: string;
       };
       if (profileWithFid.fid !== undefined) {
         fid =
@@ -74,11 +78,14 @@ export async function GET(
             ? parseInt(profileWithFid.fid, 10)
             : Number(profileWithFid.fid);
       }
+      farcasterUsername =
+        profileWithFid.username || profileWithFid.handle || profileWithFid.name;
     }
 
     const responseBody: UserProfileResponse = {
       address,
       fid,
+      farcasterUsername,
       name: displayProfile?.name,
       avatar: displayProfile?.avatar,
     };

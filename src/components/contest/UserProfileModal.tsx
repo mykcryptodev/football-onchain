@@ -225,19 +225,27 @@ export function UserProfileModal({
   });
 
   const handleViewProfile = async () => {
-    if (!profile?.fid) {
-      console.warn("No FID available for this user");
-      return;
-    }
-
-    if (isInMiniApp) {
+    if (isInMiniApp && profile?.fid) {
       try {
         await sdk.actions.viewProfile({ fid: profile.fid });
         onOpenChange(false);
       } catch (error) {
         console.error("Error viewing profile:", error);
       }
+      return;
     }
+
+    const farcasterUsername = profile?.farcasterUsername;
+    if (farcasterUsername) {
+      window.open(
+        `https://base.app/profile/${farcasterUsername}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+
+    console.warn("No Farcaster profile data available for this user");
   };
 
   // Get team colors with dark mode support - must be called before early return
@@ -342,7 +350,7 @@ export function UserProfileModal({
         <div className="space-y-6 py-4">
           {/* Box Owner - At Top */}
           <div>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg border border-border">
               {profileLoading ? (
                 <div className="flex-1 text-sm text-muted-foreground">
                   Loading owner...
@@ -378,16 +386,19 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
+                    {(profile?.farcasterUsername ||
+                      (isInMiniApp && profile?.fid)) && (
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleViewProfile}
+                        >
+                          View Profile
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {isInMiniApp && profile?.fid && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleViewProfile}
-                    >
-                      View Profile
-                    </Button>
-                  )}
                 </>
               )}
             </div>
