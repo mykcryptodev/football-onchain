@@ -86,7 +86,7 @@ export function ContestStats({ contest }: ContestStatsProps) {
         <Card>
           <CardContent className="p-2 sm:p-4">
             <div className="text-xs sm:text-sm text-muted-foreground">
-              Prize Pool (after 2% fee)
+              Prize Pool
             </div>
             <div className="text-lg sm:text-2xl font-bold">
               {totalRewardsLoading ? (

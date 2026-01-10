@@ -155,25 +155,24 @@ export function PayoutsCard({
 
   const strategyType = getPayoutStrategyType(contest.payoutStrategy);
   const strategyName = getStrategyDisplayName(strategyType);
-  const netPrizePoolLabel = "of net prize pool";
 
   const renderQuartersOnlyPayouts = () => {
     return (
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span>{`Q1 (15% ${netPrizePoolLabel}):`}</span>
+          <span>Q1 (15%):</span>
           <span>{q1Loading ? "..." : q1Formatted}</span>
         </div>
         <div className="flex justify-between">
-          <span>{`Q2 (20% ${netPrizePoolLabel}):`}</span>
+          <span>Q2 (20%):</span>
           <span>{q2Loading ? "..." : q2Formatted}</span>
         </div>
         <div className="flex justify-between">
-          <span>{`Q3 (15% ${netPrizePoolLabel}):`}</span>
+          <span>Q3 (15%):</span>
           <span>{q3Loading ? "..." : q3Formatted}</span>
         </div>
         <div className="flex justify-between">
-          <span>{`Final (50% ${netPrizePoolLabel}):`}</span>
+          <span>Final (50%):</span>
           <span>{q4Loading ? "..." : q4Formatted}</span>
         </div>
       </div>
@@ -186,7 +185,7 @@ export function PayoutsCard({
         {/* Score Changes Section */}
         <div className="space-y-2">
           <div className="flex justify-between font-medium">
-            <span>{`Score Changes (50% ${netPrizePoolLabel}):`}</span>
+            <span>Score Changes (50%):</span>
             <span>
               {scoreChangesTotalLoading ? "..." : scoreChangesTotalFormatted}
             </span>
@@ -206,24 +205,24 @@ export function PayoutsCard({
         {/* Quarters Section */}
         <div className="space-y-2">
           <div className="flex justify-between font-medium">
-            <span>{`Quarters (50% ${netPrizePoolLabel}):`}</span>
+            <span>Quarters (50%):</span>
             <span>{quartersTotalLoading ? "..." : quartersTotalFormatted}</span>
           </div>
           <div className="pl-4 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span>{`Q1 (7.5% ${netPrizePoolLabel}):`}</span>
+              <span>Q1 (7.5%):</span>
               <span>{scQ1Loading ? "..." : scQ1Formatted}</span>
             </div>
             <div className="flex justify-between">
-              <span>{`Q2 (10% ${netPrizePoolLabel}):`}</span>
+              <span>Q2 (10%):</span>
               <span>{scQ2Loading ? "..." : scQ2Formatted}</span>
             </div>
             <div className="flex justify-between">
-              <span>{`Q3 (7.5% ${netPrizePoolLabel}):`}</span>
+              <span>Q3 (7.5%):</span>
               <span>{scQ3Loading ? "..." : scQ3Formatted}</span>
             </div>
             <div className="flex justify-between">
-              <span>{`Final (25% ${netPrizePoolLabel}):`}</span>
+              <span>Final (25%):</span>
               <span>{scQ4Loading ? "..." : scQ4Formatted}</span>
             </div>
           </div>

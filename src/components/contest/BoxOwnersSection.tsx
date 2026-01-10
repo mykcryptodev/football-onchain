@@ -90,7 +90,7 @@ export function BoxOwnersSection({
         <div>
           <h2 className="text-lg font-semibold">Box Owners</h2>
           <p className="text-sm text-muted-foreground">
-            Tap an owner to view their bio and boxes.
+            Tap an owner to view their profile and boxes.
           </p>
         </div>
         <Badge variant="secondary">{owners.length} owners</Badge>
@@ -193,24 +193,6 @@ export function BoxOwnersSection({
                   </Button>
                 </div>
               )}
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Bio</h4>
-                {profileLoading ? (
-                  <div className="text-sm text-muted-foreground">
-                    Loading bio...
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    {profile?.name
-                      ? `${profile.name} has claimed ${selectedOwner.boxTokenIds.length} box${
-                          selectedOwner.boxTokenIds.length === 1 ? "" : "es"
-                        }.`
-                      : `This owner has claimed ${selectedOwner.boxTokenIds.length} box${
-                          selectedOwner.boxTokenIds.length === 1 ? "" : "es"
-                        }.`}
-                  </div>
-                )}
-              </div>
               <div>
                 <h4 className="text-sm font-semibold mb-2">Boxes</h4>
                 <div className="flex flex-wrap gap-2">
