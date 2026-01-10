@@ -56,7 +56,7 @@ export const AddMiniAppDialog: FC<AddMiniAppDialogProps> = ({
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted">
             <Bell className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
             <div className="space-y-1">
-              <p className="text-sm font-medium">What you'll get:</p>
+              <p className="text-sm font-medium">What you&apos;ll get:</p>
               <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                 <li>Real-time contest updates</li>
                 <li>Game score notifications</li>
@@ -69,14 +69,14 @@ export const AddMiniAppDialog: FC<AddMiniAppDialogProps> = ({
 
         <DialogFooter>
           <Button
+            disabled={isAdding}
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isAdding}
           >
             Maybe Later
           </Button>
-          <Button type="button" onClick={handleAddMiniApp} disabled={isAdding}>
+          <Button disabled={isAdding} type="button" onClick={handleAddMiniApp}>
             {isAdding ? "Adding..." : "Add Mini App"}
           </Button>
         </DialogFooter>

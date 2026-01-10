@@ -36,9 +36,7 @@ export function BoxOwnersSection({
   );
   const contestAddress = contests[chain.id].toLowerCase();
   const { isInMiniApp } = useFarcasterContext();
-  const { profile, isLoading: profileLoading } = useUserProfile(
-    selectedOwner?.address ?? null,
-  );
+  const { profile } = useUserProfile(selectedOwner?.address ?? null);
 
   const owners = useMemo(() => {
     const ownerMap = new Map<string, BoxOwnerEntry>();
