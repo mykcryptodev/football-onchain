@@ -1,6 +1,6 @@
 import { COMMENT_MANAGER_ADDRESS } from "@ecp.eth/sdk";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getContract,sendTransaction } from "thirdweb";
+import { getContract, sendTransaction } from "thirdweb";
 import { base } from "thirdweb/chains";
 import { useActiveAccount } from "thirdweb/react";
 

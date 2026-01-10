@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 
 import {
+  AddMiniAppDialog,
   BoxOwnersSection,
   CommentSection,
   ContestHeader,
@@ -18,6 +19,7 @@ import {
 import { chain, contests } from "@/constants";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
+import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useGameDetails } from "@/hooks/useGameDetails";
 
 export default function ContestPage() {
@@ -33,9 +35,7 @@ export default function ContestPage() {
   } = useContestData(contestId);
 
   // Fetch game details for additional game information
-  const { data: gameDetails, isLoading: isLoadingGameDetails } = useGameDetails(
-    contest?.gameId,
-  );
+  const { data: gameDetails } = useGameDetails(contest?.gameId);
 
   // Local UI state
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
@@ -46,6 +46,10 @@ export default function ContestPage() {
     null,
   );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAddMiniAppDialogOpen, setIsAddMiniAppDialogOpen] = useState(false);
+
+  // Check if user is in mini app
+  const { isInMiniApp } = useFarcasterContext();
 
   const handleBoxClick = (boxPosition: number) => {
     if (!contest?.boxesCanBeClaimed) return;
@@ -109,6 +113,11 @@ export default function ContestPage() {
           // Clear selected boxes after successful claim
           setSelectedBoxes([]);
           toast.success("Boxes claimed successfully!");
+
+          // Show mini app upsell dialog if user is in mini app
+          if (isInMiniApp) {
+            setIsAddMiniAppDialogOpen(true);
+          }
         },
         // onError callback
         error => {
@@ -218,6 +227,12 @@ export default function ContestPage() {
             setSelectedBoxTokenId(null);
           }
         }}
+      />
+
+      {/* Add Mini App Dialog - shown after successful box purchase */}
+      <AddMiniAppDialog
+        open={isAddMiniAppDialogOpen}
+        onOpenChange={setIsAddMiniAppDialogOpen}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+export { AddMiniAppDialog } from "./AddMiniAppDialog";
 export { BoxOwnersSection } from "./BoxOwnersSection";
 export { CommentSection } from "./CommentSection";
 export { ContestActions } from "./ContestActions";

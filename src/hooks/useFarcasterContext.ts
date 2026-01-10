@@ -55,4 +55,3 @@ export function useFarcasterContext(): FarcasterContextState {
     walletReady: data?.walletReady ?? false,
   };
 }
-

@@ -6,8 +6,8 @@ import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
-import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
@@ -38,7 +38,7 @@ export function UserProfileModal({
   boxTokenId,
 }: UserProfileModalProps) {
   const { profile, isLoading: profileLoading } = useUserProfile(address);
-  const { isInMiniApp } = useIsInMiniApp();
+  const { isInMiniApp } = useFarcasterContext();
 
   // Calculate prize amounts for quarters and scoring plays
   const getPrizeAmounts = () => {

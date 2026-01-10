@@ -37,9 +37,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chain, usdc } from "@/constants";
+import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
-import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
@@ -124,7 +124,7 @@ export default function PickemContestClient({
   const { selectionChanged } = useHaptics();
   const { setTokenAddress } = useDisplayToken();
   const { resolvedTheme } = useTheme();
-  const { isInMiniApp } = useIsInMiniApp();
+  const { isInMiniApp } = useFarcasterContext();
 
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -445,375 +445,373 @@ export default function PickemContestClient({
             {getTimeRemaining(contest.submissionDeadline)}
           </Badge>
         </div>
-      {/* Header */}
-      <div className="flex items-center gap-4 px-2">
-        <div>
-          <h1 className="text-3xl font-bold">
-            {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
-          </h1>
-          <p className="text-muted-foreground">
-            {contest.year} Season • Contest #{contest.id}
-          </p>
+        {/* Header */}
+        <div className="flex items-center gap-4 px-2">
+          <div>
+            <h1 className="text-3xl font-bold">
+              {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
+            </h1>
+            <p className="text-muted-foreground">
+              {contest.year} Season • Contest #{contest.id}
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Contest Info */}
-      <ContestStatsCard
-        showTitle
-        currency={contest.currency}
-        entryFee={contest.entryFee}
-        entryFeeUsd={contest.entryFeeUsd}
-        payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
-        totalEntries={contest.totalEntries}
-        totalPrizePool={contest.totalPrizePool}
-      />
+        {/* Contest Info */}
+        <ContestStatsCard
+          showTitle
+          currency={contest.currency}
+          entryFee={contest.entryFee}
+          entryFeeUsd={contest.entryFeeUsd}
+          payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+          totalEntries={contest.totalEntries}
+          totalPrizePool={contest.totalPrizePool}
+        />
 
-      {/* Games and Picks */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Games List */}
-        {!isSubmissionClosed && (
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Games ({games.length})</CardTitle>
-                <Badge
-                  variant={
-                    allPicksMade ? "default" : "secondary"
-                  }
-                >
-                  {allPicksMade
-                    ? "Ready to Submit"
-                    : "Incomplete"}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">
-                  Picks Made: {getPickedCount()} / {games.length}
-                </span>
-                <Button
-                  disabled={submitting || isSubmissionClosed}
-                  size="sm"
-                  variant="outline"
-                  onClick={pickAtRandom}
-                >
-                  <Shuffle className="h-4 w-4 mr-2" />
-                  Pick Em Randomly
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-              {games.map((game, index) => {
-                const gameFinished = isGameFinished(game);
-                const winner = getWinner(game);
-
-                return (
-                  <div key={game.gameId} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
-                      <span>Game {index + 1}</span>
-                      <span>
-                        {mounted ? formatKickoffTime(game.kickoff) : "Loading..."}
-                      </span>
-                    </div>
-
-                  <RadioGroup
-                    value={picks[game.gameId]?.toString()}
-                    onValueChange={(value: string) =>
-                      setPick(game.gameId, parseInt(value))
-                    }
+        {/* Games and Picks */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Games List */}
+          {!isSubmissionClosed && (
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Games ({games.length})</CardTitle>
+                  <Badge variant={allPicksMade ? "default" : "secondary"}>
+                    {allPicksMade ? "Ready to Submit" : "Incomplete"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Picks Made: {getPickedCount()} / {games.length}
+                  </span>
+                  <Button
+                    disabled={submitting || isSubmissionClosed}
+                    size="sm"
+                    variant="outline"
+                    onClick={pickAtRandom}
                   >
-                    <div className="grid grid-cols-2 gap-3">
-                      <div
-                        className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                          picks[game.gameId] === 0
-                            ? "border-primary bg-primary/10"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          selectionChanged();
-                          setPick(game.gameId, 0);
-                        }}
-                      >
-                          <RadioGroupItem
-                            className="mt-1"
-                            id={`${game.gameId}-away`}
-                            value="0"
-                          />
-                          <Label
-                            className="flex-1 cursor-pointer"
-                            htmlFor={`${game.gameId}-away`}
-                          >
-                            <div className="flex flex-col gap-1 w-full">
-                              <div className="flex items-center gap-2 justify-between w-full">
-                                <div className="flex items-center gap-2 justify-between w-fit">
-                                  <img
-                                    alt={`${game.awayTeam} logo`}
-                                    className="h-6 w-6 flex-shrink-0"
-                                    src={game.awayLogo}
-                                  />
-                                  <div
-                                    className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                  >
-                                    {game.awayAbbreviation}
-                                  </div>
-                                  <div
-                                    className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                  >
-                                    {game.awayTeam}
-                                  </div>
-                                </div>
-                                <div className="text-sm text-muted-foreground text-nowrap">
-                                  {game.awayRecord}
-                                </div>
-                              </div>
-                              {gameFinished && winner === "away" && (
-                                <div className="flex items-center gap-2 text-xs justify-end">
-                                  <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
-                                    W
-                                  </Badge>
-                                </div>
-                              )}
-                              {!gameFinished &&
-                                game.odds?.awayTeamOdds &&
-                                game.odds.awayTeamOdds.moneyLine && (
-                                  <div className="flex items-center gap-2 text-xs justify-end">
-                                    <Badge
-                                      className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
-                                        game.odds.awayTeamOdds.favorite
-                                          ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                          : "bg-red-100 hover:bg-red-200 text-red-700"
-                                      }`}
-                                    >
-                                      {formatMoneyLine(
-                                        game.odds.awayTeamOdds.moneyLine,
-                                      )}
-                                    </Badge>
-                                  </div>
-                                )}
-                            </div>
-                          </Label>
-                        </div>
-
-                      <div
-                        className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                          picks[game.gameId] === 1
-                            ? "border-primary bg-primary/10"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          selectionChanged();
-                          setPick(game.gameId, 1);
-                        }}
-                      >
-                          <RadioGroupItem
-                            className="mt-1"
-                            id={`${game.gameId}-home`}
-                            value="1"
-                          />
-                          <Label
-                            className="flex-1 cursor-pointer"
-                            htmlFor={`${game.gameId}-home`}
-                          >
-                            <div className="flex flex-col gap-1 w-full">
-                              <div className="flex items-center gap-2 justify-between w-full">
-                                <div className="flex items-center gap-2 justify-between w-fit">
-                                  <img
-                                    alt={`${game.homeTeam} logo`}
-                                    className="h-6 w-6 flex-shrink-0"
-                                    src={game.homeLogo}
-                                  />
-                                  <div
-                                    className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                  >
-                                    {game.homeAbbreviation}
-                                  </div>
-                                  <div
-                                    className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                  >
-                                    {game.homeTeam}
-                                  </div>
-                                </div>
-                                <div className="text-sm text-muted-foreground text-nowrap">
-                                  {game.homeRecord}
-                                </div>
-                              </div>
-                              {gameFinished && winner === "home" && (
-                                <div className="flex items-center gap-2 text-xs justify-end">
-                                  <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
-                                    Won {game.homeScore} - {game.awayScore}
-                                  </Badge>
-                                </div>
-                              )}
-                              {!gameFinished &&
-                                game.odds?.homeTeamOdds &&
-                                game.odds.homeTeamOdds.moneyLine && (
-                                  <div className="flex items-end gap-2 text-xs justify-end">
-                                    <Badge
-                                      className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
-                                        game.odds.homeTeamOdds.favorite
-                                          ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                          : "bg-red-100 hover:bg-red-200 text-red-700"
-                                      }`}
-                                    >
-                                      {formatMoneyLine(
-                                        game.odds.homeTeamOdds.moneyLine,
-                                      )}
-                                    </Badge>
-                                  </div>
-                                )}
-                            </div>
-                          </Label>
-                        </div>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submission Panel */}
-        {!isSubmissionClosed && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Submit Your Picks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Tiebreaker */}
-              <div className="space-y-2">
-                <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
-                <Input
-                  id="tiebreaker"
-                  min="0"
-                  placeholder="e.g., 45"
-                  type="number"
-                  value={tiebreakerPoints}
-                  onChange={e => setTiebreakerPoints(e.target.value)}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Guess the total points scored in the{" "}
-                  {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
-                  game
-                  {lastGame?.odds?.overUnder && (
-                    <span className="font-medium text-muted-foreground">
-                      {" "}
-                      (over/under: {lastGame.odds.overUnder})
-                    </span>
-                  )}
-                </p>
-              </div>
-              {/* Entry Fee Display */}
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Entry Fee:</span>
-                  <span className="font-bold">{formattedEntryFee}</span>
+                    <Shuffle className="h-4 w-4 mr-2" />
+                    Pick Em Randomly
+                  </Button>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">
-                    Your Balance:
-                  </span>
-                  <span className="text-muted-foreground text-xs font-bold">
-                    {Number(walletBalance?.displayValue).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              {/* Submit Button */}
-              {hasSufficientBalance ? (
-                <Button
-                  className="w-full"
-                  size="lg"
-                  disabled={
-                    !account ||
-                    submitting ||
-                    isSubmissionClosed ||
-                    !allPicksMade
-                  }
-                  onClick={handleSubmit}
-                >
-                  {submitting
-                    ? "Submitting..."
-                    : isSubmissionClosed
-                      ? "Submissions Closed"
-                      : !allPicksMade
-                        ? "Complete All Picks"
-                        : "Submit Picks"}
-                </Button>
-              ) : (
-                <div className="flex flex-col items-center">
-                  {/* if the user is in a mini app, show the buy widget */}
-                  {isInMiniApp ? (
-                    <div className="flex flex-col gap-2 items-center w-full">
-                      <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={handleMiniAppSwap}
-                      >
-                        <div className="flex gap-2 items-center">
-                          <span>Swap for {formattedEntryFee}</span>
-                          <span>
-                            (<EntryFeeUsd />)
-                          </span>
-                        </div>
-                      </Button>
-                      <div className="text-xs text-muted-foreground">
-                        You do not have enough balance to submit picks.
+              </CardHeader>
+              <CardContent className="space-y-4 max-h-96 overflow-y-auto">
+                {games.map((game, index) => {
+                  const gameFinished = isGameFinished(game);
+                  const winner = getWinner(game);
+
+                  return (
+                    <div key={game.gameId} className="p-4 border rounded-lg">
+                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
+                        <span>Game {index + 1}</span>
+                        <span>
+                          {mounted
+                            ? formatKickoffTime(game.kickoff)
+                            : "Loading..."}
+                        </span>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2 items-center w-full">
-                      <div className="text-xs text-muted-foreground">
-                        You do not have enough balance to submit picks.
-                      </div>
-                      <BuyWidget
-                        chain={chain}
-                        client={client}
-                        showThirdwebBranding={false}
-                        tokenAddress={contest.currency as `0x${string}`}
-                        amount={toTokens(
-                          contest.entryFee,
-                          currencyDecimals ?? 18,
-                        ).toString()}
-                        style={{
-                          border: "none",
-                        }}
-                        theme={
-                          resolvedTheme === "dark"
-                            ? darkTheme({
-                                colors: { modalBg: "--var(--card-foreground)" },
-                              })
-                            : lightTheme({
-                                colors: { modalBg: "var(--card-foreground)" },
-                              })
+
+                      <RadioGroup
+                        value={picks[game.gameId]?.toString()}
+                        onValueChange={(value: string) =>
+                          setPick(game.gameId, parseInt(value))
                         }
-                      />
+                      >
+                        <div className="grid grid-cols-2 gap-3">
+                          <div
+                            className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                              picks[game.gameId] === 0
+                                ? "border-primary bg-primary/10"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              selectionChanged();
+                              setPick(game.gameId, 0);
+                            }}
+                          >
+                            <RadioGroupItem
+                              className="mt-1"
+                              id={`${game.gameId}-away`}
+                              value="0"
+                            />
+                            <Label
+                              className="flex-1 cursor-pointer"
+                              htmlFor={`${game.gameId}-away`}
+                            >
+                              <div className="flex flex-col gap-1 w-full">
+                                <div className="flex items-center gap-2 justify-between w-full">
+                                  <div className="flex items-center gap-2 justify-between w-fit">
+                                    <img
+                                      alt={`${game.awayTeam} logo`}
+                                      className="h-6 w-6 flex-shrink-0"
+                                      src={game.awayLogo}
+                                    />
+                                    <div
+                                      className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                    >
+                                      {game.awayAbbreviation}
+                                    </div>
+                                    <div
+                                      className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
+                                    >
+                                      {game.awayTeam}
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground text-nowrap">
+                                    {game.awayRecord}
+                                  </div>
+                                </div>
+                                {gameFinished && winner === "away" && (
+                                  <div className="flex items-center gap-2 text-xs justify-end">
+                                    <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
+                                      W
+                                    </Badge>
+                                  </div>
+                                )}
+                                {!gameFinished &&
+                                  game.odds?.awayTeamOdds &&
+                                  game.odds.awayTeamOdds.moneyLine && (
+                                    <div className="flex items-center gap-2 text-xs justify-end">
+                                      <Badge
+                                        className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
+                                          game.odds.awayTeamOdds.favorite
+                                            ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                            : "bg-red-100 hover:bg-red-200 text-red-700"
+                                        }`}
+                                      >
+                                        {formatMoneyLine(
+                                          game.odds.awayTeamOdds.moneyLine,
+                                        )}
+                                      </Badge>
+                                    </div>
+                                  )}
+                              </div>
+                            </Label>
+                          </div>
+
+                          <div
+                            className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
+                              picks[game.gameId] === 1
+                                ? "border-primary bg-primary/10"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              selectionChanged();
+                              setPick(game.gameId, 1);
+                            }}
+                          >
+                            <RadioGroupItem
+                              className="mt-1"
+                              id={`${game.gameId}-home`}
+                              value="1"
+                            />
+                            <Label
+                              className="flex-1 cursor-pointer"
+                              htmlFor={`${game.gameId}-home`}
+                            >
+                              <div className="flex flex-col gap-1 w-full">
+                                <div className="flex items-center gap-2 justify-between w-full">
+                                  <div className="flex items-center gap-2 justify-between w-fit">
+                                    <img
+                                      alt={`${game.homeTeam} logo`}
+                                      className="h-6 w-6 flex-shrink-0"
+                                      src={game.homeLogo}
+                                    />
+                                    <div
+                                      className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                    >
+                                      {game.homeAbbreviation}
+                                    </div>
+                                    <div
+                                      className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
+                                    >
+                                      {game.homeTeam}
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground text-nowrap">
+                                    {game.homeRecord}
+                                  </div>
+                                </div>
+                                {gameFinished && winner === "home" && (
+                                  <div className="flex items-center gap-2 text-xs justify-end">
+                                    <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
+                                      Won {game.homeScore} - {game.awayScore}
+                                    </Badge>
+                                  </div>
+                                )}
+                                {!gameFinished &&
+                                  game.odds?.homeTeamOdds &&
+                                  game.odds.homeTeamOdds.moneyLine && (
+                                    <div className="flex items-end gap-2 text-xs justify-end">
+                                      <Badge
+                                        className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
+                                          game.odds.homeTeamOdds.favorite
+                                            ? "bg-green-100 hover:bg-green-200 text-green-700"
+                                            : "bg-red-100 hover:bg-red-200 text-red-700"
+                                        }`}
+                                      >
+                                        {formatMoneyLine(
+                                          game.odds.homeTeamOdds.moneyLine,
+                                        )}
+                                      </Badge>
+                                    </div>
+                                  )}
+                              </div>
+                            </Label>
+                          </div>
+                        </div>
+                      </RadioGroup>
                     </div>
-                  )}
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Submission Panel */}
+          {!isSubmissionClosed && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Submit Your Picks</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Tiebreaker */}
+                <div className="space-y-2">
+                  <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
+                  <Input
+                    id="tiebreaker"
+                    min="0"
+                    placeholder="e.g., 45"
+                    type="number"
+                    value={tiebreakerPoints}
+                    onChange={e => setTiebreakerPoints(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Guess the total points scored in the{" "}
+                    {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
+                    game
+                    {lastGame?.odds?.overUnder && (
+                      <span className="font-medium text-muted-foreground">
+                        {" "}
+                        (over/under: {lastGame.odds.overUnder})
+                      </span>
+                    )}
+                  </p>
                 </div>
-              )}
+                {/* Entry Fee Display */}
+                <div className="p-4 bg-muted rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Entry Fee:</span>
+                    <span className="font-bold">{formattedEntryFee}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">
+                      Your Balance:
+                    </span>
+                    <span className="text-muted-foreground text-xs font-bold">
+                      {Number(walletBalance?.displayValue).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                {/* Submit Button */}
+                {hasSufficientBalance ? (
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    disabled={
+                      !account ||
+                      submitting ||
+                      isSubmissionClosed ||
+                      !allPicksMade
+                    }
+                    onClick={handleSubmit}
+                  >
+                    {submitting
+                      ? "Submitting..."
+                      : isSubmissionClosed
+                        ? "Submissions Closed"
+                        : !allPicksMade
+                          ? "Complete All Picks"
+                          : "Submit Picks"}
+                  </Button>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    {/* if the user is in a mini app, show the buy widget */}
+                    {isInMiniApp ? (
+                      <div className="flex flex-col gap-2 items-center w-full">
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          onClick={handleMiniAppSwap}
+                        >
+                          <div className="flex gap-2 items-center">
+                            <span>Swap for {formattedEntryFee}</span>
+                            <span>
+                              (<EntryFeeUsd />)
+                            </span>
+                          </div>
+                        </Button>
+                        <div className="text-xs text-muted-foreground">
+                          You do not have enough balance to submit picks.
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 items-center w-full">
+                        <div className="text-xs text-muted-foreground">
+                          You do not have enough balance to submit picks.
+                        </div>
+                        <BuyWidget
+                          chain={chain}
+                          client={client}
+                          showThirdwebBranding={false}
+                          tokenAddress={contest.currency as `0x${string}`}
+                          amount={toTokens(
+                            contest.entryFee,
+                            currencyDecimals ?? 18,
+                          ).toString()}
+                          style={{
+                            border: "none",
+                          }}
+                          theme={
+                            resolvedTheme === "dark"
+                              ? darkTheme({
+                                  colors: {
+                                    modalBg: "--var(--card-foreground)",
+                                  },
+                                })
+                              : lightTheme({
+                                  colors: { modalBg: "var(--card-foreground)" },
+                                })
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {!account && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Please connect your wallet to submit picks.
-                  </AlertDescription>
-                </Alert>
-              )}
-              {isSubmissionClosed && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    The submission deadline has passed. You can no longer submit
-                    picks for this contest.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                {!account && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Please connect your wallet to submit picks.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {isSubmissionClosed && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      The submission deadline has passed. You can no longer
+                      submit picks for this contest.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {/* All Participants' Picks */}
+        {/* All Participants' Picks */}
         <ContestPicksView
           contestId={contest.id}
           gameIds={contest.gameIds}
@@ -849,13 +847,9 @@ export default function PickemContestClient({
             >
               Skip for now
             </Button>
-            <Button
-              disabled={shareLoading}
-              type="button"
-              onClick={handleShare}
-            >
+            <Button disabled={shareLoading} type="button" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
-              {shareLoading ? "Sharing..." : "Compose cast" }
+              {shareLoading ? "Sharing..." : "Compose cast"}
             </Button>
           </DialogFooter>
         </DialogContent>

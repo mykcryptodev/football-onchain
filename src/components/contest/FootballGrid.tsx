@@ -412,7 +412,8 @@ export function FootballGrid({
                 </div>
                 {hasInsufficientFunds ? (
                   <p className="text-sm text-destructive text-right">
-                    You need {missingLoading ? "..." : missingAmountFormatted} more
+                    You need {missingLoading ? "..." : missingAmountFormatted}{" "}
+                    more
                   </p>
                 ) : (
                   <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
@@ -423,7 +424,7 @@ export function FootballGrid({
 
               {/* Swap token button */}
               {tokenInfo && (
-                <div className="mt-3 pt-3 border-t border-border">
+                <div className="mt-3 py-3 border-t border-border">
                   <Button
                     className="w-full"
                     disabled={isSwapping}
