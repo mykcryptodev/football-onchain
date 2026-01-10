@@ -4,6 +4,36 @@ import { sdk } from "@farcaster/miniapp-sdk";
 import { useState } from "react";
 import { toast } from "sonner";
 
+const MINI_APP_ADDED_KEY = "mini_app_added";
+
+/**
+ * Check if the mini app has already been added (stored in localStorage).
+ */
+export function isMiniAppAdded(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(MINI_APP_ADDED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mark the mini app as added in localStorage.
+ */
+function setMiniAppAdded(added: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (added) {
+      localStorage.setItem(MINI_APP_ADDED_KEY, "true");
+    } else {
+      localStorage.removeItem(MINI_APP_ADDED_KEY);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 interface UseAddMiniAppResult {
   addMiniApp: () => Promise<void>;
   isAdding: boolean;
@@ -24,6 +54,8 @@ export function useAddMiniApp(): UseAddMiniAppResult {
 
     try {
       await sdk.actions.addMiniApp();
+      // Mark as added on success
+      setMiniAppAdded(true);
       toast.success("Mini app added! You'll now receive notifications.");
     } catch (err) {
       const error = err as Error;
@@ -39,6 +71,7 @@ export function useAddMiniApp(): UseAddMiniAppResult {
       } else {
         // If app is already added, the SDK might throw an error
         // We'll treat it as a success since the goal is achieved
+        setMiniAppAdded(true);
         console.warn("Error adding mini app:", error);
         toast.info("Mini app may already be added");
       }

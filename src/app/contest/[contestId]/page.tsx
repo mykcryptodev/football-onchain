@@ -17,6 +17,7 @@ import {
   UserProfileModal,
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
+import { isMiniAppAdded } from "@/hooks/useAddMiniApp";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
@@ -119,8 +120,8 @@ export default function ContestPage() {
           setSelectedBoxes([]);
           toast.success("Boxes claimed successfully!");
 
-          // Show mini app upsell dialog if user is in mini app
-          if (isInMiniApp) {
+          // Show mini app upsell dialog if user is in mini app and hasn't already added it
+          if (isInMiniApp && !isMiniAppAdded()) {
             setIsAddMiniAppDialogOpen(true);
           }
         },

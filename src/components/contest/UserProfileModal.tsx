@@ -405,12 +405,13 @@ export function UserProfileModal({
 
           {/* Box Value - With Team Icons and Abbreviations */}
           <div className="text-center py-4">
-            <div className="flex items-center justify-center gap-4 text-4xl font-bold">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xl sm:text-3xl md:text-4xl font-bold">
+              {/* Away Team */}
               <div className="flex items-center gap-2">
                 {teamInfo.awayLogo && (
                   <img
                     alt={teamInfo.awayAbbreviation}
-                    className="h-8 w-8"
+                    className="h-6 w-6 sm:h-8 sm:w-8"
                     src={teamInfo.awayLogo}
                   />
                 )}
@@ -423,15 +424,17 @@ export function UserProfileModal({
                 >
                   {teamInfo.awayAbbreviation}
                 </span>
+                <span className="text-muted-foreground">:</span>
+                <span>{hasRandomValues ? boxColScore : ""}</span>
               </div>
-              <span className="text-muted-foreground">:</span>
-              <span>{hasRandomValues ? boxColScore : ""}</span>
-              <span className="text-muted-foreground">,</span>
+              {/* Separator - hidden on mobile, shown on desktop */}
+              <span className="text-muted-foreground hidden sm:inline">,</span>
+              {/* Home Team */}
               <div className="flex items-center gap-2">
                 {teamInfo.homeLogo && (
                   <img
                     alt={teamInfo.homeAbbreviation}
-                    className="h-8 w-8"
+                    className="h-6 w-6 sm:h-8 sm:w-8"
                     src={teamInfo.homeLogo}
                   />
                 )}
@@ -444,9 +447,9 @@ export function UserProfileModal({
                 >
                   {teamInfo.homeAbbreviation}
                 </span>
+                <span className="text-muted-foreground">:</span>
+                <span>{hasRandomValues ? boxRowScore : ""}</span>
               </div>
-              <span className="text-muted-foreground">:</span>
-              <span>{hasRandomValues ? boxRowScore : ""}</span>
             </div>
             {!hasRandomValues && (
               <div className="mt-3 text-sm text-muted-foreground">
