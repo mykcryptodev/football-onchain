@@ -1,7 +1,8 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { Share2 } from "lucide-react";
+import { Cog, Share2 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,12 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           <Button size="sm" variant="outline" onClick={handleShare}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/contests/${contest.id}/admin`}>
+              <Cog className="h-4 w-4 mr-2" />
+              Admin
+            </Link>
           </Button>
           <Badge variant={contest.boxesCanBeClaimed ? "default" : "secondary"}>
             {contest.boxesCanBeClaimed ? "Active" : "Closed"}
