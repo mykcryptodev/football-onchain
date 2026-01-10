@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import {
   getPayoutStrategyType,
+  getNetRewards,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
   getStrategyDisplayName,
+  getTreasuryFee,
 } from "@/lib/payout-utils";
 
 import { Contest, PayoutStrategyType } from "./types";
@@ -32,7 +34,7 @@ function PayoutsFooter({
     formattedValue: treasuryFeeFormatted,
     isLoading: treasuryFeeLoading,
   } = useFormattedCurrency({
-    amount: BigInt(Math.floor(totalRewards * 0.02)),
+    amount: BigInt(Math.floor(getTreasuryFee(totalRewards))),
     currencyAddress,
   });
   const { formattedValue: amountPaidFormatted, isLoading: amountPaidLoading } =
@@ -66,9 +68,10 @@ export function PayoutsCard({
   const currencyAddress = contest.boxCost.currency;
 
   // Calculate payouts for both strategies at the top level (before any returns)
-  const quartersOnlyPayouts = getQuartersOnlyPayouts(contest.totalRewards);
+  const netRewards = getNetRewards(contest.totalRewards);
+  const quartersOnlyPayouts = getQuartersOnlyPayouts(netRewards);
   const scoreChangesPayouts = getScoreChangesPayouts(
-    contest.totalRewards,
+    netRewards,
     scoreChangeCount,
   );
 
