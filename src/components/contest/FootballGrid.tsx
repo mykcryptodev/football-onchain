@@ -79,10 +79,11 @@ export function FootballGrid({
       enabled: Boolean(account?.address),
     },
   );
+  const balanceValue = walletBalance.data?.value;
   const hasInsufficientFunds =
-    Boolean(walletBalance.data) && walletBalance.data.value < totalCost;
+    balanceValue !== undefined && balanceValue < totalCost;
   const missingAmount = hasInsufficientFunds
-    ? totalCost - (walletBalance.data?.value ?? 0n)
+    ? totalCost - (balanceValue ?? 0n)
     : 0n;
   const { formattedValue: missingAmountFormatted, isLoading: missingLoading } =
     useFormattedCurrency({
