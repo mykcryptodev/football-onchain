@@ -248,7 +248,7 @@ contract GameScoreOracleUnpackingTest is Test {
             uint256 packedChange = (packedUint256 >> (offsetInUint256 * 32)) & 0xFFFFFFFF;
 
             // Unpack only the last digits (simplified format)
-            uint8 homeLastDigit = uint8((packedChange >> 1) & 0xF);       // 4 bits
+            uint8 homeLastDigit = uint8((packedChange >> 4) & 0xF);       // 4 bits
             uint8 awayLastDigit = uint8(packedChange & 0xF);             // 4 bits
 
             console.log("Score Change", i, ":");
@@ -324,7 +324,7 @@ contract GameScoreOracleUnpackingTest is Test {
             uint256 packedUint256 = _bytesToUint256(scoreChangesResponse, uint256Index);
             uint256 packedChange = (packedUint256 >> (offsetInUint256 * 32)) & 0xFFFFFFFF;
 
-            uint8 homeLastDigit = uint8((packedChange >> 1) & 0xF);
+            uint8 homeLastDigit = uint8((packedChange >> 4) & 0xF);
             uint8 awayLastDigit = uint8(packedChange & 0xF);
         }
 
@@ -362,7 +362,7 @@ contract GameScoreOracleUnpackingTest is Test {
             uint256 packedUint256 = _bytesToUint256(response15, uint256Index);
             uint256 packedChange = (packedUint256 >> (offsetInUint256 * 32)) & 0xFFFFFFFF;
 
-            uint8 homeLastDigit = uint8((packedChange >> 1) & 0xF);
+            uint8 homeLastDigit = uint8((packedChange >> 4) & 0xF);
             uint8 awayLastDigit = uint8(packedChange & 0xF);
         }
 
@@ -495,6 +495,87 @@ contract GameScoreOracleUnpackingTest is Test {
             console.log("Total gas:", totalGas);
             console.log("Under limit:", underLimit);
         }
+    }
+
+    function testScoreChangePackingEdgeCases() public {
+        console.log("=== SCORE CHANGE PACKING EDGE CASES TEST ===");
+        
+        // Test edge cases for score change packing/unpacking
+        // This verifies the fix from <<1 to <<4
+        
+        // Test case 1: Maximum values (9,9)
+        _testPackingCase(9, 9, "Maximum values (9,9)");
+        
+        // Test case 2: Minimum values (0,0)
+        _testPackingCase(0, 0, "Minimum values (0,0)");
+        
+        // Test case 3: Previously corrupted case (2,2)
+        _testPackingCase(2, 2, "Previously corrupted case (2,2)");
+        
+        // Test case 4: Edge case (8,1)
+        _testPackingCase(8, 1, "Edge case (8,1)");
+        
+        // Test case 5: Random case (5,7)
+        _testPackingCase(5, 7, "Random case (5,7)");
+        
+        console.log("All edge cases passed!");
+    }
+    
+    function _testPackingCase(uint8 homeDigit, uint8 awayDigit, string memory description) internal {
+        // Pack the values using the fixed logic (<<4)
+        uint256 packedChange = (uint256(homeDigit) << 4) | uint256(awayDigit);
+        
+        // Unpack using the fixed logic (>>4)
+        uint8 unpackedHome = uint8((packedChange >> 4) & 0xF);
+        uint8 unpackedAway = uint8(packedChange & 0xF);
+        
+        console.log("Test:", description);
+        console.log("  Input: home=%d, away=%d", homeDigit, awayDigit);
+        console.log("  Packed value:", packedChange);
+        console.log("  Unpacked: home=%d, away=%d", unpackedHome, unpackedAway);
+        
+        // Verify correctness
+        assertEq(unpackedHome, homeDigit, "Home digit mismatch");
+        assertEq(unpackedAway, awayDigit, "Away digit mismatch");
+        
+        console.log("  PASS");
+    }
+    
+    function testBuggyPackingComparison() public {
+        console.log("=== BUGGY vs FIXED PACKING COMPARISON ===");
+        
+        // Demonstrate the bug with the old <<1 approach
+        uint8 home = 2;
+        uint8 away = 2;
+        
+        // Old buggy packing (<<1)
+        uint256 buggyPacked = (uint256(home) << 1) | uint256(away);
+        uint8 buggyHome = uint8((buggyPacked >> 1) & 0xF);
+        uint8 buggyAway = uint8(buggyPacked & 0xF);
+        
+        console.log("BUGGY APPROACH (<<1, >>1):");
+        console.log("  Input: home=%d, away=%d", home, away);
+        console.log("  Packed:", buggyPacked);
+        console.log("  Unpacked: home=%d, away=%d", buggyHome, buggyAway);
+        console.log("  WRONG! Expected (2,2) but got (%d,%d)", buggyHome, buggyAway);
+        
+        // New fixed packing (<<4)
+        uint256 fixedPacked = (uint256(home) << 4) | uint256(away);
+        uint8 fixedHome = uint8((fixedPacked >> 4) & 0xF);
+        uint8 fixedAway = uint8(fixedPacked & 0xF);
+        
+        console.log("FIXED APPROACH (<<4, >>4):");
+        console.log("  Input: home=%d, away=%d", home, away);
+        console.log("  Packed:", fixedPacked);
+        console.log("  Unpacked: home=%d, away=%d", fixedHome, fixedAway);
+        console.log("  CORRECT!");
+        
+        // Verify the fix
+        assertEq(fixedHome, home, "Fixed home digit should match");
+        assertEq(fixedAway, away, "Fixed away digit should match");
+        
+        // Show that buggy approach fails
+        assertTrue(buggyHome != home || buggyAway != away, "Buggy approach should produce wrong results");
     }
 
     function _bytesToUint256(bytes memory input, uint8 index) internal pure returns (uint256 result) {

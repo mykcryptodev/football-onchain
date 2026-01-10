@@ -78,7 +78,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         "const change=scoreChanges[i+j];"
         "const homeLastDigit=change.homeScore%10;"
         "const awayLastDigit=change.awayScore%10;"
-        "const packedChange=(homeLastDigit<<1)|awayLastDigit;"
+        "const packedChange=(homeLastDigit<<4)|awayLastDigit;"
         "packedUint256|=(BigInt(packedChange)<<BigInt(j*32));"
         "}"
         "packedResult.push(packedUint256);"
@@ -255,7 +255,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
             uint256 packedUint256 = packedScoreChanges[uint256Index];
             uint256 packedChange = (packedUint256 >> (offsetInUint256 * 32)) & 0xFFFFFFFF;
 
-            uint8 homeLastDigit = uint8((packedChange >> 1) & 0xF);
+            uint8 homeLastDigit = uint8((packedChange >> 4) & 0xF);
             uint8 awayLastDigit = uint8(packedChange & 0xF);
 
             scoreChanges[i] = ScoreChangeEvent({
@@ -285,7 +285,7 @@ contract GameScoreOracle is ConfirmedOwner, FunctionsClient {
         uint256 packedUint256 = packedScoreChanges[uint256Index];
         uint256 packedChange = (packedUint256 >> (offsetInUint256 * 32)) & 0xFFFFFFFF;
 
-        uint8 homeLastDigit = uint8((packedChange >> 1) & 0xF);
+        uint8 homeLastDigit = uint8((packedChange >> 4) & 0xF);
         uint8 awayLastDigit = uint8(packedChange & 0xF);
 
         return ScoreChangeEvent({
