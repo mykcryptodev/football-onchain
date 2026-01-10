@@ -18,9 +18,9 @@ interface UserProfileResponse {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { address: string } },
+  { params }: { params: Promise<{ address: string }> },
 ) {
-  const { address } = params;
+  const { address } = await params;
 
   if (!address) {
     return NextResponse.json({ error: "Address is required" }, { status: 400 });
