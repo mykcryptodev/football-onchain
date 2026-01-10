@@ -1,20 +1,17 @@
 "use client";
 
-import { sdk } from "@farcaster/miniapp-sdk";
 import { AlertCircle, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useActiveAccount } from "thirdweb/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useComments } from "@/hooks/useComments";
-import { useFarcasterContext } from "@/hooks/useFarcasterContext";
-import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
-import { useNeynarSigner } from "@/hooks/useNeynarSigner";
-import { usePostComment } from "@/hooks/usePostComment";
+import { useEthComments } from "@/hooks/useEthComments";
+import { usePostEthComment } from "@/hooks/usePostEthComment";
 
 interface CommentSectionProps {
   contestId: string;
@@ -26,9 +23,8 @@ export function CommentSection({ contestId }: CommentSectionProps) {
     isLoading: loading,
     isRefreshing: refreshing,
     refresh,
-  } = useComments(contestId);
-  const { isInMiniApp } = useIsInMiniApp();
-  const { context } = useFarcasterContext();
+  } = useEthComments(contestId);
+  const account = useActiveAccount();
   const [commentText, setCommentText] = useState("");
   const [showComposer, setShowComposer] = useState(false);
 
@@ -38,47 +34,14 @@ export function CommentSection({ contestId }: CommentSectionProps) {
       : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const contestUrl = `${baseUrl}/contest/${contestId}`;
 
-  // Get user's FID from Farcaster context
-  const userFid = context?.user?.fid ?? null;
-
-  // Get signer status for Neynar casting
-  const {
-    signerStatus,
-    signerUuid,
-    approvalUrl,
-    isLoading: signerLoading,
-    error: signerError,
-    refetch: refetchSigner,
-  } = useNeynarSigner({
-    fid: userFid,
-    enabled: isInMiniApp && showComposer,
-  });
-
-  // Debug logging
-  if (showComposer && typeof window !== "undefined") {
-    console.log("[CommentSection] Signer state:", {
-      userFid,
-      isInMiniApp,
-      signerStatus,
-      signerLoading,
-      hasApprovalUrl: !!approvalUrl,
-      error: signerError?.message,
-    });
-  }
-
-  const { postComment, isPosting } = usePostComment();
+  const { postComment, isPosting } = usePostEthComment();
 
   const handleAddCommentClick = () => {
-    setShowComposer(true);
-  };
-
-  const handleApproveSignerClick = () => {
-    if (approvalUrl) {
-      window.open(approvalUrl, "_blank");
-      toast.info(
-        "Please approve the signer in Warpcast, then come back and try again",
-      );
+    if (!account?.address) {
+      toast.error("Please connect your wallet to comment");
+      return;
     }
+    setShowComposer(true);
   };
 
   const handleSubmitComment = async () => {
@@ -87,74 +50,40 @@ export function CommentSection({ contestId }: CommentSectionProps) {
       return;
     }
 
-    // If we have an approved signer, use Neynar API
-    if (signerStatus === "approved" && signerUuid) {
-      try {
-        await postComment({
-          text: commentText,
-          parentUrl: contestUrl,
-          signerUuid,
-        });
+    if (!account?.address) {
+      toast.error("Please connect your wallet to comment");
+      return;
+    }
 
-        toast.success(
-          "Comment posted! It may take a moment to appear in the feed.",
-        );
-        setCommentText("");
-        setShowComposer(false);
-        // Refresh comments after a short delay
-        setTimeout(() => refresh(), 3000);
-      } catch (error) {
-        console.error("Error posting comment:", error);
-        toast.error(
-          error instanceof Error ? error.message : "Failed to post comment",
-        );
-      }
-    } else {
-      // Fallback to composeCast (without parent URL support)
-      handleFallbackCompose();
+    try {
+      await postComment({
+        content: commentText,
+        targetUri: contestUrl,
+      });
+
+      toast.success(
+        "Comment posted! It may take a moment to appear in the feed.",
+      );
+      setCommentText("");
+      setShowComposer(false);
+      // Refresh comments after a short delay to allow indexer to process
+      setTimeout(() => refresh(), 3000);
+    } catch (error) {
+      console.error("Error posting comment:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to post comment",
+      );
     }
   };
 
-  const handleFallbackCompose = async () => {
-    if (isInMiniApp) {
-      try {
-        const result = await sdk.actions.composeCast({
-          text: commentText || `Commenting on contest ${contestId}`,
-          embeds: [contestUrl],
-          parent: {
-            // @ts-expect-error - TODO: trying
-            type: "url",
-            url: contestUrl,
-          },
-        });
-
-        if (result?.cast) {
-          toast.success(
-            "Cast posted! It may take a moment to appear as a comment.",
-          );
-          setCommentText("");
-          setShowComposer(false);
-          // Refresh comments after posting
-          setTimeout(() => refresh(), 3000);
-        } else {
-          toast.info("Comment cancelled");
-        }
-      } catch (error) {
-        console.error("Error composing cast:", error);
-        toast.error("Failed to compose comment");
-      }
-    } else {
-      // Fallback for non-miniapp: open Warpcast compose in new window
-      const text = commentText ? encodeURIComponent(commentText) : "";
-      const warpcastUrl = `https://farcaster.xyz/~/compose?text=${text}&embeds[]=${encodeURIComponent(contestUrl)}`;
-      window.open(warpcastUrl, "_blank");
-      toast.info("Opening Warpcast to compose comment");
-    }
-  };
-
-  const formatRelativeTime = (timestamp: string) => {
+  const formatRelativeTime = (timestamp: string | number | Date) => {
     const now = new Date();
-    const then = new Date(timestamp);
+    const then =
+      timestamp instanceof Date
+        ? timestamp
+        : new Date(
+            typeof timestamp === "number" ? timestamp * 1000 : timestamp,
+          );
     const diffMs = now.getTime() - then.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
@@ -165,6 +94,42 @@ export function CommentSection({ contestId }: CommentSectionProps) {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return then.toLocaleDateString();
+  };
+
+  const getAuthorDisplayName = (comment: (typeof comments)[0]) => {
+    // Priority: ENS > Farcaster displayName > Farcaster username > shortened address
+    if (comment.author.ens?.name) {
+      return comment.author.ens.name;
+    }
+    if (comment.author.farcaster?.displayName) {
+      return comment.author.farcaster.displayName;
+    }
+    if (comment.author.farcaster?.username) {
+      return `@${comment.author.farcaster.username}`;
+    }
+    // Shorten address to 0x1234...5678 format
+    const addr = comment.author.address;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const getAuthorUsername = (comment: (typeof comments)[0]) => {
+    // Show farcaster username or shortened address
+    if (comment.author.farcaster?.username) {
+      return `@${comment.author.farcaster.username}`;
+    }
+    const addr = comment.author.address;
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
+
+  const getAuthorAvatar = (comment: (typeof comments)[0]) => {
+    // Priority: ENS avatar > Farcaster pfp
+    if (comment.author.ens?.avatarUrl) {
+      return comment.author.ens.avatarUrl;
+    }
+    if (comment.author.farcaster?.pfpUrl) {
+      return comment.author.farcaster.pfpUrl;
+    }
+    return undefined;
   };
 
   return (
@@ -208,61 +173,18 @@ export function CommentSection({ contestId }: CommentSectionProps) {
               onChange={e => setCommentText(e.target.value)}
             />
 
-            {/* Signer status feedback */}
-            {signerLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Checking signer status...
-              </div>
-            )}
-
-            {signerError && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
-                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm text-red-900 dark:text-red-100">
-                    Error checking signer: {signerError.message}
-                  </p>
-                  <p className="text-xs text-red-800 dark:text-red-200">
-                    {!userFid && "FID not available. "}
-                    {!isInMiniApp && "Not in Farcaster mini app. "}
-                    You can use the Warpcast fallback below.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {signerStatus === "pending_approval" && approvalUrl && (
+            {!account?.address && (
               <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
                 <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm text-amber-900 dark:text-amber-100">
-                    To post comments with proper threading, you need to approve
-                    this app in Warpcast (one-time setup).
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleApproveSignerClick}
-                    >
-                      Approve in Warpcast
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => refetchSigner()}
-                    >
-                      I&apos;ve approved it
-                    </Button>
-                  </div>
-                </div>
+                <p className="text-sm text-amber-900 dark:text-amber-100">
+                  Please connect your wallet to post comments.
+                </p>
               </div>
             )}
 
             <div className="flex gap-2">
               <Button
-                disabled={isPosting || !commentText.trim() || signerLoading}
+                disabled={isPosting || !commentText.trim() || !account?.address}
                 size="sm"
                 onClick={handleSubmitComment}
               >
@@ -289,17 +211,6 @@ export function CommentSection({ contestId }: CommentSectionProps) {
               >
                 Cancel
               </Button>
-              {signerStatus !== "approved" && (
-                <Button
-                  className="ml-auto"
-                  disabled={isPosting || !commentText.trim()}
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleFallbackCompose}
-                >
-                  Use Warpcast
-                </Button>
-              )}
             </div>
           </div>
         )}
@@ -326,37 +237,32 @@ export function CommentSection({ contestId }: CommentSectionProps) {
           </div>
         ) : (
           <div className="space-y-6">
-            {comments.map(cast => (
-              <div key={cast.hash} className="flex gap-3">
+            {comments.map(comment => (
+              <div key={comment.id} className="flex gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={cast.author.pfp_url} />
+                  <AvatarImage src={getAuthorAvatar(comment)} />
                   <AvatarFallback>
-                    {cast.author.display_name?.[0]?.toUpperCase() || "?"}
+                    {getAuthorDisplayName(comment)[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
                     <span className="font-semibold text-sm">
-                      {cast.author.display_name}
+                      {getAuthorDisplayName(comment)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      @{cast.author.username}
+                      {getAuthorUsername(comment)}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(cast.timestamp)}
+                      {formatRelativeTime(comment.createdAt)}
                     </span>
                   </div>
                   <p className="text-sm break-words whitespace-pre-wrap">
-                    {cast.text}
+                    {comment.content}
                   </p>
-                  <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                    <span>{cast.reactions.likes_count} likes</span>
-                    <span>{cast.reactions.recasts_count} recasts</span>
-                  </div>
                 </div>
               </div>
             ))}
-            {/* Note: Load More functionality would need pagination support in the hook */}
           </div>
         )}
       </CardContent>
