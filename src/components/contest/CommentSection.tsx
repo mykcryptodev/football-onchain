@@ -16,7 +16,12 @@ interface CommentSectionProps {
 }
 
 export function CommentSection({ contestId }: CommentSectionProps) {
-  const { comments, isLoading: loading, isRefreshing: refreshing, refresh } = useComments(contestId);
+  const {
+    comments,
+    isLoading: loading,
+    isRefreshing: refreshing,
+    refresh,
+  } = useComments(contestId);
   const { isInMiniApp } = useIsInMiniApp();
 
   const baseUrl =
@@ -31,7 +36,11 @@ export function CommentSection({ contestId }: CommentSectionProps) {
         const result = await sdk.actions.composeCast({
           text: `Commenting on contest ${contestId}`,
           embeds: [contestUrl],
-          channelKey: contestUrl,
+          parent: {
+            // @ts-expect-error - TODO: trying
+            type: "url",
+            url: contestUrl,
+          },
         });
 
         if (result?.cast) {
