@@ -51,7 +51,7 @@ export function SwapModal({ isOpen, onClose, tokenInfo }: SwapModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl px-0 sm:px-6">
+      <DialogContent className="sm:max-w-xl px-0 sm:px-6 max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Get {tokenInfo.symbol}</DialogTitle>
         </DialogHeader>
