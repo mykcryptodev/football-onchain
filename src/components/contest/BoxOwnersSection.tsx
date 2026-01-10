@@ -150,7 +150,7 @@ export function BoxOwnersSection({
         <DialogContent className="max-w-md">
           {selectedOwner && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <AccountProvider address={selectedOwner.address} client={client}>
                   <AccountAvatar
                     fallbackComponent={
@@ -181,8 +181,9 @@ export function BoxOwnersSection({
                     </div>
                   )}
                 </div>
-                {(profile?.farcasterUsername ||
-                  (isInMiniApp && profile?.fid)) && (
+              </div>
+              {(profile?.farcasterUsername || (isInMiniApp && profile?.fid)) && (
+                <div className="flex justify-end">
                   <Button
                     size="sm"
                     variant="outline"
@@ -190,8 +191,8 @@ export function BoxOwnersSection({
                   >
                     View Profile
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
               <div>
                 <h4 className="text-sm font-semibold mb-2">Bio</h4>
                 {profileLoading ? (

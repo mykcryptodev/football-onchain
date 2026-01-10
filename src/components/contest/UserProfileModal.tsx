@@ -350,7 +350,7 @@ export function UserProfileModal({
         <div className="space-y-6 py-4">
           {/* Box Owner - At Top */}
           <div>
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg border border-border">
               {profileLoading ? (
                 <div className="flex-1 text-sm text-muted-foreground">
                   Loading owner...
@@ -388,7 +388,7 @@ export function UserProfileModal({
                     )}
                     {(profile?.farcasterUsername ||
                       (isInMiniApp && profile?.fid)) && (
-                      <div className="mt-2">
+                      <div className="mt-2 flex justify-end">
                         <Button
                           size="sm"
                           variant="outline"
