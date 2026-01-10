@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { chain, contests } from "@/constants";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -134,7 +133,9 @@ export function BoxOwnersSection({
             Tap an owner to view their profile and boxes.
           </p>
         </div>
-        <Badge variant="secondary">{owners.length} owners</Badge>
+        <Badge variant="secondary" className="whitespace-nowrap">
+          {owners.length} owners
+        </Badge>
       </div>
 
       {owners.length === 0 ? (
@@ -142,7 +143,7 @@ export function BoxOwnersSection({
           No boxes have been claimed yet.
         </div>
       ) : (
-        <ScrollArea className="max-h-[360px]">
+        <div className="max-h-[360px] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {owners.map(owner => (
               <OwnerItem
@@ -153,7 +154,7 @@ export function BoxOwnersSection({
               />
             ))}
           </div>
-        </ScrollArea>
+        </div>
       )}
 
       <Dialog
