@@ -1,4 +1,4 @@
-import { pgTable, text, bigint, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const neynarSigners = pgTable("neynar_signers", {
   id: uuid("id").primaryKey().defaultRandom(),

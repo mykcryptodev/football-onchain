@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Publish the cast with parent URL
-    const cast = await client.publishCast(signerUuid, text, {
+    const cast = await client.publishCast({
+      signerUuid,
+      text,
       parent: parentUrl,
     });
 

@@ -185,11 +185,11 @@ export function CommentSection({ contestId }: CommentSectionProps) {
         {showComposer && (
           <div className="mb-6 space-y-3">
             <Textarea
+              className="min-h-[100px]"
+              disabled={isPosting}
               placeholder="Write your comment..."
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
-              className="min-h-[100px]"
-              disabled={isPosting}
             />
 
             {/* Signer approval needed */}
@@ -221,7 +221,7 @@ export function CommentSection({ contestId }: CommentSectionProps) {
                       variant="ghost"
                       onClick={() => refetchSigner()}
                     >
-                      I've approved it
+                      I&apos;ve approved it
                     </Button>
                   </div>
                 </div>
@@ -230,9 +230,9 @@ export function CommentSection({ contestId }: CommentSectionProps) {
 
             <div className="flex gap-2">
               <Button
-                onClick={handleSubmitComment}
                 disabled={isPosting || !commentText.trim() || signerLoading}
                 size="sm"
+                onClick={handleSubmitComment}
               >
                 {isPosting ? (
                   <>
@@ -247,23 +247,23 @@ export function CommentSection({ contestId }: CommentSectionProps) {
                 )}
               </Button>
               <Button
+                disabled={isPosting}
+                size="sm"
                 variant="outline"
                 onClick={() => {
                   setShowComposer(false);
                   setCommentText("");
                 }}
-                disabled={isPosting}
-                size="sm"
               >
                 Cancel
               </Button>
               {signerStatus !== "approved" && (
                 <Button
-                  variant="ghost"
-                  onClick={handleFallbackCompose}
+                  className="ml-auto"
                   disabled={isPosting || !commentText.trim()}
                   size="sm"
-                  className="ml-auto"
+                  variant="ghost"
+                  onClick={handleFallbackCompose}
                 >
                   Use Warpcast
                 </Button>

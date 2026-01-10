@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
     if (existingSigner) {
       // Check the signer status with Neynar
       try {
-        const signerStatus = await client.lookupSigner(
-          existingSigner.signerUuid,
-        );
+        const signerStatus = await client.lookupSigner({
+          signerUuid: existingSigner.signerUuid,
+        });
 
         // Update status in database if it changed
         if (signerStatus.status !== existingSigner.status) {
@@ -80,9 +80,8 @@ export async function GET(request: NextRequest) {
       status: "pending_approval",
     });
 
-    // Register the signed key with the user's FID
-    await client.registerSignedKey(newSigner.signer_uuid, fid);
-
+    // Return the approval URL for the user to approve in Warpcast
+    // The managed signer will automatically register the signed key after approval
     return NextResponse.json({
       status: "pending_approval",
       approvalUrl: newSigner.signer_approval_url,
