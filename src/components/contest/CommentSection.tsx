@@ -31,9 +31,10 @@ export function CommentSection({ contestId }: CommentSectionProps) {
         const result = await sdk.actions.composeCast({
           text: `Commenting on contest ${contestId}`,
           parent: {
-            type: "cast",
-            hash: contestId,
+            type: "url",
+            url: contestUrl,
           },
+          channelKey: contestUrl,
         });
 
         if (result?.cast) {
