@@ -56,11 +56,9 @@ export function CommentSection({ contestId }: CommentSectionProps) {
     }
 
     try {
-      // Use the wallet address as both author and app signer for simplicity
       await postComment({
         content: commentText,
         targetUri: contestUrl,
-        appSignerAddress: account.address,
       });
 
       toast.success(

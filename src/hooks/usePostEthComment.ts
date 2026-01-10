@@ -1,17 +1,15 @@
-import { COMMENT_MANAGER_ADDRESS } from "@ecp.eth/sdk";
-import { createCommentData } from "@ecp.eth/sdk/comments";
-import { getOneMinuteFromNowInSeconds } from "@ecp.eth/sdk/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { prepareContractCall, sendTransaction } from "thirdweb";
 import { base } from "thirdweb/chains";
+import { sendTransaction, getContract } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
+import { COMMENT_MANAGER_ADDRESS } from "@ecp.eth/sdk";
 
 import { client } from "@/providers/Thirdweb";
+import { postComment } from "@/constants/abis/comments";
 
 interface PostEthCommentParams {
   content: string;
   targetUri: string;
-  appSignerAddress: string;
 }
 
 interface PostEthCommentResult {
@@ -27,35 +25,39 @@ export function usePostEthComment() {
     Error,
     PostEthCommentParams
   >({
-    mutationFn: async ({
-      content,
-      targetUri,
-      appSignerAddress,
-    }: PostEthCommentParams) => {
+    mutationFn: async ({ content, targetUri }: PostEthCommentParams) => {
       if (!account?.address) {
         throw new Error("Wallet not connected");
       }
 
-      // Create comment data
-      const commentData = createCommentData({
-        content,
-        targetUri,
-        author: account.address as `0x${string}`,
-        app: appSignerAddress as `0x${string}`,
-        deadline: getOneMinuteFromNowInSeconds(),
+      // Get contract instance
+      const contract = getContract({
+        address: COMMENT_MANAGER_ADDRESS,
+        chain: base,
+        client,
       });
 
-      // For now, we'll use the direct transaction method (no signature)
-      // This requires the user to sign the transaction directly
-      const transaction = prepareContractCall({
-        contract: {
-          address: COMMENT_MANAGER_ADDRESS,
-          chain: base,
-          client,
-        },
-        method:
-          "function postComment((string content, string targetUri, uint8 commentType, uint256 channelId, bytes32 parentId, address author, address app, uint256 deadline) commentData, bytes memory appSignature)",
-        params: [commentData, "0x"],
+      // Prepare the comment data struct
+      // Order must match the CreateComment struct exactly:
+      // author, app, channelId, deadline, parentId, commentType, content, metadata[], targetUri
+      const commentData = {
+        author: account.address as `0x${string}`,
+        app: account.address as `0x${string}`, // Using wallet as app for direct posting
+        channelId: BigInt(0), // Default channel
+        deadline: BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour from now
+        parentId:
+          "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`,
+        commentType: 0, // 0 = comment
+        content,
+        metadata: [], // No metadata
+        targetUri,
+      };
+
+      // Use the generated postComment function
+      const transaction = postComment({
+        contract,
+        commentData,
+        appSignature: "0x" as `0x${string}`, // Empty signature for direct posting
       });
 
       const { transactionHash } = await sendTransaction({
