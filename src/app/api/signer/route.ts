@@ -38,6 +38,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (!process.env.NEYNAR_CLIENT_ID) {
+      console.error("[Signer API] NEYNAR_CLIENT_ID not configured");
+      return NextResponse.json(
+        { error: "Neynar client ID not configured" },
+        { status: 500 },
+      );
+    }
+
     if (!process.env.DATABASE_URL) {
       console.error("[Signer API] DATABASE_URL not configured");
       return NextResponse.json(
@@ -53,7 +61,10 @@ export async function GET(request: NextRequest) {
       where: eq(neynarSigners.fid, fid),
     });
 
-    console.log("[Signer API] Existing signer:", existingSigner ? "found" : "not found");
+    console.log(
+      "[Signer API] Existing signer:",
+      existingSigner ? "found" : "not found",
+    );
 
     if (existingSigner) {
       // Check the signer status with Neynar
@@ -80,8 +91,9 @@ export async function GET(request: NextRequest) {
           });
         } else {
           // For any non-approved status (pending_approval, generated, etc.)
-          // Return the approval URL
-          const approvalUrl = `https://client.warpcast.com/deeplinks/signed-key-request?token=${existingSigner.signerUuid}`;
+          // Return the approval URL using Neynar's hosted approval page
+          const clientId = process.env.NEYNAR_CLIENT_ID;
+          const approvalUrl = `https://app.neynar.com/signer/connect?client_id=${clientId}&signer_uuid=${existingSigner.signerUuid}`;
           return NextResponse.json({
             status: "pending_approval",
             approvalUrl: approvalUrl,
@@ -90,7 +102,8 @@ export async function GET(request: NextRequest) {
       } catch (error) {
         console.error("Error looking up signer:", error);
         // If lookup fails, still return the existing signer with approval URL
-        const approvalUrl = `https://client.warpcast.com/deeplinks/signed-key-request?token=${existingSigner.signerUuid}`;
+        const clientId = process.env.NEYNAR_CLIENT_ID;
+        const approvalUrl = `https://app.neynar.com/signer/connect?client_id=${clientId}&signer_uuid=${existingSigner.signerUuid}`;
         return NextResponse.json({
           status: "pending_approval",
           approvalUrl: approvalUrl,
@@ -101,12 +114,16 @@ export async function GET(request: NextRequest) {
     // Create a new signer
     console.log("[Signer API] Creating new signer...");
     const newSigner = await client.createSigner();
-    console.log("[Signer API] Signer created:", newSigner.signer_uuid);
+    console.log("[Signer API] Signer created:", JSON.stringify(newSigner));
 
-    // Construct the Warpcast deep link for signer approval
-    // This URL will open in Warpcast and prompt the user to approve the signer
-    const approvalUrl = `https://client.warpcast.com/deeplinks/signed-key-request?token=${newSigner.signer_uuid}`;
+    // For Neynar-managed signers, use the Neynar-hosted approval page
+    // This provides a web-based approval flow that works universally
+    const clientId = process.env.NEYNAR_CLIENT_ID;
+    const approvalUrl = `https://app.neynar.com/signer/connect?client_id=${clientId}&signer_uuid=${newSigner.signer_uuid}`;
     console.log("[Signer API] Approval URL:", approvalUrl);
+    console.log(
+      "[Signer API] NOTE: User approves via Neynar web page, which handles Warpcast auth",
+    );
 
     // Store in database
     console.log("[Signer API] Storing signer in database...");
