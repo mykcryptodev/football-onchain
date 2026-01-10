@@ -1,11 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base } from "thirdweb/chains";
-import { sendTransaction, getContract } from "thirdweb";
-import { useActiveAccount } from "thirdweb/react";
 import { COMMENT_MANAGER_ADDRESS } from "@ecp.eth/sdk";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { getContract,sendTransaction } from "thirdweb";
+import { base } from "thirdweb/chains";
+import { useActiveAccount } from "thirdweb/react";
 
-import { client } from "@/providers/Thirdweb";
 import { postComment } from "@/constants/abis/comments";
+import { client } from "@/providers/Thirdweb";
 
 interface PostEthCommentParams {
   content: string;

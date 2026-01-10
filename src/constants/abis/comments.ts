@@ -1,9 +1,9 @@
 import {
-  prepareEvent,
-  prepareContractCall,
-  readContract,
-  type BaseTransactionOptions,
   type AbiParameterToPrimitiveType,
+  type BaseTransactionOptions,
+  prepareContractCall,
+  prepareEvent,
+  readContract,
 } from "thirdweb";
 
 /**
@@ -457,7 +457,7 @@ export function ownershipTransferredEvent(filters: OwnershipTransferredEventFilt
  * ```
  */
 export async function DOMAIN_SEPARATOR(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return readContract({
     contract: options.contract,
@@ -468,11 +468,11 @@ export async function DOMAIN_SEPARATOR(
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -492,7 +492,7 @@ export async function DOMAIN_SEPARATOR(
  * ```
  */
 export async function channelManager(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return readContract({
     contract: options.contract,
@@ -503,11 +503,11 @@ export async function channelManager(
     {
       "internalType": "contract IChannelManager",
       "name": "",
-      "type": "address"
-    }
-  ]
+      "type": "address",
+    },
+  ],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -536,7 +536,7 @@ arg_1: AbiParameterToPrimitiveType<{"internalType":"bytes32","name":"","type":"b
  * ```
  */
 export async function commentHookMetadata(
-  options: BaseTransactionOptions<CommentHookMetadataParams>
+  options: BaseTransactionOptions<CommentHookMetadataParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -546,23 +546,23 @@ export async function commentHookMetadata(
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes",
       "name": "",
-      "type": "bytes"
-    }
-  ]
+      "type": "bytes",
+    },
+  ],
 ],
-    params: [options.arg_0, options.arg_1]
+    params: [options.arg_0, options.arg_1],
   });
 };
 
@@ -591,7 +591,7 @@ arg_1: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"","type":"u
  * ```
  */
 export async function commentHookMetadataKeys(
-  options: BaseTransactionOptions<CommentHookMetadataKeysParams>
+  options: BaseTransactionOptions<CommentHookMetadataKeysParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -601,23 +601,23 @@ export async function commentHookMetadataKeys(
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "uint256",
       "name": "",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.arg_0, options.arg_1]
+    params: [options.arg_0, options.arg_1],
   });
 };
 
@@ -646,7 +646,7 @@ arg_1: AbiParameterToPrimitiveType<{"internalType":"bytes32","name":"","type":"b
  * ```
  */
 export async function commentMetadata(
-  options: BaseTransactionOptions<CommentMetadataParams>
+  options: BaseTransactionOptions<CommentMetadataParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -656,23 +656,23 @@ export async function commentMetadata(
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes",
       "name": "",
-      "type": "bytes"
-    }
-  ]
+      "type": "bytes",
+    },
+  ],
 ],
-    params: [options.arg_0, options.arg_1]
+    params: [options.arg_0, options.arg_1],
   });
 };
 
@@ -701,7 +701,7 @@ arg_1: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"","type":"u
  * ```
  */
 export async function commentMetadataKeys(
-  options: BaseTransactionOptions<CommentMetadataKeysParams>
+  options: BaseTransactionOptions<CommentMetadataKeysParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -711,23 +711,23 @@ export async function commentMetadataKeys(
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "uint256",
       "name": "",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.arg_0, options.arg_1]
+    params: [options.arg_0, options.arg_1],
   });
 };
 
@@ -762,7 +762,7 @@ deadline: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"deadline
  * ```
  */
 export async function getAddApprovalHash(
-  options: BaseTransactionOptions<GetAddApprovalHashParams>
+  options: BaseTransactionOptions<GetAddApprovalHashParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -772,38 +772,38 @@ export async function getAddApprovalHash(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "expiry",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "nonce",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.author, options.app, options.expiry, options.nonce, options.deadline]
+    params: [options.author, options.app, options.expiry, options.nonce, options.deadline],
   });
 };
 
@@ -832,7 +832,7 @@ app: AbiParameterToPrimitiveType<{"internalType":"address","name":"app","type":"
  * ```
  */
 export async function getApprovalExpiry(
-  options: BaseTransactionOptions<GetApprovalExpiryParams>
+  options: BaseTransactionOptions<GetApprovalExpiryParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -842,23 +842,23 @@ export async function getApprovalExpiry(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
   [
     {
       "internalType": "uint256",
       "name": "",
-      "type": "uint256"
-    }
-  ]
+      "type": "uint256",
+    },
+  ],
 ],
-    params: [options.author, options.app]
+    params: [options.author, options.app],
   });
 };
 
@@ -885,7 +885,7 @@ export type GetCommentParams = {
  * ```
  */
 export async function getComment(
-  options: BaseTransactionOptions<GetCommentParams>
+  options: BaseTransactionOptions<GetCommentParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -895,8 +895,8 @@ export async function getComment(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
@@ -904,61 +904,61 @@ export async function getComment(
         {
           "internalType": "address",
           "name": "author",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint88",
           "name": "createdAt",
-          "type": "uint88"
+          "type": "uint88",
         },
         {
           "internalType": "enum Comments.AuthorAuthMethod",
           "name": "authMethod",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint88",
           "name": "updatedAt",
-          "type": "uint88"
+          "type": "uint88",
         },
         {
           "internalType": "uint8",
           "name": "commentType",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "uint256",
           "name": "channelId",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "bytes32",
           "name": "parentId",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "internalType": "string",
           "name": "targetUri",
-          "type": "string"
-        }
+          "type": "string",
+        },
       ],
       "internalType": "struct Comments.Comment",
       "name": "",
-      "type": "tuple"
-    }
-  ]
+      "type": "tuple",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -985,7 +985,7 @@ export type GetCommentHookMetadataParams = {
  * ```
  */
 export async function getCommentHookMetadata(
-  options: BaseTransactionOptions<GetCommentHookMetadataParams>
+  options: BaseTransactionOptions<GetCommentHookMetadataParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -995,8 +995,8 @@ export async function getCommentHookMetadata(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
@@ -1004,21 +1004,21 @@ export async function getCommentHookMetadata(
         {
           "internalType": "bytes32",
           "name": "key",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "bytes",
           "name": "value",
-          "type": "bytes"
-        }
+          "type": "bytes",
+        },
       ],
       "internalType": "struct Metadata.MetadataEntry[]",
       "name": "",
-      "type": "tuple[]"
-    }
-  ]
+      "type": "tuple[]",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -1045,7 +1045,7 @@ export type GetCommentHookMetadataKeysParams = {
  * ```
  */
 export async function getCommentHookMetadataKeys(
-  options: BaseTransactionOptions<GetCommentHookMetadataKeysParams>
+  options: BaseTransactionOptions<GetCommentHookMetadataKeysParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1055,18 +1055,18 @@ export async function getCommentHookMetadataKeys(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes32[]",
       "name": "",
-      "type": "bytes32[]"
-    }
-  ]
+      "type": "bytes32[]",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -1095,7 +1095,7 @@ key: AbiParameterToPrimitiveType<{"internalType":"bytes32","name":"key","type":"
  * ```
  */
 export async function getCommentHookMetadataValue(
-  options: BaseTransactionOptions<GetCommentHookMetadataValueParams>
+  options: BaseTransactionOptions<GetCommentHookMetadataValueParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1105,23 +1105,23 @@ export async function getCommentHookMetadataValue(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "bytes32",
       "name": "key",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes",
       "name": "",
-      "type": "bytes"
-    }
-  ]
+      "type": "bytes",
+    },
+  ],
 ],
-    params: [options.commentId, options.key]
+    params: [options.commentId, options.key],
   });
 };
 
@@ -1148,7 +1148,7 @@ export type GetCommentIdParams = {
  * ```
  */
 export async function getCommentId(
-  options: BaseTransactionOptions<GetCommentIdParams>
+  options: BaseTransactionOptions<GetCommentIdParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1160,75 +1160,75 @@ export async function getCommentId(
         {
           "internalType": "address",
           "name": "author",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "channelId",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "bytes32",
           "name": "parentId",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "uint8",
           "name": "commentType",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
+          "type": "tuple[]",
         },
         {
           "internalType": "string",
           "name": "targetUri",
-          "type": "string"
-        }
+          "type": "string",
+        },
       ],
       "internalType": "struct Comments.CreateComment",
       "name": "commentData",
-      "type": "tuple"
-    }
+      "type": "tuple",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.commentData]
+    params: [options.commentData],
   });
 };
 
@@ -1255,7 +1255,7 @@ export type GetCommentMetadataParams = {
  * ```
  */
 export async function getCommentMetadata(
-  options: BaseTransactionOptions<GetCommentMetadataParams>
+  options: BaseTransactionOptions<GetCommentMetadataParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1265,8 +1265,8 @@ export async function getCommentMetadata(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
@@ -1274,21 +1274,21 @@ export async function getCommentMetadata(
         {
           "internalType": "bytes32",
           "name": "key",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "bytes",
           "name": "value",
-          "type": "bytes"
-        }
+          "type": "bytes",
+        },
       ],
       "internalType": "struct Metadata.MetadataEntry[]",
       "name": "",
-      "type": "tuple[]"
-    }
-  ]
+      "type": "tuple[]",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -1315,7 +1315,7 @@ export type GetCommentMetadataKeysParams = {
  * ```
  */
 export async function getCommentMetadataKeys(
-  options: BaseTransactionOptions<GetCommentMetadataKeysParams>
+  options: BaseTransactionOptions<GetCommentMetadataKeysParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1325,18 +1325,18 @@ export async function getCommentMetadataKeys(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes32[]",
       "name": "",
-      "type": "bytes32[]"
-    }
-  ]
+      "type": "bytes32[]",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -1365,7 +1365,7 @@ key: AbiParameterToPrimitiveType<{"internalType":"bytes32","name":"key","type":"
  * ```
  */
 export async function getCommentMetadataValue(
-  options: BaseTransactionOptions<GetCommentMetadataValueParams>
+  options: BaseTransactionOptions<GetCommentMetadataValueParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1375,23 +1375,23 @@ export async function getCommentMetadataValue(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "bytes32",
       "name": "key",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bytes",
       "name": "",
-      "type": "bytes"
-    }
-  ]
+      "type": "bytes",
+    },
+  ],
 ],
-    params: [options.commentId, options.key]
+    params: [options.commentId, options.key],
   });
 };
 
@@ -1424,7 +1424,7 @@ deadline: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"deadline
  * ```
  */
 export async function getDeleteCommentHash(
-  options: BaseTransactionOptions<GetDeleteCommentHashParams>
+  options: BaseTransactionOptions<GetDeleteCommentHashParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1434,33 +1434,33 @@ export async function getDeleteCommentHash(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.commentId, options.author, options.app, options.deadline]
+    params: [options.commentId, options.author, options.app, options.deadline],
   });
 };
 
@@ -1491,7 +1491,7 @@ editData: AbiParameterToPrimitiveType<{"components":[{"internalType":"address","
  * ```
  */
 export async function getEditCommentHash(
-  options: BaseTransactionOptions<GetEditCommentHashParams>
+  options: BaseTransactionOptions<GetEditCommentHashParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1501,67 +1501,67 @@ export async function getEditCommentHash(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "components": [
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "nonce",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
-        }
+          "type": "tuple[]",
+        },
       ],
       "internalType": "struct Comments.EditComment",
       "name": "editData",
-      "type": "tuple"
-    }
+      "type": "tuple",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.commentId, options.author, options.editData]
+    params: [options.commentId, options.author, options.editData],
   });
 };
 
@@ -1590,7 +1590,7 @@ app: AbiParameterToPrimitiveType<{"internalType":"address","name":"app","type":"
  * ```
  */
 export async function getNonce(
-  options: BaseTransactionOptions<GetNonceParams>
+  options: BaseTransactionOptions<GetNonceParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1600,23 +1600,23 @@ export async function getNonce(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
   [
     {
       "internalType": "uint256",
       "name": "",
-      "type": "uint256"
-    }
-  ]
+      "type": "uint256",
+    },
+  ],
 ],
-    params: [options.author, options.app]
+    params: [options.author, options.app],
   });
 };
 
@@ -1649,7 +1649,7 @@ deadline: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"deadline
  * ```
  */
 export async function getRemoveApprovalHash(
-  options: BaseTransactionOptions<GetRemoveApprovalHashParams>
+  options: BaseTransactionOptions<GetRemoveApprovalHashParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1659,33 +1659,33 @@ export async function getRemoveApprovalHash(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "nonce",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.author, options.app, options.nonce, options.deadline]
+    params: [options.author, options.app, options.nonce, options.deadline],
   });
 };
 
@@ -1714,7 +1714,7 @@ app: AbiParameterToPrimitiveType<{"internalType":"address","name":"app","type":"
  * ```
  */
 export async function isApproved(
-  options: BaseTransactionOptions<IsApprovedParams>
+  options: BaseTransactionOptions<IsApprovedParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1724,23 +1724,23 @@ export async function isApproved(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
   [
     {
       "internalType": "bool",
       "name": "",
-      "type": "bool"
-    }
-  ]
+      "type": "bool",
+    },
+  ],
 ],
-    params: [options.author, options.app]
+    params: [options.author, options.app],
   });
 };
 
@@ -1767,7 +1767,7 @@ export type IsDeletedParams = {
  * ```
  */
 export async function isDeleted(
-  options: BaseTransactionOptions<IsDeletedParams>
+  options: BaseTransactionOptions<IsDeletedParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1777,18 +1777,18 @@ export async function isDeleted(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
   [
     {
       "internalType": "bool",
       "name": "",
-      "type": "bool"
-    }
-  ]
+      "type": "bool",
+    },
+  ],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -1808,7 +1808,7 @@ export async function isDeleted(
  * ```
  */
 export async function name(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return readContract({
     contract: options.contract,
@@ -1819,11 +1819,11 @@ export async function name(
     {
       "internalType": "string",
       "name": "",
-      "type": "string"
-    }
-  ]
+      "type": "string",
+    },
+  ],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -1843,7 +1843,7 @@ export async function name(
  * ```
  */
 export async function owner(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return readContract({
     contract: options.contract,
@@ -1854,11 +1854,11 @@ export async function owner(
     {
       "internalType": "address",
       "name": "result",
-      "type": "address"
-    }
-  ]
+      "type": "address",
+    },
+  ],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -1885,7 +1885,7 @@ export type OwnershipHandoverExpiresAtParams = {
  * ```
  */
 export async function ownershipHandoverExpiresAt(
-  options: BaseTransactionOptions<OwnershipHandoverExpiresAtParams>
+  options: BaseTransactionOptions<OwnershipHandoverExpiresAtParams>,
 ) {
   return readContract({
     contract: options.contract,
@@ -1895,18 +1895,18 @@ export async function ownershipHandoverExpiresAt(
     {
       "internalType": "address",
       "name": "pendingOwner",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
   [
     {
       "internalType": "uint256",
       "name": "result",
-      "type": "uint256"
-    }
-  ]
+      "type": "uint256",
+    },
+  ],
 ],
-    params: [options.pendingOwner]
+    params: [options.pendingOwner],
   });
 };
 
@@ -1926,7 +1926,7 @@ export async function ownershipHandoverExpiresAt(
  * ```
  */
 export async function version(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return readContract({
     contract: options.contract,
@@ -1937,11 +1937,11 @@ export async function version(
     {
       "internalType": "string",
       "name": "",
-      "type": "string"
-    }
-  ]
+      "type": "string",
+    },
+  ],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -1977,7 +1977,7 @@ expiry: AbiParameterToPrimitiveType<{"internalType":"uint256","name":"expiry","t
  * ```
  */
 export function addApproval(
-  options: BaseTransactionOptions<AddApprovalParams>
+  options: BaseTransactionOptions<AddApprovalParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -1987,17 +1987,17 @@ export function addApproval(
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "expiry",
-      "type": "uint256"
-    }
+      "type": "uint256",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.app, options.expiry]
+    params: [options.app, options.expiry],
   });
 };
 
@@ -2037,7 +2037,7 @@ authorSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"aut
  * ```
  */
 export function addApprovalWithSig(
-  options: BaseTransactionOptions<AddApprovalWithSigParams>
+  options: BaseTransactionOptions<AddApprovalWithSigParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2047,37 +2047,37 @@ export function addApprovalWithSig(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "expiry",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "nonce",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "bytes",
       "name": "authorSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.author, options.app, options.expiry, options.nonce, options.deadline, options.authorSignature]
+    params: [options.author, options.app, options.expiry, options.nonce, options.deadline, options.authorSignature],
   });
 };
 
@@ -2107,7 +2107,7 @@ export type BatchOperationsParams = {
  * ```
  */
 export function batchOperations(
-  options: BaseTransactionOptions<BatchOperationsParams>
+  options: BaseTransactionOptions<BatchOperationsParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2119,38 +2119,38 @@ export function batchOperations(
         {
           "internalType": "enum Comments.BatchOperationType",
           "name": "operationType",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "uint256",
           "name": "value",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "bytes",
           "name": "data",
-          "type": "bytes"
+          "type": "bytes",
         },
         {
           "internalType": "bytes[]",
           "name": "signatures",
-          "type": "bytes[]"
-        }
+          "type": "bytes[]",
+        },
       ],
       "internalType": "struct Comments.BatchOperation[]",
       "name": "operations",
-      "type": "tuple[]"
-    }
+      "type": "tuple[]",
+    },
   ],
   [
     {
       "internalType": "bytes[]",
       "name": "results",
-      "type": "bytes[]"
-    }
-  ]
+      "type": "bytes[]",
+    },
+  ],
 ],
-    params: [options.operations]
+    params: [options.operations],
   });
 };
 
@@ -2173,16 +2173,16 @@ export function batchOperations(
  * ```
  */
 export function cancelOwnershipHandover(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
   "0x54d1f13d",
   [],
-  []
+  [],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -2212,7 +2212,7 @@ export type CompleteOwnershipHandoverParams = {
  * ```
  */
 export function completeOwnershipHandover(
-  options: BaseTransactionOptions<CompleteOwnershipHandoverParams>
+  options: BaseTransactionOptions<CompleteOwnershipHandoverParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2222,12 +2222,12 @@ export function completeOwnershipHandover(
     {
       "internalType": "address",
       "name": "pendingOwner",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.pendingOwner]
+    params: [options.pendingOwner],
   });
 };
 
@@ -2257,7 +2257,7 @@ export type DeleteCommentParams = {
  * ```
  */
 export function deleteComment(
-  options: BaseTransactionOptions<DeleteCommentParams>
+  options: BaseTransactionOptions<DeleteCommentParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2267,12 +2267,12 @@ export function deleteComment(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
@@ -2310,7 +2310,7 @@ appSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"appSig
  * ```
  */
 export function deleteCommentWithSig(
-  options: BaseTransactionOptions<DeleteCommentWithSigParams>
+  options: BaseTransactionOptions<DeleteCommentWithSigParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2320,32 +2320,32 @@ export function deleteCommentWithSig(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "bytes",
       "name": "authorSignature",
-      "type": "bytes"
+      "type": "bytes",
     },
     {
       "internalType": "bytes",
       "name": "appSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.commentId, options.app, options.deadline, options.authorSignature, options.appSignature]
+    params: [options.commentId, options.app, options.deadline, options.authorSignature, options.appSignature],
   });
 };
 
@@ -2379,7 +2379,7 @@ appSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"appSig
  * ```
  */
 export function editComment(
-  options: BaseTransactionOptions<EditCommentParams>
+  options: BaseTransactionOptions<EditCommentParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2389,61 +2389,61 @@ export function editComment(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "components": [
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "nonce",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
-        }
+          "type": "tuple[]",
+        },
       ],
       "internalType": "struct Comments.EditComment",
       "name": "editData",
-      "type": "tuple"
+      "type": "tuple",
     },
     {
       "internalType": "bytes",
       "name": "appSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.commentId, options.editData, options.appSignature]
+    params: [options.commentId, options.editData, options.appSignature],
   });
 };
 
@@ -2479,7 +2479,7 @@ appSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"appSig
  * ```
  */
 export function editCommentWithSig(
-  options: BaseTransactionOptions<EditCommentWithSigParams>
+  options: BaseTransactionOptions<EditCommentWithSigParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2489,66 +2489,66 @@ export function editCommentWithSig(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
+      "type": "bytes32",
     },
     {
       "components": [
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "nonce",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
-        }
+          "type": "tuple[]",
+        },
       ],
       "internalType": "struct Comments.EditComment",
       "name": "editData",
-      "type": "tuple"
+      "type": "tuple",
     },
     {
       "internalType": "bytes",
       "name": "authorSignature",
-      "type": "bytes"
+      "type": "bytes",
     },
     {
       "internalType": "bytes",
       "name": "appSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.commentId, options.editData, options.authorSignature, options.appSignature]
+    params: [options.commentId, options.editData, options.authorSignature, options.appSignature],
   });
 };
 
@@ -2580,7 +2580,7 @@ appSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"appSig
  * ```
  */
 export function postComment(
-  options: BaseTransactionOptions<PostCommentParams>
+  options: BaseTransactionOptions<PostCommentParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2592,80 +2592,80 @@ export function postComment(
         {
           "internalType": "address",
           "name": "author",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "channelId",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "bytes32",
           "name": "parentId",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "uint8",
           "name": "commentType",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
+          "type": "tuple[]",
         },
         {
           "internalType": "string",
           "name": "targetUri",
-          "type": "string"
-        }
+          "type": "string",
+        },
       ],
       "internalType": "struct Comments.CreateComment",
       "name": "commentData",
-      "type": "tuple"
+      "type": "tuple",
     },
     {
       "internalType": "bytes",
       "name": "appSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.commentData, options.appSignature]
+    params: [options.commentData, options.appSignature],
   });
 };
 
@@ -2699,7 +2699,7 @@ appSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"appSig
  * ```
  */
 export function postCommentWithSig(
-  options: BaseTransactionOptions<PostCommentWithSigParams>
+  options: BaseTransactionOptions<PostCommentWithSigParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2711,85 +2711,85 @@ export function postCommentWithSig(
         {
           "internalType": "address",
           "name": "author",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "address",
           "name": "app",
-          "type": "address"
+          "type": "address",
         },
         {
           "internalType": "uint256",
           "name": "channelId",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "uint256",
           "name": "deadline",
-          "type": "uint256"
+          "type": "uint256",
         },
         {
           "internalType": "bytes32",
           "name": "parentId",
-          "type": "bytes32"
+          "type": "bytes32",
         },
         {
           "internalType": "uint8",
           "name": "commentType",
-          "type": "uint8"
+          "type": "uint8",
         },
         {
           "internalType": "string",
           "name": "content",
-          "type": "string"
+          "type": "string",
         },
         {
           "components": [
             {
               "internalType": "bytes32",
               "name": "key",
-              "type": "bytes32"
+              "type": "bytes32",
             },
             {
               "internalType": "bytes",
               "name": "value",
-              "type": "bytes"
-            }
+              "type": "bytes",
+            },
           ],
           "internalType": "struct Metadata.MetadataEntry[]",
           "name": "metadata",
-          "type": "tuple[]"
+          "type": "tuple[]",
         },
         {
           "internalType": "string",
           "name": "targetUri",
-          "type": "string"
-        }
+          "type": "string",
+        },
       ],
       "internalType": "struct Comments.CreateComment",
       "name": "commentData",
-      "type": "tuple"
+      "type": "tuple",
     },
     {
       "internalType": "bytes",
       "name": "authorSignature",
-      "type": "bytes"
+      "type": "bytes",
     },
     {
       "internalType": "bytes",
       "name": "appSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
   [
     {
       "internalType": "bytes32",
       "name": "",
-      "type": "bytes32"
-    }
-  ]
+      "type": "bytes32",
+    },
+  ],
 ],
-    params: [options.commentData, options.authorSignature, options.appSignature]
+    params: [options.commentData, options.authorSignature, options.appSignature],
   });
 };
 
@@ -2827,7 +2827,7 @@ authorSignature: AbiParameterToPrimitiveType<{"internalType":"bytes","name":"aut
  * ```
  */
 export function removeApprovalWithSig(
-  options: BaseTransactionOptions<RemoveApprovalWithSigParams>
+  options: BaseTransactionOptions<RemoveApprovalWithSigParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2837,32 +2837,32 @@ export function removeApprovalWithSig(
     {
       "internalType": "address",
       "name": "author",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
+      "type": "address",
     },
     {
       "internalType": "uint256",
       "name": "nonce",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "uint256",
       "name": "deadline",
-      "type": "uint256"
+      "type": "uint256",
     },
     {
       "internalType": "bytes",
       "name": "authorSignature",
-      "type": "bytes"
-    }
+      "type": "bytes",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.author, options.app, options.nonce, options.deadline, options.authorSignature]
+    params: [options.author, options.app, options.nonce, options.deadline, options.authorSignature],
   });
 };
 
@@ -2885,16 +2885,16 @@ export function removeApprovalWithSig(
  * ```
  */
 export function renounceOwnership(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
   "0x715018a6",
   [],
-  []
+  [],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -2917,16 +2917,16 @@ export function renounceOwnership(
  * ```
  */
 export function requestOwnershipHandover(
-  options: BaseTransactionOptions
+  options: BaseTransactionOptions,
 ) {
   return prepareContractCall({
     contract: options.contract,
     method: [
   "0x25692962",
   [],
-  []
+  [],
 ],
-    params: []
+    params: [],
   });
 };
 
@@ -2956,7 +2956,7 @@ export type RevokeApprovalParams = {
  * ```
  */
 export function revokeApproval(
-  options: BaseTransactionOptions<RevokeApprovalParams>
+  options: BaseTransactionOptions<RevokeApprovalParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -2966,12 +2966,12 @@ export function revokeApproval(
     {
       "internalType": "address",
       "name": "app",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.app]
+    params: [options.app],
   });
 };
 
@@ -3001,7 +3001,7 @@ export type TransferOwnershipParams = {
  * ```
  */
 export function transferOwnership(
-  options: BaseTransactionOptions<TransferOwnershipParams>
+  options: BaseTransactionOptions<TransferOwnershipParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -3011,12 +3011,12 @@ export function transferOwnership(
     {
       "internalType": "address",
       "name": "newOwner",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.newOwner]
+    params: [options.newOwner],
   });
 };
 
@@ -3046,7 +3046,7 @@ export type UpdateChannelContractParams = {
  * ```
  */
 export function updateChannelContract(
-  options: BaseTransactionOptions<UpdateChannelContractParams>
+  options: BaseTransactionOptions<UpdateChannelContractParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -3056,12 +3056,12 @@ export function updateChannelContract(
     {
       "internalType": "address",
       "name": "_channelContract",
-      "type": "address"
-    }
+      "type": "address",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.channelContract]
+    params: [options.channelContract],
   });
 };
 
@@ -3091,7 +3091,7 @@ export type UpdateCommentHookDataParams = {
  * ```
  */
 export function updateCommentHookData(
-  options: BaseTransactionOptions<UpdateCommentHookDataParams>
+  options: BaseTransactionOptions<UpdateCommentHookDataParams>,
 ) {
   return prepareContractCall({
     contract: options.contract,
@@ -3101,12 +3101,12 @@ export function updateCommentHookData(
     {
       "internalType": "bytes32",
       "name": "commentId",
-      "type": "bytes32"
-    }
+      "type": "bytes32",
+    },
   ],
-  []
+  [],
 ],
-    params: [options.commentId]
+    params: [options.commentId],
   });
 };
 
