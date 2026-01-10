@@ -7,6 +7,7 @@ interface UserProfile {
   farcasterUsername?: string;
   name?: string;
   avatar?: string;
+  bio?: string;
   address: string;
 }
 

@@ -33,6 +33,10 @@ export const getUserProfileCacheKey = (address: string) => {
   return `user-profile:${address.toLowerCase()}`;
 };
 
+export const getUserBioCacheKey = (address: string) => {
+  return `user-bio:${address.toLowerCase()}`;
+};
+
 export const getGameDetailsCacheKey = (gameId: string) => {
   return `game-details:${gameId}`;
 };
@@ -42,6 +46,7 @@ export const CACHE_TTL = {
   CONTEST: 3600, // 1 hour in seconds
   CONTESTS_LIST: 300, // 5 minutes in seconds
   USER_PROFILE: 900, // 15 minutes in seconds
+  USER_BIO: 86400, // 24 hours in seconds - heavily cached
   GAME_DETAILS: 300, // 5 minutes in seconds
 } as const;
 

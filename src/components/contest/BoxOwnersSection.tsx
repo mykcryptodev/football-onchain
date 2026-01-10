@@ -27,6 +27,47 @@ interface BoxOwnerEntry {
   boxTokenIds: number[];
 }
 
+interface OwnerItemProps {
+  owner: BoxOwnerEntry;
+  contest: Contest;
+  onClick: () => void;
+}
+
+function OwnerItem({ owner, contest, onClick }: OwnerItemProps) {
+  const { profile } = useUserProfile(owner.address);
+
+  return (
+    <button
+      className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-3 text-left hover:bg-muted/50 transition"
+      type="button"
+      onClick={onClick}
+    >
+      <AccountProvider address={owner.address} client={client}>
+        <AccountAvatar
+          fallbackComponent={
+            <Blobbie address={owner.address} className="size-9 rounded-full" />
+          }
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "100%",
+          }}
+        />
+      </AccountProvider>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium truncate">
+          {profile?.name || owner.address}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {owner.boxTokenIds.length} box
+          {owner.boxTokenIds.length === 1 ? "" : "es"}
+        </div>
+      </div>
+      <Badge variant="outline">#{contest.id}</Badge>
+    </button>
+  );
+}
+
 export function BoxOwnersSection({
   contest,
   boxOwners,
@@ -104,38 +145,12 @@ export function BoxOwnersSection({
         <ScrollArea className="max-h-[360px]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {owners.map(owner => (
-              <button
+              <OwnerItem
                 key={owner.address}
-                className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-3 text-left hover:bg-muted/50 transition"
-                type="button"
+                contest={contest}
+                owner={owner}
                 onClick={() => setSelectedOwner(owner)}
-              >
-                <AccountProvider address={owner.address} client={client}>
-                  <AccountAvatar
-                    fallbackComponent={
-                      <Blobbie
-                        address={owner.address}
-                        className="size-9 rounded-full"
-                      />
-                    }
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "100%",
-                    }}
-                  />
-                </AccountProvider>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">
-                    {owner.address}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {owner.boxTokenIds.length} box
-                    {owner.boxTokenIds.length === 1 ? "" : "es"}
-                  </div>
-                </div>
-                <Badge variant="outline">#{contest.id}</Badge>
-              </button>
+              />
             ))}
           </div>
         </ScrollArea>
@@ -170,14 +185,20 @@ export function BoxOwnersSection({
                   />
                 </AccountProvider>
                 <div className="min-w-0 flex-1">
-                  {profile?.name && (
+                  {profile?.name ? (
                     <div className="text-base font-semibold truncate">
                       {profile.name}
                     </div>
+                  ) : (
+                    <div className="text-base font-semibold truncate font-mono">
+                      {selectedOwner.address}
+                    </div>
                   )}
-                  <div className="text-xs text-muted-foreground font-mono truncate">
-                    {selectedOwner.address}
-                  </div>
+                  {profile?.name && (
+                    <div className="text-xs text-muted-foreground font-mono truncate">
+                      {selectedOwner.address}
+                    </div>
+                  )}
                   {profile?.fid && (
                     <div className="text-xs text-muted-foreground mt-1">
                       Farcaster ID: {profile.fid}
@@ -185,6 +206,13 @@ export function BoxOwnersSection({
                   )}
                 </div>
               </div>
+              {profile?.bio && (
+                <div className="pt-2 border-t">
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {profile.bio}
+                  </p>
+                </div>
+              )}
               {(profile?.farcasterUsername ||
                 (isInMiniApp && profile?.fid)) && (
                 <div className="flex justify-end">

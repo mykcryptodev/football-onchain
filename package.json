@@ -20,6 +20,7 @@
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@hookform/resolvers": "^5.2.1",
     "@neondatabase/serverless": "^1.0.2",
+    "@neynar/nodejs-sdk": "^3.119.1",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",

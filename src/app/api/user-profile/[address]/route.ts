@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSocialProfiles } from "thirdweb/social";
 
+import { fetchFarcasterBioByAddress } from "@/lib/neynar";
 import {
   CACHE_TTL,
+  getUserBioCacheKey,
   getUserProfileCacheKey,
   redis,
   safeRedisOperation,
@@ -14,6 +16,7 @@ interface UserProfileResponse {
   farcasterUsername?: string;
   name?: string;
   avatar?: string;
+  bio?: string;
   address: string;
 }
 
@@ -28,27 +31,84 @@ export async function GET(
   }
 
   const cacheKey = getUserProfileCacheKey(address);
+  let cachedProfile: UserProfileResponse | null = null;
 
   if (redis) {
     const redisClient = redis;
-    const cachedProfile = await safeRedisOperation(
+    const cached = await safeRedisOperation(
       () => redisClient.get(cacheKey),
       null,
     );
 
-    if (cachedProfile) {
-      const parsedProfile =
-        typeof cachedProfile === "string"
-          ? (JSON.parse(cachedProfile) as UserProfileResponse)
-          : (cachedProfile as UserProfileResponse);
-      const response = NextResponse.json(parsedProfile);
-      response.headers.set(
-        "Cache-Control",
-        "no-store, no-cache, must-revalidate, proxy-revalidate",
-      );
-      response.headers.set("Pragma", "no-cache");
-      return response;
+    if (cached) {
+      cachedProfile =
+        typeof cached === "string"
+          ? (JSON.parse(cached) as UserProfileResponse)
+          : (cached as UserProfileResponse);
     }
+  }
+
+  // Fetch Farcaster bio with heavy caching (always check, even if profile is cached)
+  let bio: string | null = null;
+  const bioCacheKey = getUserBioCacheKey(address);
+
+  if (redis) {
+    const redisClient = redis;
+    const cachedBio = await safeRedisOperation(
+      () => redisClient.get(bioCacheKey),
+      null,
+    );
+
+    if (cachedBio) {
+      bio =
+        typeof cachedBio === "string" && cachedBio !== "" ? cachedBio : null;
+    }
+  }
+
+  // If not cached, fetch from Neynar (works with ETH address even without FID)
+  if (bio === null) {
+    bio = await fetchFarcasterBioByAddress(address);
+
+    // Cache the bio heavily (24 hours), even if null to avoid repeated API calls
+    if (redis) {
+      const redisClient = redis;
+      await safeRedisOperation(
+        () => redisClient.setex(bioCacheKey, CACHE_TTL.USER_BIO, bio || ""),
+        null,
+      );
+    }
+  }
+
+  // If we have a cached profile, merge bio and return
+  if (cachedProfile) {
+    const responseBody: UserProfileResponse = {
+      ...cachedProfile,
+      bio: bio || cachedProfile.bio || undefined,
+    };
+
+    // Update cache with bio if it wasn't there before
+    if (!cachedProfile.bio && bio) {
+      if (redis) {
+        const redisClient = redis;
+        await safeRedisOperation(
+          () =>
+            redisClient.setex(
+              cacheKey,
+              CACHE_TTL.USER_PROFILE,
+              JSON.stringify(responseBody),
+            ),
+          null,
+        );
+      }
+    }
+
+    const response = NextResponse.json(responseBody);
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    response.headers.set("Pragma", "no-cache");
+    return response;
   }
 
   try {
@@ -88,6 +148,7 @@ export async function GET(
       farcasterUsername,
       name: displayProfile?.name,
       avatar: displayProfile?.avatar,
+      bio: bio || undefined,
     };
 
     if (redis) {
