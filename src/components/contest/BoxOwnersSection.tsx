@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { chain, contests } from "@/constants";
-import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
+import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { client } from "@/providers/Thirdweb";
 
@@ -31,9 +31,11 @@ export function BoxOwnersSection({
   contest,
   boxOwners,
 }: BoxOwnersSectionProps) {
-  const [selectedOwner, setSelectedOwner] = useState<BoxOwnerEntry | null>(null);
+  const [selectedOwner, setSelectedOwner] = useState<BoxOwnerEntry | null>(
+    null,
+  );
   const contestAddress = contests[chain.id].toLowerCase();
-  const { isInMiniApp } = useIsInMiniApp();
+  const { isInMiniApp } = useFarcasterContext();
   const { profile, isLoading: profileLoading } = useUserProfile(
     selectedOwner?.address ?? null,
   );
@@ -151,7 +153,10 @@ export function BoxOwnersSection({
           {selectedOwner && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <AccountProvider address={selectedOwner.address} client={client}>
+                <AccountProvider
+                  address={selectedOwner.address}
+                  client={client}
+                >
                   <AccountAvatar
                     fallbackComponent={
                       <Blobbie
@@ -182,7 +187,8 @@ export function BoxOwnersSection({
                   )}
                 </div>
               </div>
-              {(profile?.farcasterUsername || (isInMiniApp && profile?.fid)) && (
+              {(profile?.farcasterUsername ||
+                (isInMiniApp && profile?.fid)) && (
                 <div className="flex justify-end">
                   <Button
                     size="sm"
