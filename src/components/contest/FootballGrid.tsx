@@ -4,6 +4,7 @@ import {
   AccountProvider,
   Blobbie,
   useActiveAccount,
+  useWalletBalance,
 } from "thirdweb/react";
 
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,32 @@ export function FootballGrid({
   const { formattedValue: totalCostFormatted, isLoading: totalCostLoading } =
     useFormattedCurrency({
       amount: totalCost,
+      currencyAddress: contest.boxCost.currency,
+    });
+
+  const walletBalance = useWalletBalance(
+    {
+      address: account?.address,
+      chain,
+      client,
+      tokenAddress:
+        contest.boxCost.currency.toLowerCase() === ZERO_ADDRESS.toLowerCase()
+          ? undefined
+          : contest.boxCost.currency,
+    },
+    {
+      enabled: Boolean(account?.address),
+    },
+  );
+  const balanceValue = walletBalance.data?.value ?? null;
+  const hasInsufficientFunds =
+    balanceValue !== null && balanceValue < totalCost;
+  const missingAmount = hasInsufficientFunds
+    ? totalCost - balanceValue
+    : BigInt(0);
+  const { formattedValue: missingAmountFormatted, isLoading: missingLoading } =
+    useFormattedCurrency({
+      amount: missingAmount,
       currencyAddress: contest.boxCost.currency,
     });
 
@@ -383,9 +410,15 @@ export function FootballGrid({
                     )}
                   </p>
                 </div>
-                <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
-                  {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
-                </Button>
+                {hasInsufficientFunds ? (
+                  <p className="text-sm text-destructive text-right">
+                    You need {missingLoading ? "..." : missingAmountFormatted} more
+                  </p>
+                ) : (
+                  <Button disabled={isClaimingBoxes} onClick={onClaimBoxes}>
+                    {isClaimingBoxes ? "Claiming..." : "Claim Boxes"}
+                  </Button>
+                )}
               </div>
 
               {/* Swap token button */}
