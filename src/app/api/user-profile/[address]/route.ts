@@ -7,12 +7,14 @@ import {
   redis,
   safeRedisOperation,
 } from "@/lib/redis";
+import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import { client } from "@/providers/Thirdweb";
 
 interface UserProfileResponse {
   fid?: number;
   name?: string;
   avatar?: string;
+  farcasterBio?: string;
   address: string;
 }
 
@@ -76,11 +78,24 @@ export async function GET(
       }
     }
 
+    let farcasterBio: string | undefined;
+    if (isNeynarConfigured) {
+      const neynarUsers = await fetchBulkUsersByAddress([address]);
+      const neynarUser = neynarUsers[address.toLowerCase()]?.[0];
+      if (neynarUser) {
+        farcasterBio = neynarUser.profile?.bio?.text;
+        if (!fid && neynarUser.fid) {
+          fid = neynarUser.fid;
+        }
+      }
+    }
+
     const responseBody: UserProfileResponse = {
       address,
       fid,
       name: displayProfile?.name,
       avatar: displayProfile?.avatar,
+      farcasterBio,
     };
 
     if (redis) {

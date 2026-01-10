@@ -378,6 +378,11 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
+                    {profile?.farcasterBio && (
+                      <div className="text-xs text-muted-foreground mt-2 line-clamp-3">
+                        {profile.farcasterBio}
+                      </div>
+                    )}
                   </div>
                   {isInMiniApp && profile?.fid && (
                     <Button
