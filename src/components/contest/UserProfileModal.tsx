@@ -11,6 +11,7 @@ import { useIsInMiniApp } from "@/hooks/useIsInMiniApp";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
+  getNetRewards,
   getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
@@ -45,9 +46,10 @@ export function UserProfileModal({
 
     const strategyType = getPayoutStrategyType(contest.payoutStrategy);
     const currencyAddress = contest.boxCost.currency;
+    const netRewards = getNetRewards(contest.totalRewards);
 
     if (strategyType === PayoutStrategyType.QUARTERS_ONLY) {
-      const payouts = getQuartersOnlyPayouts(contest.totalRewards);
+      const payouts = getQuartersOnlyPayouts(netRewards);
       return {
         q1: payouts.q1.amount,
         q2: payouts.q2.amount,
@@ -58,10 +60,7 @@ export function UserProfileModal({
       };
     } else {
       const scoreChangeCount = gameScore?.scoringPlays?.length || 0;
-      const payouts = getScoreChangesPayouts(
-        contest.totalRewards,
-        scoreChangeCount,
-      );
+      const payouts = getScoreChangesPayouts(netRewards, scoreChangeCount);
       return {
         q1: payouts.quarters.q1.amount,
         q2: payouts.quarters.q2.amount,

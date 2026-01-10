@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
 import { useTokenInfo } from "@/hooks/useTokenInfo";
+import { getNetRewards } from "@/lib/payout-utils";
 
 import { SwapModal } from "./SwapModal";
 import { Contest } from "./types";
@@ -21,7 +22,7 @@ export function ContestStats({ contest }: ContestStatsProps) {
     formattedValue: totalRewardsFormatted,
     isLoading: totalRewardsLoading,
   } = useFormattedCurrency({
-    amount: BigInt(contest.totalRewards),
+    amount: BigInt(Math.floor(getNetRewards(contest.totalRewards))),
     currencyAddress: contest.boxCost.currency,
   });
 
@@ -85,7 +86,7 @@ export function ContestStats({ contest }: ContestStatsProps) {
         <Card>
           <CardContent className="p-2 sm:p-4">
             <div className="text-xs sm:text-sm text-muted-foreground">
-              Total Prize Pool
+              Prize Pool (after 2% fee)
             </div>
             <div className="text-lg sm:text-2xl font-bold">
               {totalRewardsLoading ? (

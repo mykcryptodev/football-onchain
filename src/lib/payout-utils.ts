@@ -5,6 +5,8 @@ import {
   scoreChangesPayoutStrategy,
 } from "@/constants";
 
+export const TREASURY_FEE_RATE = 0.02;
+
 /**
  * Determine the payout strategy type based on the contract address
  */
@@ -79,6 +81,14 @@ export function getScoreChangesPayouts(
       },
     },
   };
+}
+
+export function getTreasuryFee(totalRewards: number) {
+  return totalRewards * TREASURY_FEE_RATE;
+}
+
+export function getNetRewards(totalRewards: number) {
+  return totalRewards - getTreasuryFee(totalRewards);
 }
 
 /**
