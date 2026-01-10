@@ -4,7 +4,7 @@
 
 NFL Pick'em contests where users mint NFTs representing their predictions. Each NFT contains picks for all games in a week. Winners are determined by most correct picks, with prizes distributed on-chain.
 
-Read the project white paper: [WHITEPAPER.md](WHITEPAPER.md)
+Read the Football Boxes white paper: [WHITEPAPER.md](WHITEPAPER.md)
 
 ## How It Works
 
