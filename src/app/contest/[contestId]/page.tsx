@@ -104,7 +104,12 @@ export default function ContestPage() {
         undefined,
         {
           boxCost: {
-            amount: contest.boxCost.amount.toString(),
+            // Ensure amount is a string (not scientific notation)
+            // If it's already a string, use it; if it's a number, convert safely
+            amount:
+              typeof contest.boxCost.amount === "string"
+                ? contest.boxCost.amount
+                : contest.boxCost.amount.toString(),
             currency: contest.boxCost.currency,
           },
         },

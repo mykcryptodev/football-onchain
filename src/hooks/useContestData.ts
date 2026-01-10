@@ -22,47 +22,78 @@ export function useContestData(contestId: string): UseContestDataReturn {
   const contestQuery = useQuery({
     queryKey: queryKeys.contest(contestId),
     queryFn: async () => {
-      const response = await fetch(`/api/contest/${contestId}?t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
+      const response = await fetch(
+        `/api/contest/${contestId}?t=${Date.now()}`,
+        {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" },
+        },
+      );
       if (!response.ok) throw new Error("Failed to fetch contest");
       return response.json();
     },
-    select: (data) => ({
-      contest: {
-        id: parseInt(data.id),
-        gameId: parseInt(data.gameId),
-        creator: data.creator,
-        rows: data.rows,
-        cols: data.cols,
-        boxCost: {
-          currency: data.boxCost.currency,
-          amount: parseInt(data.boxCost.amount),
-        },
-        boxesCanBeClaimed: data.boxesCanBeClaimed,
-        payoutsPaid: {
-          totalPayoutsMade: data.payoutsPaid.totalPayoutsMade,
-          totalAmountPaid: parseInt(data.payoutsPaid.totalAmountPaid),
-        },
-        totalRewards: parseInt(data.totalRewards),
-        boxesClaimed: parseInt(data.boxesClaimed),
-        randomValuesSet: data.randomValuesSet,
-        title: data.title,
-        description: data.description,
-        payoutStrategy: data.payoutStrategy,
-        payoutTransactionHash: data.payoutTransactionHash || null,
-      } as Contest,
-      boxOwners: (data.boxes || []) as BoxOwner[],
-      gameId: data.gameId,
-    }),
+    select: data => {
+      // Convert crypto amounts using BigInt to preserve precision for large values
+      // Then convert to number for backward compatibility with existing types
+      // Note: Very large values (> Number.MAX_SAFE_INTEGER) may still lose precision
+      // but this is better than parseInt which fails earlier
+      const boxCostAmount =
+        typeof data.boxCost.amount === "string"
+          ? data.boxCost.amount
+          : String(data.boxCost.amount);
+
+      const totalAmountPaid =
+        typeof data.payoutsPaid.totalAmountPaid === "string"
+          ? Number(BigInt(data.payoutsPaid.totalAmountPaid))
+          : data.payoutsPaid.totalAmountPaid;
+
+      const totalRewards =
+        typeof data.totalRewards === "string"
+          ? Number(BigInt(data.totalRewards))
+          : data.totalRewards;
+
+      const boxesClaimed =
+        typeof data.boxesClaimed === "string"
+          ? Number(BigInt(data.boxesClaimed))
+          : data.boxesClaimed;
+
+      return {
+        contest: {
+          id: parseInt(data.id),
+          gameId: parseInt(data.gameId),
+          creator: data.creator,
+          rows: data.rows,
+          cols: data.cols,
+          boxCost: {
+            currency: data.boxCost.currency,
+            amount: boxCostAmount, // Keep as string to preserve precision
+          },
+          boxesCanBeClaimed: data.boxesCanBeClaimed,
+          payoutsPaid: {
+            totalPayoutsMade: data.payoutsPaid.totalPayoutsMade,
+            totalAmountPaid,
+          },
+          totalRewards,
+          boxesClaimed,
+          randomValuesSet: data.randomValuesSet,
+          title: data.title,
+          description: data.description,
+          payoutStrategy: data.payoutStrategy,
+          payoutTransactionHash: data.payoutTransactionHash || null,
+        } as Contest,
+        boxOwners: (data.boxes || []) as BoxOwner[],
+        gameId: data.gameId,
+      };
+    },
   });
 
   // Game scores query (separate for independent refresh)
   const gameScoresQuery = useQuery({
     queryKey: queryKeys.gameScores(contestQuery.data?.gameId?.toString() ?? ""),
     queryFn: async () => {
-      const response = await fetch(`/api/games/${contestQuery.data?.gameId}/scores`);
+      const response = await fetch(
+        `/api/games/${contestQuery.data?.gameId}/scores`,
+      );
       if (!response.ok) return null;
       return response.json() as Promise<GameScore>;
     },
@@ -98,4 +129,3 @@ export function useContestData(contestId: string): UseContestDataReturn {
     refreshGameScores,
   };
 }
-

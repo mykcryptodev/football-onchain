@@ -163,7 +163,10 @@ export function useClaimBoxes() {
               {
                 onSuccess: async () => {
                   // Invalidate both Redis and React Query caches
-                  await invalidateContestCaches(contestId.toString(), queryClient);
+                  await invalidateContestCaches(
+                    contestId.toString(),
+                    queryClient,
+                  );
                   onSuccess?.();
                 },
                 onError: error => {
@@ -204,7 +207,10 @@ export function useClaimBoxes() {
                 const claimResult = sendTransaction(claimTx, {
                   onSuccess: async () => {
                     // Invalidate both Redis and React Query caches
-                    await invalidateContestCaches(contestId.toString(), queryClient);
+                    await invalidateContestCaches(
+                      contestId.toString(),
+                      queryClient,
+                    );
                     onSuccess?.();
                   },
                   onError: error => {
@@ -255,7 +261,10 @@ export function useClaimBoxes() {
               const claimResult = sendTransaction(claimTx, {
                 onSuccess: async () => {
                   // Invalidate both Redis and React Query caches
-                  await invalidateContestCaches(contestId.toString(), queryClient);
+                  await invalidateContestCaches(
+                    contestId.toString(),
+                    queryClient,
+                  );
                   onSuccess?.();
                 },
                 onError: error => {

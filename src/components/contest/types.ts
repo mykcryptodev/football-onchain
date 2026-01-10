@@ -7,7 +7,7 @@ export interface Contest {
   cols: number[];
   boxCost: {
     currency: string;
-    amount: number;
+    amount: string | number; // Keep as string to avoid scientific notation for large wei amounts
   };
   boxesCanBeClaimed: boolean;
   payoutsPaid: {
