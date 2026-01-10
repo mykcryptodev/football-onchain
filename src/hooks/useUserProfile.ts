@@ -6,6 +6,7 @@ interface UserProfile {
   fid?: number;
   name?: string;
   avatar?: string;
+  farcasterBio?: string;
   address: string;
 }
 
