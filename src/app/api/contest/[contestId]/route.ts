@@ -14,9 +14,11 @@ import {
   CACHE_TTL,
   getContestCacheKey,
   getPayoutTxKey,
+  getUserProfileCacheKey,
   redis,
   safeRedisOperation,
 } from "@/lib/redis";
+import { fetchBulkUsersByAddress, isNeynarConfigured } from "@/lib/neynar";
 import { getBoxOwnersFromThirdweb } from "@/lib/thirdweb-api";
 
 // Disable Next.js caching for this route
@@ -29,6 +31,76 @@ const client = createThirdwebClient({
 
 const CONTRACTS_ADDRESS = contests[chain.id];
 const BOXES_ADDRESS = boxes[chain.id];
+
+const normalizeAddress = (address: string) => address.toLowerCase();
+
+const warmUserProfilesCache = async (addresses: string[]) => {
+  if (!redis || !isNeynarConfigured || addresses.length === 0) {
+    return;
+  }
+
+  const normalizedAddresses = Array.from(
+    new Set(addresses.map(address => normalizeAddress(address))),
+  );
+  if (normalizedAddresses.length === 0) {
+    return;
+  }
+
+  const redisClient = redis;
+  const cacheKeys = normalizedAddresses.map(getUserProfileCacheKey);
+  const cachedProfiles = await safeRedisOperation(
+    () => redisClient.mget(...cacheKeys),
+    null,
+  );
+  const missingAddresses = Array.isArray(cachedProfiles)
+    ? normalizedAddresses.filter((_, index) => !cachedProfiles[index])
+    : normalizedAddresses;
+
+  if (missingAddresses.length === 0) {
+    return;
+  }
+
+  const neynarUsersByAddress = await fetchBulkUsersByAddress(
+    missingAddresses,
+  );
+  const profileEntries = Object.entries(neynarUsersByAddress)
+    .map(([address, users]) => {
+      const user = users?.[0];
+      if (!user) {
+        return null;
+      }
+
+      return {
+        cacheKey: getUserProfileCacheKey(address),
+        profile: {
+          address,
+          fid: user.fid,
+          name: user.display_name || user.username,
+          avatar: user.pfp_url,
+          farcasterBio: user.profile?.bio?.text,
+        },
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+  if (profileEntries.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    profileEntries.map(entry =>
+      safeRedisOperation(
+        () =>
+          redisClient.setex(
+            entry.cacheKey,
+            CACHE_TTL.USER_PROFILE,
+            JSON.stringify(entry.profile),
+          ),
+        null,
+      ),
+    ),
+  );
+};
 
 export async function GET(
   request: NextRequest,
@@ -196,6 +268,17 @@ export async function GET(
         typeof cachedContest === "string"
           ? JSON.parse(cachedContest)
           : cachedContest;
+      const cachedOwnerAddresses = Array.isArray(parsedContest.boxes)
+        ? parsedContest.boxes
+            .map((box: BoxOwner) => box.owner)
+            .filter(
+              (owner: string | undefined) =>
+                owner &&
+                owner !== ZERO_ADDRESS &&
+                owner.toLowerCase() !== CONTRACTS_ADDRESS.toLowerCase(),
+            )
+        : [];
+      await warmUserProfilesCache(cachedOwnerAddresses);
       const response = NextResponse.json(parsedContest);
       response.headers.set(
         "Cache-Control",
@@ -223,6 +306,16 @@ export async function GET(
       console.error("Error fetching box owners:", error);
       // Continue without boxes data if there's an error
     }
+
+    const ownerAddresses = boxesData
+      .map(box => box.owner)
+      .filter(
+        owner =>
+          owner &&
+          owner !== ZERO_ADDRESS &&
+          owner.toLowerCase() !== CONTRACTS_ADDRESS.toLowerCase(),
+      );
+    await warmUserProfilesCache(ownerAddresses);
 
     // Fetch payout transaction hash from Redis if payouts have been made
     let payoutTransactionHash: string | null = null;
