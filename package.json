@@ -16,9 +16,10 @@
     "fix": "npm run format"
   },
   "dependencies": {
+    "@ecp.eth/sdk": "^0.0.37",
     "@farcaster/miniapp-sdk": "^0.2.1",
     "@hookform/resolvers": "^5.2.1",
-    "@neynar/nodejs-sdk": "^3.118.0",
+    "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -35,6 +36,7 @@
     "@upstash/redis": "^1.35.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.1",
     "install": "^0.13.0",
     "lucide-react": "^0.542.0",
     "next": "15.5.7",
@@ -53,6 +55,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "eslint-config-prettier": "^10.1.8",
