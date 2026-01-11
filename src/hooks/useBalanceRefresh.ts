@@ -14,8 +14,8 @@ type UseBalanceRefreshResult = {
   isRefreshing: boolean;
 };
 
-const DEFAULT_DURATION_MS = 30_000;
-const DEFAULT_INTERVAL_MS = 4_000;
+const DEFAULT_DURATION_MS = 300_000;
+const DEFAULT_INTERVAL_MS = 15_000;
 
 export function useBalanceRefresh({
   refetch,
