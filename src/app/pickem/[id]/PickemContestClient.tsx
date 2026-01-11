@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { chain, usdc } from "@/constants";
+import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -154,13 +155,20 @@ export default function PickemContestClient({
     setMounted(true);
   }, []);
 
-  const { data: walletBalance, isLoading: isLoadingWalletBalance } =
-    useWalletBalance({
-      chain,
-      address: account?.address,
-      client,
-      tokenAddress: contest.currency,
-    });
+  const {
+    data: walletBalance,
+    isLoading: isLoadingWalletBalance,
+    refetch: refetchWalletBalance,
+  } = useWalletBalance({
+    chain,
+    address: account?.address,
+    client,
+    tokenAddress: contest.currency,
+  });
+
+  const { start: startBalanceRefresh } = useBalanceRefresh({
+    refetch: refetchWalletBalance,
+  });
 
   // Set the display token to the contest's currency
   useEffect(() => {
@@ -383,6 +391,7 @@ export default function PickemContestClient({
 
   const handleMiniAppSwap = async () => {
     if (isInMiniApp) {
+      startBalanceRefresh();
       await sdk.actions.swapToken({
         sellToken: toCaip19({ address: usdc[chain.id], chain }),
         buyToken: toCaip19({ address: contest.currency, chain }),
