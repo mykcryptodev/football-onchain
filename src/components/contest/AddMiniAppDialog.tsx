@@ -37,7 +37,7 @@ export const AddMiniAppDialog: FC<AddMiniAppDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="top-[50%] bottom-auto translate-y-[-50%] rounded-lg sm:top-[50%] sm:bottom-auto sm:translate-y-[-50%] sm:rounded-lg">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="rounded-full bg-primary/10 p-2">
