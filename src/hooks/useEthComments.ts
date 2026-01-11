@@ -20,9 +20,7 @@ export function useEthComments(contestId: string): UseEthCommentsReturn {
   const queryClient = useQueryClient();
 
   const baseUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const targetUri = `${baseUrl}/contest/${contestId}`;
 
   const query = useQuery({
