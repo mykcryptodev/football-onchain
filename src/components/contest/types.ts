@@ -80,6 +80,8 @@ export interface GameScore {
   requestInProgress: boolean;
   homeTeamName?: string;
   awayTeamName?: string;
+  homeTeamAbbreviation?: string;
+  awayTeamAbbreviation?: string;
   homeTeamColor?: string;
   awayTeamColor?: string;
   scoringPlays?: ScoringPlay[];

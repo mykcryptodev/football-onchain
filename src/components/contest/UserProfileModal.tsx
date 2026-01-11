@@ -272,9 +272,11 @@ export function UserProfileModal({
   const getTeamInfo = () => {
     if (!gameScore?.scoringPlays || gameScore.scoringPlays.length === 0) {
       return {
-        awayAbbreviation: gameScore.awayTeamName || "Away",
+        awayAbbreviation:
+          gameScore.awayTeamAbbreviation || gameScore.awayTeamName || "Away",
         awayLogo: undefined,
-        homeAbbreviation: gameScore.homeTeamName || "Home",
+        homeAbbreviation:
+          gameScore.homeTeamAbbreviation || gameScore.homeTeamName || "Home",
         homeLogo: undefined,
       };
     }
@@ -312,26 +314,22 @@ export function UserProfileModal({
         awayTeam = awayTeam || teams[0];
         homeTeam = homeTeam || teams[1];
       } else if (teams.length === 1) {
-        // If only one team found, try to determine which is which based on score
-        const firstPlay = gameScore.scoringPlays[0];
-        if (
-          firstPlay &&
-          firstPlay.awayScore !== undefined &&
-          firstPlay.homeScore !== undefined
-        ) {
-          // Can't definitively determine, but use what we have
-          awayTeam = awayTeam || teams[0];
-          homeTeam = homeTeam || teams[0];
-        }
+        awayTeam = awayTeam || teams[0];
       }
     }
 
     return {
       awayAbbreviation:
-        awayTeam?.abbreviation || gameScore.awayTeamName || "Away",
+        awayTeam?.abbreviation ||
+        gameScore.awayTeamAbbreviation ||
+        gameScore.awayTeamName ||
+        "Away",
       awayLogo: awayTeam?.logo,
       homeAbbreviation:
-        homeTeam?.abbreviation || gameScore.homeTeamName || "Home",
+        homeTeam?.abbreviation ||
+        gameScore.homeTeamAbbreviation ||
+        gameScore.homeTeamName ||
+        "Home",
       homeLogo: homeTeam?.logo,
     };
   };
