@@ -66,8 +66,7 @@ export async function safeRedisOperation<T>(
     return await operation();
   } catch (error) {
     // Check if this is the "res.map is not a function" error
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
 
     // Log detailed error for debugging
@@ -82,21 +81,18 @@ export async function safeRedisOperation<T>(
       errorMessage.includes("map is not a function") ||
       errorMessage.includes("res.map")
     ) {
-      console.error(
-        "Upstash Redis client error detected. This may indicate:",
-        {
-          possibleCauses: [
-            "Invalid or expired Upstash credentials",
-            "Upstash API rate limiting",
-            "Network connectivity issues",
-            "Upstash Redis client library bug",
-          ],
-          redisUrl: process.env.UPSTASH_REDIS_REST_URL
-            ? `${process.env.UPSTASH_REDIS_REST_URL.substring(0, 20)}...`
-            : "not configured",
-          hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,
-        },
-      );
+      console.error("Upstash Redis client error detected. This may indicate:", {
+        possibleCauses: [
+          "Invalid or expired Upstash credentials",
+          "Upstash API rate limiting",
+          "Network connectivity issues",
+          "Upstash Redis client library bug",
+        ],
+        redisUrl: process.env.UPSTASH_REDIS_REST_URL
+          ? `${process.env.UPSTASH_REDIS_REST_URL.substring(0, 20)}...`
+          : "not configured",
+        hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
     }
 
     return fallback;
