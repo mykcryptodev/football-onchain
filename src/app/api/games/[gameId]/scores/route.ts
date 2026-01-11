@@ -112,6 +112,8 @@ export async function GET(
       requestInProgress: false, // Always false since we're fetching directly
       homeTeamName: homeTeam.team?.displayName || homeTeam.team?.name || "Home Team",
       awayTeamName: awayTeam.team?.displayName || awayTeam.team?.name || "Away Team",
+      homeTeamAbbreviation: homeTeam.team?.abbreviation,
+      awayTeamAbbreviation: awayTeam.team?.abbreviation,
       homeTeamColor: homeTeam.team?.color,
       awayTeamColor: awayTeam.team?.color,
       scoringPlays: scoringPlays.map(
