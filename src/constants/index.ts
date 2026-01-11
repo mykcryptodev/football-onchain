@@ -55,6 +55,11 @@ export const pickem = {
   [base.id]: "0xD2BB06162f80CC377b55eC531a59a6a62301E09C",
 };
 
+export const airdrop = {
+  [baseSepolia.id]: "0xaBA25A201074B70f359D7B0c58B6B9e157c5bEB5",
+  [base.id]: "0xaBA25A201074B70f359D7B0c58B6B9e157c5bEB5",
+};
+
 export const usdc = {
   [baseSepolia.id]: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
   [base.id]: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
