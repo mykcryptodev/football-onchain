@@ -9,6 +9,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
+import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
 import { useTeamColors } from "@/hooks/useTeamColors";
@@ -65,7 +66,8 @@ export function FootballGrid({
       currencyAddress: contest.boxCost.currency,
     });
 
-  const walletBalance = useWalletBalance(
+  const { data: walletBalance, refetch: refetchWalletBalance } =
+    useWalletBalance(
     {
       address: account?.address,
       chain,
@@ -79,7 +81,10 @@ export function FootballGrid({
       enabled: Boolean(account?.address),
     },
   );
-  const balanceValue = walletBalance.data?.value ?? null;
+  const { start: startBalanceRefresh } = useBalanceRefresh({
+    refetch: refetchWalletBalance,
+  });
+  const balanceValue = walletBalance?.value ?? null;
   const hasInsufficientFunds =
     balanceValue !== null && balanceValue < totalCost;
   const missingAmount = hasInsufficientFunds
@@ -194,6 +199,11 @@ export function FootballGrid({
     } catch {
       return "text-foreground";
     }
+  };
+
+  const handleSwap = async () => {
+    startBalanceRefresh();
+    await swap();
   };
 
   return (
@@ -400,7 +410,7 @@ export function FootballGrid({
                             className="underline text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={isSwapping}
                             type="button"
-                            onClick={swap}
+                            onClick={handleSwap}
                           >
                             {tokenInfo.symbol}
                           </button>
@@ -430,7 +440,7 @@ export function FootballGrid({
                     disabled={isSwapping}
                     type="button"
                     variant="outline"
-                    onClick={swap}
+                    onClick={handleSwap}
                   >
                     {isSwapping
                       ? "Opening swap..."
