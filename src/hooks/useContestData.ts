@@ -15,13 +15,19 @@ interface UseContestDataReturn {
   refreshGameScores: () => Promise<void>;
 }
 
+interface ContestQueryData {
+  contest: Contest;
+  boxOwners: BoxOwner[];
+  gameId: number;
+}
+
 export function useContestData(contestId: string): UseContestDataReturn {
   const queryClient = useQueryClient();
   const contestPollIntervalMs = 15 * 1000;
   const gameScorePollIntervalMs = 12 * 1000;
 
   // Main contest data query
-  const contestQuery = useQuery({
+  const contestQuery = useQuery<ContestQueryData>({
     queryKey: queryKeys.contest(contestId),
     queryFn: async () => {
       const response = await fetch(
@@ -89,8 +95,8 @@ export function useContestData(contestId: string): UseContestDataReturn {
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
-    refetchInterval: data => {
-      const contest = data?.contest as Contest | undefined;
+    refetchInterval: query => {
+      const contest = query.state.data?.contest;
 
       if (!contest) {
         return contestPollIntervalMs;
@@ -119,10 +125,12 @@ export function useContestData(contestId: string): UseContestDataReturn {
     enabled: !!contestQuery.data?.gameId,
     staleTime: 15 * 1000,
     refetchOnWindowFocus: true,
-    refetchInterval: data => {
+    refetchInterval: query => {
       if (!contestQuery.data?.gameId) {
         return false;
       }
+
+      const data = query.state.data as GameScore | null | undefined;
 
       if (!data) {
         return gameScorePollIntervalMs;
