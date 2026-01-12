@@ -205,7 +205,11 @@ export default function ContestPage() {
             )}
 
             {/* Payouts */}
-            <PayoutsCard contest={contest} />
+            <PayoutsCard
+              contest={contest}
+              gameScore={gameScore}
+              scoreChangeCount={gameScore?.scoringPlays?.length || 0}
+            />
           </div>
         </div>
 

@@ -10,11 +10,12 @@ import {
   getTreasuryFee,
 } from "@/lib/payout-utils";
 
-import { Contest, PayoutStrategyType } from "./types";
+import { Contest, GameScore, PayoutStrategyType } from "./types";
 
 interface PayoutsCardProps {
   contest: Contest;
   scoreChangeCount?: number; // Optional: number of score changes (for score-changes strategy)
+  gameScore?: GameScore | null; // Optional: game score data to check completion status
 }
 
 interface PayoutsFooterProps {
@@ -64,6 +65,7 @@ function PayoutsFooter({
 export function PayoutsCard({
   contest,
   scoreChangeCount = 0,
+  gameScore,
 }: PayoutsCardProps) {
   const currencyAddress = contest.boxCost.currency;
 
@@ -196,6 +198,8 @@ export function PayoutsCard({
                 {scoreChangeCount} changes ×{" "}
                 {perScoreChangeLoading ? "..." : perScoreChangeFormatted} each
               </div>
+            ) : gameScore && gameScore.qComplete >= 100 ? (
+              <div>No score changes recorded</div>
             ) : (
               <div>Pending game completion</div>
             )}
@@ -245,15 +249,15 @@ export function PayoutsCard({
         <p className="text-xs text-muted-foreground">
           Percentages are calculated after the 2% treasury fee.
         </p>
-        {strategyType === PayoutStrategyType.QUARTERS_ONLY
-          ? renderQuartersOnlyPayouts()
-          : strategyType === PayoutStrategyType.SCORE_CHANGES
-            ? renderScoreChangesPayouts()
-            : (
-                <div className="text-sm text-muted-foreground text-center py-4">
-                  Payout information is not available for this legacy strategy.
-                </div>
-              )}
+        {strategyType === PayoutStrategyType.QUARTERS_ONLY ? (
+          renderQuartersOnlyPayouts()
+        ) : strategyType === PayoutStrategyType.SCORE_CHANGES ? (
+          renderScoreChangesPayouts()
+        ) : (
+          <div className="text-sm text-muted-foreground text-center py-4">
+            Payout information is not available for this legacy strategy.
+          </div>
+        )}
 
         <PayoutsFooter
           currencyAddress={currencyAddress}
