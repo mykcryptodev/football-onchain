@@ -1,6 +1,8 @@
 import { PayoutStrategyType } from "@/components/contest/types";
 import {
   chain,
+  legacyQuartersOnlyPayoutStrategy,
+  legacyScoreChangesPayoutStrategy,
   quartersOnlyPayoutStrategy,
   scoreChangesPayoutStrategy,
 } from "@/constants";
@@ -9,7 +11,7 @@ export const TREASURY_FEE_RATE = 0.02;
 
 /**
  * Determine the payout strategy type based on the contract address
- * Returns UNKNOWN for legacy or unrecognized payout strategies instead of throwing
+ * Checks both current and legacy payout strategies before returning UNKNOWN
  */
 export function getPayoutStrategyType(
   payoutStrategyAddress: string,
@@ -18,23 +20,37 @@ export function getPayoutStrategyType(
     return PayoutStrategyType.UNKNOWN;
   }
 
+  const addressToCheck = payoutStrategyAddress.toLowerCase();
+
+  // Check current strategies first
   const quartersOnlyAddress =
     quartersOnlyPayoutStrategy[chain.id]?.toLowerCase();
   const scoreChangesAddress =
     scoreChangesPayoutStrategy[chain.id]?.toLowerCase();
-  const addressToCheck = payoutStrategyAddress.toLowerCase();
 
   if (addressToCheck === quartersOnlyAddress) {
     return PayoutStrategyType.QUARTERS_ONLY;
   } else if (addressToCheck === scoreChangesAddress) {
     return PayoutStrategyType.SCORE_CHANGES;
-  } else {
-    // Return UNKNOWN instead of throwing to handle legacy strategies gracefully
-    console.warn(
-      `Unknown payout strategy address: ${payoutStrategyAddress} (chain: ${chain.id})`,
-    );
-    return PayoutStrategyType.UNKNOWN;
   }
+
+  // Check legacy strategies - treat them like their current counterparts
+  const legacyQuartersOnlyAddress =
+    legacyQuartersOnlyPayoutStrategy[chain.id]?.toLowerCase();
+  const legacyScoreChangesAddress =
+    legacyScoreChangesPayoutStrategy[chain.id]?.toLowerCase();
+
+  if (addressToCheck === legacyQuartersOnlyAddress) {
+    return PayoutStrategyType.QUARTERS_ONLY;
+  } else if (addressToCheck === legacyScoreChangesAddress) {
+    return PayoutStrategyType.SCORE_CHANGES;
+  }
+
+  // Only return UNKNOWN if it's truly unrecognized
+  console.warn(
+    `Unknown payout strategy address: ${payoutStrategyAddress} (chain: ${chain.id})`,
+  );
+  return PayoutStrategyType.UNKNOWN;
 }
 
 /**
