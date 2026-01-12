@@ -11,7 +11,7 @@ import {
 } from "thirdweb/extensions/erc721";
 import { useActiveAccount, useSendTransaction } from "thirdweb/react";
 
-import { airdrop as airdropAddress,chain } from "@/constants";
+import { airdrop as airdropAddress, chain } from "@/constants";
 import { client } from "@/providers/Thirdweb";
 
 type AirdropRecipient = {
