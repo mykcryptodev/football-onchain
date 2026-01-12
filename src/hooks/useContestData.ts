@@ -21,13 +21,38 @@ interface ContestQueryData {
   gameId: number;
 }
 
+interface ContestApiResponse {
+  id: string;
+  gameId: string;
+  creator: string;
+  rows: number[];
+  cols: number[];
+  boxCost: {
+    currency: string;
+    amount: string | number;
+  };
+  boxesCanBeClaimed: boolean;
+  payoutsPaid: {
+    totalPayoutsMade: number;
+    totalAmountPaid: string | number;
+  };
+  totalRewards: string | number;
+  boxesClaimed: string | number;
+  randomValuesSet: boolean;
+  title: string;
+  description: string;
+  payoutStrategy: string;
+  payoutTransactionHash?: string | null;
+  boxes?: BoxOwner[];
+}
+
 export function useContestData(contestId: string): UseContestDataReturn {
   const queryClient = useQueryClient();
   const contestPollIntervalMs = 15 * 1000;
   const gameScorePollIntervalMs = 12 * 1000;
 
   // Main contest data query
-  const contestQuery = useQuery<ContestQueryData>({
+  const contestQuery = useQuery<ContestApiResponse, Error, ContestQueryData>({
     queryKey: queryKeys.contest(contestId),
     queryFn: async () => {
       const response = await fetch(
