@@ -9,10 +9,15 @@ export const TREASURY_FEE_RATE = 0.02;
 
 /**
  * Determine the payout strategy type based on the contract address
+ * Returns UNKNOWN for legacy or unrecognized payout strategies instead of throwing
  */
 export function getPayoutStrategyType(
   payoutStrategyAddress: string,
 ): PayoutStrategyType {
+  if (!payoutStrategyAddress) {
+    return PayoutStrategyType.UNKNOWN;
+  }
+
   const quartersOnlyAddress =
     quartersOnlyPayoutStrategy[chain.id]?.toLowerCase();
   const scoreChangesAddress =
@@ -24,7 +29,11 @@ export function getPayoutStrategyType(
   } else if (addressToCheck === scoreChangesAddress) {
     return PayoutStrategyType.SCORE_CHANGES;
   } else {
-    throw new Error("Invalid payout strategy address");
+    // Return UNKNOWN instead of throwing to handle legacy strategies gracefully
+    console.warn(
+      `Unknown payout strategy address: ${payoutStrategyAddress} (chain: ${chain.id})`,
+    );
+    return PayoutStrategyType.UNKNOWN;
   }
 }
 
@@ -109,6 +118,8 @@ export function getStrategyDisplayName(
       return "Quarters Only";
     case PayoutStrategyType.SCORE_CHANGES:
       return "Score Changes + Quarters";
+    case PayoutStrategyType.UNKNOWN:
+      return "Legacy Strategy";
     default:
       return "Unknown Strategy";
   }

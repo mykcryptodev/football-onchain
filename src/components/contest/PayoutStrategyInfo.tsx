@@ -58,6 +58,24 @@ export function PayoutStrategyInfo({
     );
   }
 
+  if (strategyType === PayoutStrategyType.UNKNOWN) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Legacy Strategy</CardTitle>
+            <Badge variant="outline">Unknown</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            This contest uses a legacy payout strategy. Payout information is not available.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
       <CardHeader>

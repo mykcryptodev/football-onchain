@@ -58,7 +58,7 @@ export function UserProfileModal({
         scoreChange: 0,
         currencyAddress,
       };
-    } else {
+    } else if (strategyType === PayoutStrategyType.SCORE_CHANGES) {
       const scoreChangeCount = gameScore?.scoringPlays?.length || 0;
       const payouts = getScoreChangesPayouts(netRewards, scoreChangeCount);
       return {
@@ -67,6 +67,16 @@ export function UserProfileModal({
         q3: payouts.quarters.q3.amount,
         q4: payouts.quarters.q4.amount,
         scoreChange: payouts.scoreChanges.perScoreChange,
+        currencyAddress,
+      };
+    } else {
+      // Unknown/legacy strategy - return zeros
+      return {
+        q1: 0,
+        q2: 0,
+        q3: 0,
+        q4: 0,
+        scoreChange: 0,
         currencyAddress,
       };
     }

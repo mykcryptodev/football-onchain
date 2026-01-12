@@ -34,6 +34,7 @@ export interface PayoutInfo {
 export enum PayoutStrategyType {
   QUARTERS_ONLY = "quarters-only",
   SCORE_CHANGES = "score-changes",
+  UNKNOWN = "unknown", // For legacy or unrecognized payout strategies
 }
 
 export interface ScoringPlay {

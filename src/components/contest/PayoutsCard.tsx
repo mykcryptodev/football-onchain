@@ -247,7 +247,13 @@ export function PayoutsCard({
         </p>
         {strategyType === PayoutStrategyType.QUARTERS_ONLY
           ? renderQuartersOnlyPayouts()
-          : renderScoreChangesPayouts()}
+          : strategyType === PayoutStrategyType.SCORE_CHANGES
+            ? renderScoreChangesPayouts()
+            : (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  Payout information is not available for this legacy strategy.
+                </div>
+              )}
 
         <PayoutsFooter
           currencyAddress={currencyAddress}
