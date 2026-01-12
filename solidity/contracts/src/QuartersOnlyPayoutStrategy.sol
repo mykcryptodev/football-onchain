@@ -58,10 +58,10 @@ contract QuartersOnlyPayoutStrategy is IPayoutStrategy {
         ) = gameScoreOracle.getGameScores(gameId);
 
         // Process payouts by quarter
-        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 1, qComplete, awayQ1LastDigit, homeQ1LastDigit, Q1_PAYOUT_BPS, "Q1 Winner");
-        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 2, qComplete, awayQ2LastDigit, homeQ2LastDigit, Q2_PAYOUT_BPS, "Q2 Winner");
-        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 3, qComplete, awayQ3LastDigit, homeQ3LastDigit, Q3_PAYOUT_BPS, "Q3 Winner");
-        _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 4, qComplete, awayFLastDigit, homeFLastDigit, Q4_PAYOUT_BPS, "Final Winner");
+        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 1, qComplete, homeQ1LastDigit, awayQ1LastDigit, Q1_PAYOUT_BPS, "Q1 Winner");
+        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 2, qComplete, homeQ2LastDigit, awayQ2LastDigit, Q2_PAYOUT_BPS, "Q2 Winner");
+        currentIndex = _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 3, qComplete, homeQ3LastDigit, awayQ3LastDigit, Q3_PAYOUT_BPS, "Q3 Winner");
+        _processQuarterPayout(payouts, currentIndex, contestId, getBoxOwner, totalPot, 4, qComplete, homeFLastDigit, awayFLastDigit, Q4_PAYOUT_BPS, "Final Winner");
 
         return payouts;
     }
@@ -77,15 +77,15 @@ contract QuartersOnlyPayoutStrategy is IPayoutStrategy {
         uint256 totalPot,
         uint8 quarter,
         uint8 qComplete,
-        uint8 awayLastDigit,
         uint8 homeLastDigit,
+        uint8 awayLastDigit,
         uint256 payoutBps,
         string memory reason
     ) internal view returns (uint8) {
         bool shouldPayout = (quarter < 4 && qComplete >= quarter) || (quarter == 4 && qComplete >= 100);
 
         if (shouldPayout && currentIndex < payouts.length) {
-            address winner = getBoxOwner(contestId, awayLastDigit, homeLastDigit);
+            address winner = getBoxOwner(contestId, homeLastDigit, awayLastDigit);
             payouts[currentIndex] = PayoutInfo({
                 winner: winner,
                 amount: (totalPot * payoutBps) / BASIS_POINTS_DENOMINATOR,

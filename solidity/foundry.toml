@@ -24,3 +24,8 @@ force = true                                              # Perform always a cle
 verbosity = 4                                             # Increase the verbosity level for the tests.
 fuzz = { runs = 10_000, max_test_rejects = 150_000 }      # Increase the number of fuzz runs and maximum number of combined inputs that may be rejected for the tests.
 invariant = { runs = 375, depth = 500 }                   # Increase the number of runs (while preserving the default depth) for each invariant test group.
+
+# Etherscan/Basescan configuration for contract verification
+[etherscan]
+base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+base-sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }

@@ -32,12 +32,12 @@ export const gameScoreOracle = {
 
 export const scoreChangesPayoutStrategy = {
   [baseSepolia.id]: "0xf69F876BBB478AD28C94a3E7b449230Fd88F56cB",
-  [base.id]: "0xfcECAF769AE37660c7178C38fd6c49868e90FA89",
+  [base.id]: "0x1233906b843F2a127944D7acE98F1286F1883CDF",
 };
 
 export const quartersOnlyPayoutStrategy = {
   [baseSepolia.id]: "0xD768a2440924Bd16b950583966b0CBc92f19845d",
-  [base.id]: "0xE162C6CC5E8440132Ca85740740aAcEaf9baFcD2",
+  [base.id]: "0xdc7dd804d00e914e49d91ac68fd6d1ff0c1481d8",
 };
 
 export const randomNumbers = {
