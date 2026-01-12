@@ -2,18 +2,19 @@
 
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+import { Blobbie } from "thirdweb/react";
 
 import type { ContestListItem } from "@/app/api/contests/route";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { client } from "@/providers/Thirdweb";
+import { resolveAvatarUrl } from "@/lib/utils";
 
 function ContestCard({ contest }: { contest: ContestListItem }) {
   const { formattedValue: boxCostFormatted } = useFormattedCurrency({
@@ -24,6 +25,7 @@ function ContestCard({ contest }: { contest: ContestListItem }) {
   const { profile, isLoading: profileLoading } = useUserProfile(
     contest.creator,
   );
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
 
   const totalBoxes = 100;
   const spotsRemaining = totalBoxes - contest.boxesClaimed;
@@ -43,21 +45,20 @@ function ContestCard({ contest }: { contest: ContestListItem }) {
             )}
             {/* Creator Info */}
             <div className="flex items-center gap-2 mt-2">
-              <AccountProvider address={contest.creator} client={client}>
-                <AccountAvatar
-                  fallbackComponent={
-                    <Blobbie
-                      address={contest.creator}
-                      className="size-5 rounded-full"
-                    />
-                  }
-                  style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "100%",
-                  }}
-                />
-              </AccountProvider>
+              <Avatar className="h-5 w-5">
+                {avatarUrl ? (
+                  <AvatarImage
+                    alt={profile?.name || "User avatar"}
+                    src={avatarUrl}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-transparent p-0">
+                  <Blobbie
+                    address={contest.creator}
+                    className="size-5 rounded-full"
+                  />
+                </AvatarFallback>
+              </Avatar>
               <span className="text-xs text-muted-foreground">
                 {profileLoading
                   ? "Loading..."
