@@ -15,11 +15,44 @@ interface UseContestDataReturn {
   refreshGameScores: () => Promise<void>;
 }
 
+interface ContestQueryData {
+  contest: Contest;
+  boxOwners: BoxOwner[];
+  gameId: number;
+}
+
+interface ContestApiResponse {
+  id: string;
+  gameId: string;
+  creator: string;
+  rows: number[];
+  cols: number[];
+  boxCost: {
+    currency: string;
+    amount: string | number;
+  };
+  boxesCanBeClaimed: boolean;
+  payoutsPaid: {
+    totalPayoutsMade: number;
+    totalAmountPaid: string | number;
+  };
+  totalRewards: string | number;
+  boxesClaimed: string | number;
+  randomValuesSet: boolean;
+  title: string;
+  description: string;
+  payoutStrategy: string;
+  payoutTransactionHash?: string | null;
+  boxes?: BoxOwner[];
+}
+
 export function useContestData(contestId: string): UseContestDataReturn {
   const queryClient = useQueryClient();
+  const contestPollIntervalMs = 15 * 1000;
+  const gameScorePollIntervalMs = 12 * 1000;
 
   // Main contest data query
-  const contestQuery = useQuery({
+  const contestQuery = useQuery<ContestApiResponse, Error, ContestQueryData>({
     queryKey: queryKeys.contest(contestId),
     queryFn: async () => {
       const response = await fetch(
@@ -82,8 +115,25 @@ export function useContestData(contestId: string): UseContestDataReturn {
           payoutTransactionHash: data.payoutTransactionHash || null,
         } as Contest,
         boxOwners: (data.boxes || []) as BoxOwner[],
-        gameId: data.gameId,
+        gameId: parseInt(data.gameId),
       };
+    },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: query => {
+      const data = query.state.data as ContestQueryData | undefined;
+
+      if (!data?.contest) {
+        return contestPollIntervalMs;
+      }
+
+      const isContestActive =
+        data.contest.boxesCanBeClaimed ||
+        data.contest.boxesClaimed < 100 ||
+        !data.contest.randomValuesSet ||
+        !data.contest.payoutTransactionHash;
+
+      return isContestActive ? contestPollIntervalMs : false;
     },
   });
 
@@ -98,6 +148,29 @@ export function useContestData(contestId: string): UseContestDataReturn {
       return response.json() as Promise<GameScore>;
     },
     enabled: !!contestQuery.data?.gameId,
+    staleTime: 15 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: query => {
+      if (!contestQuery.data?.gameId) {
+        return false;
+      }
+
+      const data = query.state.data as GameScore | null | undefined;
+
+      if (!data) {
+        return gameScorePollIntervalMs;
+      }
+
+      if (data.requestInProgress) {
+        return 5 * 1000;
+      }
+
+      if (data.qComplete >= 4) {
+        return false;
+      }
+
+      return gameScorePollIntervalMs;
+    },
   });
 
   // Refresh that invalidates both Redis AND React Query caches
