@@ -115,7 +115,7 @@ export function useContestData(contestId: string): UseContestDataReturn {
           payoutTransactionHash: data.payoutTransactionHash || null,
         } as Contest,
         boxOwners: (data.boxes || []) as BoxOwner[],
-        gameId: data.gameId,
+        gameId: parseInt(data.gameId),
       };
     },
     staleTime: 30 * 1000,
