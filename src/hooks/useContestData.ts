@@ -121,17 +121,17 @@ export function useContestData(contestId: string): UseContestDataReturn {
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
     refetchInterval: query => {
-      const contest = query.state.data?.contest;
+      const data = query.state.data as ContestQueryData | undefined;
 
-      if (!contest) {
+      if (!data?.contest) {
         return contestPollIntervalMs;
       }
 
       const isContestActive =
-        contest.boxesCanBeClaimed ||
-        contest.boxesClaimed < 100 ||
-        !contest.randomValuesSet ||
-        !contest.payoutTransactionHash;
+        data.contest.boxesCanBeClaimed ||
+        data.contest.boxesClaimed < 100 ||
+        !data.contest.randomValuesSet ||
+        !data.contest.payoutTransactionHash;
 
       return isContestActive ? contestPollIntervalMs : false;
     },
