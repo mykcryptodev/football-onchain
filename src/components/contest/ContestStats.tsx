@@ -1,7 +1,11 @@
+import { useMemo } from "react";
+import { toTokens } from "thirdweb/utils";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
 import { useTokenInfo } from "@/hooks/useTokenInfo";
+import { useTokenPricing } from "@/hooks/useTokenPricing";
 import { getNetRewards } from "@/lib/payout-utils";
 
 import { SwapModal } from "./SwapModal";
@@ -12,6 +16,10 @@ interface ContestStatsProps {
 }
 
 export function ContestStats({ contest }: ContestStatsProps) {
+  const netRewardsWei = useMemo(
+    () => BigInt(Math.floor(getNetRewards(contest.totalRewards))),
+    [contest.totalRewards],
+  );
   const { formattedValue: boxCostFormatted, isLoading: boxCostLoading } =
     useFormattedCurrency({
       amount: BigInt(contest.boxCost.amount),
@@ -22,16 +30,41 @@ export function ContestStats({ contest }: ContestStatsProps) {
     formattedValue: totalRewardsFormatted,
     isLoading: totalRewardsLoading,
   } = useFormattedCurrency({
-    amount: BigInt(Math.floor(getNetRewards(contest.totalRewards))),
+    amount: netRewardsWei,
     currencyAddress: contest.boxCost.currency,
   });
 
   // Fetch token metadata using hook
   const { tokenInfo } = useTokenInfo(contest.boxCost.currency);
+  const { pricing: tokenPricing, isLoading: tokenPricingLoading } =
+    useTokenPricing(contest.boxCost.currency);
 
   // Swap token hook
   const { swap, isSwapping, isModalOpen, closeModal, isInMiniApp } =
     useSwapToken(tokenInfo);
+
+  const formatUsd = (amount: number) =>
+    amount.toLocaleString([], {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    });
+
+  const boxCostUsd = useMemo(() => {
+    if (!tokenPricing?.priceUsd) return null;
+    const tokenAmount = Number(
+      toTokens(BigInt(contest.boxCost.amount), tokenPricing.decimals),
+    );
+    if (!Number.isFinite(tokenAmount)) return null;
+    return tokenAmount * tokenPricing.priceUsd;
+  }, [contest.boxCost.amount, tokenPricing]);
+
+  const totalRewardsUsd = useMemo(() => {
+    if (!tokenPricing?.priceUsd) return null;
+    const tokenAmount = Number(toTokens(netRewardsWei, tokenPricing.decimals));
+    if (!Number.isFinite(tokenAmount)) return null;
+    return tokenAmount * tokenPricing.priceUsd;
+  }, [netRewardsWei, tokenPricing]);
 
   return (
     <>
@@ -69,6 +102,16 @@ export function ContestStats({ contest }: ContestStatsProps) {
                 </>
               )}
             </div>
+            {!boxCostLoading &&
+              (tokenPricingLoading ? (
+                <div className="text-xs text-muted-foreground">...</div>
+              ) : (
+                boxCostUsd && (
+                  <div className="text-xs text-muted-foreground">
+                    ≈ {formatUsd(boxCostUsd)}
+                  </div>
+                )
+              ))}
           </CardContent>
         </Card>
 
@@ -108,6 +151,16 @@ export function ContestStats({ contest }: ContestStatsProps) {
                 </>
               )}
             </div>
+            {!totalRewardsLoading &&
+              (tokenPricingLoading ? (
+                <div className="text-xs text-muted-foreground">...</div>
+              ) : (
+                totalRewardsUsd && (
+                  <div className="text-xs text-muted-foreground">
+                    ≈ {formatUsd(totalRewardsUsd)}
+                  </div>
+                )
+              ))}
           </CardContent>
         </Card>
       </div>
