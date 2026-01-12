@@ -17,6 +17,8 @@ interface UseContestDataReturn {
 
 export function useContestData(contestId: string): UseContestDataReturn {
   const queryClient = useQueryClient();
+  const contestPollIntervalMs = 15 * 1000;
+  const gameScorePollIntervalMs = 12 * 1000;
 
   // Main contest data query
   const contestQuery = useQuery({
@@ -85,6 +87,23 @@ export function useContestData(contestId: string): UseContestDataReturn {
         gameId: data.gameId,
       };
     },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: data => {
+      const contest = data?.contest as Contest | undefined;
+
+      if (!contest) {
+        return contestPollIntervalMs;
+      }
+
+      const isContestActive =
+        contest.boxesCanBeClaimed ||
+        contest.boxesClaimed < 100 ||
+        !contest.randomValuesSet ||
+        !contest.payoutTransactionHash;
+
+      return isContestActive ? contestPollIntervalMs : false;
+    },
   });
 
   // Game scores query (separate for independent refresh)
@@ -98,6 +117,27 @@ export function useContestData(contestId: string): UseContestDataReturn {
       return response.json() as Promise<GameScore>;
     },
     enabled: !!contestQuery.data?.gameId,
+    staleTime: 15 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: data => {
+      if (!contestQuery.data?.gameId) {
+        return false;
+      }
+
+      if (!data) {
+        return gameScorePollIntervalMs;
+      }
+
+      if (data.requestInProgress) {
+        return 5 * 1000;
+      }
+
+      if (data.qComplete >= 4) {
+        return false;
+      }
+
+      return gameScorePollIntervalMs;
+    },
   });
 
   // Refresh that invalidates both Redis AND React Query caches
