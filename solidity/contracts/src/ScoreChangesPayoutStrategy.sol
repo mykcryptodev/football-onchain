@@ -81,7 +81,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
 
             for (uint256 i = 0; i < scoreChanges.length; i++) {
                 GameScoreOracle.ScoreChangeEvent memory change = scoreChanges[i];
-                address winner = getBoxOwner(contestId, change.awayLastDigit, change.homeLastDigit);
+                address winner = getBoxOwner(contestId, change.homeLastDigit, change.awayLastDigit);
 
                 payouts[currentIndex] = PayoutInfo({
                     winner: winner,
@@ -99,7 +99,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
 
         // Q1 Payout
         if (qComplete >= 1) {
-            address q1Winner = getBoxOwner(contestId, awayQ1LastDigit, homeQ1LastDigit);
+            address q1Winner = getBoxOwner(contestId, homeQ1LastDigit, awayQ1LastDigit);
             payouts[currentIndex] = PayoutInfo({
                 winner: q1Winner,
                 amount: (quarterAllocation * Q1_QUARTER_BPS) / BASIS_POINTS_DENOMINATOR,
@@ -112,7 +112,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
 
         // Q2 Payout
         if (qComplete >= 2) {
-            address q2Winner = getBoxOwner(contestId, awayQ2LastDigit, homeQ2LastDigit);
+            address q2Winner = getBoxOwner(contestId, homeQ2LastDigit, awayQ2LastDigit);
             payouts[currentIndex] = PayoutInfo({
                 winner: q2Winner,
                 amount: (quarterAllocation * Q2_QUARTER_BPS) / BASIS_POINTS_DENOMINATOR,
@@ -125,7 +125,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
 
         // Q3 Payout
         if (qComplete >= 3) {
-            address q3Winner = getBoxOwner(contestId, awayQ3LastDigit, homeQ3LastDigit);
+            address q3Winner = getBoxOwner(contestId, homeQ3LastDigit, awayQ3LastDigit);
             payouts[currentIndex] = PayoutInfo({
                 winner: q3Winner,
                 amount: (quarterAllocation * Q3_QUARTER_BPS) / BASIS_POINTS_DENOMINATOR,
@@ -138,7 +138,7 @@ contract ScoreChangesPayoutStrategy is IPayoutStrategy {
 
         // Final Payout (Q4)
         if (qComplete >= 100) {
-            address finalWinner = getBoxOwner(contestId, awayFLastDigit, homeFLastDigit);
+            address finalWinner = getBoxOwner(contestId, homeFLastDigit, awayFLastDigit);
             payouts[currentIndex] = PayoutInfo({
                 winner: finalWinner,
                 amount: (quarterAllocation * Q4_QUARTER_BPS) / BASIS_POINTS_DENOMINATOR,
