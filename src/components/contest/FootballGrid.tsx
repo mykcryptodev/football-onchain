@@ -12,6 +12,7 @@ import { useTokenInfo } from "@/hooks/useTokenInfo";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
 import { resolveAvatarUrl } from "@/lib/utils";
+import { client } from "@/providers/Thirdweb";
 
 import { SwapModal } from "./SwapModal";
 import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
