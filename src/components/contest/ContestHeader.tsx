@@ -1,7 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { Cog, Share2 } from "lucide-react";
+import { CircleHelp, Cog, Share2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -81,6 +81,12 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
           <Button size="sm" variant="outline" onClick={handleShare}>
             <Share2 className="h-4 w-4 mr-2" />
             Share
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/contest/${contest.id}/faq`}>
+              <CircleHelp className="h-4 w-4 mr-2" />
+              FAQ
+            </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
             <Link href={`/contests/${contest.id}/admin`}>
