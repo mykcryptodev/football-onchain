@@ -204,3 +204,34 @@ export async function resolveTokenIcon(token: Token) {
     return MISSING_ICON_URL;
   }
 }
+
+export function resolveAvatarUrl(avatar?: string | null): string | null {
+  if (!avatar) {
+    return null;
+  }
+
+  if (avatar.startsWith("ipfs://")) {
+    const path = avatar.replace("ipfs://", "").replace(/^ipfs\//, "");
+    return `https://ipfs.io/ipfs/${path}`;
+  }
+
+  if (avatar.startsWith("http://") || avatar.startsWith("https://")) {
+    try {
+      const url = new URL(avatar);
+      const ipfsMatch = url.pathname.match(/\/ipfs\/([^/]+)(.*)?/);
+      const hasPinataToken = url.searchParams.has("pinataGatewayToken");
+      const isPinataGateway =
+        url.hostname.includes("pinata") || url.hostname.includes("mypinata");
+
+      if (ipfsMatch && (hasPinataToken || isPinataGateway)) {
+        const cid = ipfsMatch[1];
+        const rest = ipfsMatch[2] || "";
+        return `https://ipfs.io/ipfs/${cid}${rest}`;
+      }
+    } catch {
+      return avatar;
+    }
+  }
+
+  return avatar;
+}
