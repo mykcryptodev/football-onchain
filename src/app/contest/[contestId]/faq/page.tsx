@@ -10,11 +10,13 @@ import { getPayoutStrategyType } from "@/lib/payout-utils";
 export default function ContestFaqPage() {
   const params = useParams();
   const contestId = params.contestId as string;
-  const { contest } = useContestData(contestId);
+  const { contest, gameScore } = useContestData(contestId);
   const isScoreChanges =
     contest?.payoutStrategy &&
     getPayoutStrategyType(contest.payoutStrategy) ===
       PayoutStrategyType.SCORE_CHANGES;
+  const homeTeamName = gameScore?.homeTeamName ?? "Home team";
+  const awayTeamName = gameScore?.awayTeamName ?? "Away team";
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,8 +72,9 @@ export default function ContestFaqPage() {
           <section className="rounded-lg border bg-card p-4 space-y-2">
             <h2 className="text-lg font-semibold">Quick example</h2>
             <p className="text-sm text-muted-foreground">
-              If the Chiefs lead the 49ers 21-17, the last digits are 1 and 7.
-              The square with 1 and 7 wins that quarter.
+              Example score: {homeTeamName} 21, {awayTeamName} 17. The last
+              digits are 1 and 7. The {homeTeamName}-1 / {awayTeamName}-7 box
+              wins that quarter.
             </p>
           </section>
         </div>
