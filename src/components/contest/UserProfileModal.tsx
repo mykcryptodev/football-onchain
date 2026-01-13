@@ -3,6 +3,7 @@
 import { sdk } from "@farcaster/miniapp-sdk";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -16,6 +17,7 @@ import {
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
 } from "@/lib/payout-utils";
+import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
 import { Contest, GameScore, PayoutStrategyType, ScoringPlay } from "./types";
@@ -350,6 +352,7 @@ export function UserProfileModal({
 
   const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
   const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -364,21 +367,36 @@ export function UserProfileModal({
                 </div>
               ) : (
                 <>
-                  <AccountProvider address={address} client={client}>
-                    <AccountAvatar
-                      fallbackComponent={
+                  {avatarUrl ? (
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        alt={profile?.name || "User avatar"}
+                        src={avatarUrl}
+                      />
+                      <AvatarFallback className="bg-transparent p-0">
                         <Blobbie
                           address={address}
                           className="size-10 rounded-full"
                         />
-                      }
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "100%",
-                      }}
-                    />
-                  </AccountProvider>
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <AccountProvider address={address} client={client}>
+                      <AccountAvatar
+                        fallbackComponent={
+                          <Blobbie
+                            address={address}
+                            className="size-10 rounded-full"
+                          />
+                        }
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "100%",
+                        }}
+                      />
+                    </AccountProvider>
+                  )}
                   <div className="flex-1 min-w-0">
                     {profile?.name && (
                       <div className="text-sm font-medium truncate">

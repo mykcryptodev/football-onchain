@@ -7,6 +7,7 @@ import {
   useWalletBalance,
 } from "thirdweb/react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { chain, contests } from "@/constants";
 import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
@@ -14,7 +15,9 @@ import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useSwapToken } from "@/hooks/useSwapToken";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useTokenInfo } from "@/hooks/useTokenInfo";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { getPayoutStrategyType } from "@/lib/payout-utils";
+import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
 import { SwapModal } from "./SwapModal";
@@ -29,6 +32,39 @@ interface FootballGridProps {
   onClaimedBoxClick?: (address: string, tokenId: number) => void;
   onClaimBoxes?: () => void;
   isClaimingBoxes?: boolean;
+}
+
+function ClaimedBoxAvatar({ owner }: { owner: string }) {
+  const { profile } = useUserProfile(owner);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
+
+  if (!avatarUrl) {
+    return (
+      <AccountProvider address={owner} client={client}>
+        <AccountAvatar
+          fallbackComponent={
+            <Blobbie address={owner} className="size-4 sm:size-6 rounded-full" />
+          }
+          style={{
+            width: "clamp(16px, 4vw, 24px)",
+            height: "clamp(16px, 4vw, 24px)",
+            borderRadius: "100%",
+          }}
+        />
+      </AccountProvider>
+    );
+  }
+
+  return (
+    <Avatar className="size-4 sm:size-6">
+      {avatarUrl ? (
+        <AvatarImage alt={profile?.name || "User avatar"} src={avatarUrl} />
+      ) : null}
+      <AvatarFallback className="bg-transparent p-0">
+        <Blobbie address={owner} className="size-4 sm:size-6 rounded-full" />
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 export function FootballGrid({
@@ -366,21 +402,7 @@ export function FootballGrid({
                         </div>
                       )}
                       {isClaimedByUser && (
-                        <AccountProvider address={box.owner} client={client}>
-                          <AccountAvatar
-                            fallbackComponent={
-                              <Blobbie
-                                address={box.owner}
-                                className="size-4 sm:size-6 rounded-full"
-                              />
-                            }
-                            style={{
-                              width: "clamp(16px, 4vw, 24px)",
-                              height: "clamp(16px, 4vw, 24px)",
-                              borderRadius: "100%",
-                            }}
-                          />
-                        </AccountProvider>
+                        <ClaimedBoxAvatar owner={box.owner} />
                       )}
                     </div>
                   );

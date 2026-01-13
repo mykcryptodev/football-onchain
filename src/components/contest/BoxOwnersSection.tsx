@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { chain, contests } from "@/constants";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
 import type { BoxOwner, Contest } from "./types";
@@ -28,12 +30,12 @@ interface BoxOwnerEntry {
 
 interface OwnerItemProps {
   owner: BoxOwnerEntry;
-  contest: Contest;
   onClick: () => void;
 }
 
-function OwnerItem({ owner, contest, onClick }: OwnerItemProps) {
+function OwnerItem({ owner, onClick }: OwnerItemProps) {
   const { profile } = useUserProfile(owner.address);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
 
   return (
     <button
@@ -41,18 +43,27 @@ function OwnerItem({ owner, contest, onClick }: OwnerItemProps) {
       type="button"
       onClick={onClick}
     >
-      <AccountProvider address={owner.address} client={client}>
-        <AccountAvatar
-          fallbackComponent={
+      {avatarUrl ? (
+        <Avatar className="h-9 w-9">
+          <AvatarImage alt={profile?.name || "User avatar"} src={avatarUrl} />
+          <AvatarFallback className="bg-transparent p-0">
             <Blobbie address={owner.address} className="size-9 rounded-full" />
-          }
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "100%",
-          }}
-        />
-      </AccountProvider>
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <AccountProvider address={owner.address} client={client}>
+          <AccountAvatar
+            fallbackComponent={
+              <Blobbie address={owner.address} className="size-9 rounded-full" />
+            }
+            style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "100%",
+            }}
+          />
+        </AccountProvider>
+      )}
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium truncate">
           {profile?.name || owner.address}
@@ -76,6 +87,7 @@ export function BoxOwnersSection({
   const contestAddress = contests[chain.id].toLowerCase();
   const { isInMiniApp } = useFarcasterContext();
   const { profile } = useUserProfile(selectedOwner?.address ?? null);
+  const selectedAvatarUrl = resolveAvatarUrl(profile?.avatar);
 
   const owners = useMemo(() => {
     const ownerMap = new Map<string, BoxOwnerEntry>();
@@ -147,7 +159,6 @@ export function BoxOwnersSection({
             {owners.map(owner => (
               <OwnerItem
                 key={owner.address}
-                contest={contest}
                 owner={owner}
                 onClick={() => setSelectedOwner(owner)}
               />
@@ -166,24 +177,36 @@ export function BoxOwnersSection({
           {selectedOwner && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <AccountProvider
-                  address={selectedOwner.address}
-                  client={client}
-                >
-                  <AccountAvatar
-                    fallbackComponent={
+                {selectedAvatarUrl ? (
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage
+                      alt={profile?.name || "User avatar"}
+                      src={selectedAvatarUrl}
+                    />
+                    <AvatarFallback className="bg-transparent p-0">
                       <Blobbie
                         address={selectedOwner.address}
                         className="size-12 rounded-full"
                       />
-                    }
-                    style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "100%",
-                    }}
-                  />
-                </AccountProvider>
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <AccountProvider address={selectedOwner.address} client={client}>
+                    <AccountAvatar
+                      fallbackComponent={
+                        <Blobbie
+                          address={selectedOwner.address}
+                          className="size-12 rounded-full"
+                        />
+                      }
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "100%",
+                      }}
+                    />
+                  </AccountProvider>
+                )}
                 <div className="min-w-0 flex-1">
                   {profile?.name ? (
                     <div className="text-base font-semibold truncate">
