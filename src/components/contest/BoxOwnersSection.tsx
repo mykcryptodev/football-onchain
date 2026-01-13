@@ -5,11 +5,11 @@ import { useMemo, useState } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
 import { Blobbie } from "thirdweb/react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { chain, contests } from "@/constants";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -29,11 +29,10 @@ interface BoxOwnerEntry {
 
 interface OwnerItemProps {
   owner: BoxOwnerEntry;
-  contest: Contest;
   onClick: () => void;
 }
 
-function OwnerItem({ owner, contest, onClick }: OwnerItemProps) {
+function OwnerItem({ owner, onClick }: OwnerItemProps) {
   const { profile } = useUserProfile(owner.address);
   const avatarUrl = resolveAvatarUrl(profile?.avatar);
 
@@ -146,7 +145,6 @@ export function BoxOwnersSection({
             {owners.map(owner => (
               <OwnerItem
                 key={owner.address}
-                contest={contest}
                 owner={owner}
                 onClick={() => setSelectedOwner(owner)}
               />
