@@ -375,7 +375,7 @@ export function FootballGrid({
                     <div
                       key={col}
                       className={`
-                       aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center transition-colors rounded border ${borderColor} min-w-[2.5rem] sm:min-w-0
+                       relative aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center transition-colors rounded border ${borderColor} min-w-[2.5rem] sm:min-w-0
                        ${
                          isWinner
                            ? "bg-emerald-100 dark:bg-emerald-900/30"
@@ -386,7 +386,7 @@ export function FootballGrid({
                              )
                        }
                        ${isClaimedByUser && !isWinner && !isMyBox ? "cursor-pointer hover:bg-muted/70" : ""}
-                       ${isMyBox && !isWinner ? "" : ""}
+                       ${isMyBox ? "ring-2 ring-sky-400/80" : ""}
                      `}
                       onClick={() => {
                         if (isClaimedByUser && onClaimedBoxClick && box) {
@@ -396,6 +396,11 @@ export function FootballGrid({
                         }
                       }}
                     >
+                      {isMyBox && (
+                        <span className="absolute right-0.5 top-0.5 rounded-full bg-sky-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                          You
+                        </span>
+                      )}
                       {!isClaimedByUser && (
                         <div className="font-mono text-[10px] sm:text-xs">
                           {boxPosition}
