@@ -349,6 +349,12 @@ export function UserProfileModal({
   const teamInfo = getTeamInfo();
   const hasWins =
     boxWins.quarters.length > 0 || boxWins.scoringPlays.length > 0;
+  const isScoreChangeStrategy =
+    getPayoutStrategyType(contest.payoutStrategy) ===
+    PayoutStrategyType.SCORE_CHANGES;
+  const isGameFinal = gameScore.qComplete >= 4;
+  const showScoreChangeDisclaimer =
+    isScoreChangeStrategy && boxWins.scoringPlays.length > 0 && !isGameFinal;
 
   const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
   const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
@@ -538,6 +544,12 @@ export function UserProfileModal({
           {boxWins.scoringPlays.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold mb-3">Scoring Play Wins</h3>
+              {showScoreChangeDisclaimer && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Prize amounts for score changes can shift if more score
+                  changes happen before the game ends.
+                </p>
+              )}
               <div className="space-y-2">
                 {boxWins.scoringPlays.map(({ index, play }) => (
                   <div
