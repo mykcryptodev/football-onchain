@@ -1,8 +1,8 @@
 "use client";
 
+import { useQueries, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
 import { ZERO_ADDRESS } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { shortenAddress } from "thirdweb/utils";
@@ -17,7 +17,12 @@ import {
   getScoreChangesPayouts,
 } from "@/lib/payout-utils";
 
-import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "../contest/types";
+import {
+  BoxOwner,
+  Contest,
+  GameScore,
+  PayoutStrategyType,
+} from "../contest/types";
 
 interface ContestListItem {
   id: number;
