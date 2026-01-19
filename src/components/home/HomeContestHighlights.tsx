@@ -4,18 +4,26 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
-import { useActiveAccount } from "thirdweb/react";
-import { shortenAddress } from "thirdweb/utils";
+import {
+  AccountAvatar,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { chain, contests } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   getNetRewards,
   getPayoutStrategyType,
   getQuartersOnlyPayouts,
   getScoreChangesPayouts,
 } from "@/lib/payout-utils";
+import { resolveAvatarUrl } from "@/lib/utils";
+import { client } from "@/providers/Thirdweb";
 
 import {
   BoxOwner,
@@ -72,7 +80,12 @@ interface UserBoxEntry {
   gameDate: Date;
   boxPosition: number;
   tokenId: number;
+  boxRowDigit: number;
+  boxColDigit: number;
+  homeTeamLabel: string;
+  awayTeamLabel: string;
   matchup: string;
+  ownerAddress: string;
 }
 
 interface WinningBoxEntry {
@@ -82,6 +95,10 @@ interface WinningBoxEntry {
   gameDate: Date;
   boxPosition: number;
   tokenId: number;
+  boxRowDigit: number;
+  boxColDigit: number;
+  homeTeamLabel: string;
+  awayTeamLabel: string;
   owner: string;
   totalAmount: number;
   currencyAddress: string;
@@ -149,6 +166,13 @@ function getMatchupLabel(gameScore?: GameScore | null, gameId?: number) {
   return `${awayLabel} @ ${homeLabel}`;
 }
 
+function getTeamLabels(gameScore?: GameScore | null) {
+  return {
+    homeLabel: gameScore?.homeTeamAbbreviation || gameScore?.homeTeamName || "Home",
+    awayLabel: gameScore?.awayTeamAbbreviation || gameScore?.awayTeamName || "Away",
+  };
+}
+
 function isRealUser(owner: string) {
   if (!owner) return false;
   if (owner.toLowerCase() === ZERO_ADDRESS.toLowerCase()) return false;
@@ -164,6 +188,38 @@ function findBoxPosition(contest: Contest, homeDigit: number, awayDigit: number)
   }
 
   return rowIndex * 10 + colIndex;
+}
+
+function BoxOwnerInfo({ address }: { address: string }) {
+  const { profile } = useUserProfile(address);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
+
+  return (
+    <div className="flex items-center gap-2">
+      {avatarUrl ? (
+        <Avatar className="h-6 w-6">
+          <AvatarImage alt={profile?.name || "User avatar"} src={avatarUrl} />
+          <AvatarFallback className="bg-transparent p-0">
+            <Blobbie address={address} className="size-6 rounded-full" />
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <AccountProvider address={address} client={client}>
+          <AccountAvatar
+            fallbackComponent={
+              <Blobbie address={address} className="size-6 rounded-full" />
+            }
+            style={{
+              width: "24px",
+              height: "24px",
+              borderRadius: "100%",
+            }}
+          />
+        </AccountProvider>
+      )}
+      <span className="truncate">{profile?.name || address}</span>
+    </div>
+  );
 }
 
 function PrizeAmount({
@@ -188,6 +244,7 @@ function PrizeAmount({
 export function HomeContestHighlights() {
   const account = useActiveAccount();
   const walletAddress = account?.address?.toLowerCase();
+  const ownerAddress = account?.address;
 
   const contestsQuery = useQuery<ContestListItem[]>({
     queryKey: ["contests"],
@@ -291,7 +348,7 @@ export function HomeContestHighlights() {
   );
 
   const userBoxes = useMemo(() => {
-    if (!walletAddress) return [] as UserBoxEntry[];
+    if (!walletAddress || !ownerAddress) return [] as UserBoxEntry[];
 
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
@@ -305,10 +362,9 @@ export function HomeContestHighlights() {
         if (Number.isNaN(gameDate.getTime())) return [];
         if (gameDate < twoWeeksAgo) return [];
 
-        const matchup = getMatchupLabel(
-          gameScoresMap.get(contest.gameId),
-          contest.gameId,
-        );
+        const gameScore = gameScoresMap.get(contest.gameId);
+        const matchup = getMatchupLabel(gameScore, contest.gameId);
+        const { homeLabel, awayLabel } = getTeamLabels(gameScore);
 
         return boxOwners
           .filter(box => box.owner.toLowerCase() === walletAddress)
@@ -319,11 +375,16 @@ export function HomeContestHighlights() {
             gameDate,
             boxPosition: box.tokenId % 100,
             tokenId: box.tokenId,
+            boxRowDigit: contest.rows[Math.floor((box.tokenId % 100) / 10)],
+            boxColDigit: contest.cols[(box.tokenId % 100) % 10],
+            homeTeamLabel: homeLabel,
+            awayTeamLabel: awayLabel,
             matchup,
+            ownerAddress,
           }));
       })
       .sort((a, b) => b.gameDate.getTime() - a.gameDate.getTime());
-  }, [contestData, gameDetailsMap, gameScoresMap, walletAddress]);
+  }, [contestData, gameDetailsMap, gameScoresMap, ownerAddress, walletAddress]);
 
   const winningBoxes = useMemo(() => {
     const entries: WinningBoxEntry[] = [];
@@ -341,7 +402,8 @@ export function HomeContestHighlights() {
 
       const payoutType = getPayoutStrategyType(contest.payoutStrategy);
       const netRewards = getNetRewards(contest.totalRewards);
-      const matchup = getMatchupLabel(gameScore, contest.gameId);
+        const matchup = getMatchupLabel(gameScore, contest.gameId);
+        const { homeLabel, awayLabel } = getTeamLabels(gameScore);
 
       let quarterAmounts = {
         q1: 0,
@@ -386,6 +448,8 @@ export function HomeContestHighlights() {
           return;
         }
 
+        const rowIndex = Math.floor(boxPosition / 10);
+        const colIndex = boxPosition % 10;
         winsMap.set(tokenId, {
           contestId: contest.id,
           contestTitle: contest.title,
@@ -393,6 +457,10 @@ export function HomeContestHighlights() {
           gameDate,
           boxPosition,
           tokenId,
+          boxRowDigit: contest.rows[rowIndex],
+          boxColDigit: contest.cols[colIndex],
+          homeTeamLabel: homeLabel,
+          awayTeamLabel: awayLabel,
           owner,
           totalAmount: amount,
           currencyAddress: contest.boxCost.currency,
@@ -502,7 +570,39 @@ export function HomeContestHighlights() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">Box</span>
-                    <span>#{box.boxPosition}</span>
+                    <Link
+                      className="text-primary hover:underline"
+                      href={{
+                        pathname: `/contest/${box.contestId}`,
+                        query: {
+                          boxTokenId: box.tokenId,
+                          owner: box.ownerAddress,
+                        },
+                      }}
+                    >
+                      #{box.boxPosition}
+                    </Link>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Box value</span>
+                    <span>
+                      {box.awayTeamLabel} {box.boxColDigit} / {box.homeTeamLabel}{" "}
+                      {box.boxRowDigit}
+                    </span>
+                  </div>
+                  <div className="flex justify-end">
+                    <Link
+                      className="text-primary hover:underline text-xs"
+                      href={{
+                        pathname: `/contest/${box.contestId}`,
+                        query: {
+                          boxTokenId: box.tokenId,
+                          owner: box.ownerAddress,
+                        },
+                      }}
+                    >
+                      View box
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
@@ -554,11 +654,29 @@ export function HomeContestHighlights() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">Box</span>
-                    <span>#{entry.boxPosition}</span>
+                    <Link
+                      className="text-primary hover:underline"
+                      href={{
+                        pathname: `/contest/${entry.contestId}`,
+                        query: {
+                          boxTokenId: entry.tokenId,
+                          owner: entry.owner,
+                        },
+                      }}
+                    >
+                      #{entry.boxPosition}
+                    </Link>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Box value</span>
+                    <span>
+                      {entry.awayTeamLabel} {entry.boxColDigit} /{" "}
+                      {entry.homeTeamLabel} {entry.boxRowDigit}
+                    </span>
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">Winner</span>
-                    <span>{shortenAddress(entry.owner)}</span>
+                    <BoxOwnerInfo address={entry.owner} />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2 font-semibold">
                     <span className="text-muted-foreground">Total won</span>
