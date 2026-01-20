@@ -2,6 +2,8 @@
 
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import type { ContestListItem } from "@/app/api/contests/route";
@@ -165,8 +167,19 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-export default function JoinContestPage() {
+function JoinContestContent() {
   const { contests, isLoading, error } = useBoxesContests();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab");
+  const activeTab =
+    tabParam === "open" ||
+    tabParam === "full" ||
+    tabParam === "closed" ||
+    tabParam === "all"
+      ? tabParam
+      : "all";
 
   if (error) {
     return (
@@ -211,7 +224,15 @@ export default function JoinContestPage() {
         )}
 
         {!isLoading && contests.length > 0 && (
-          <Tabs className="space-y-6" defaultValue="all">
+          <Tabs
+            className="space-y-6"
+            value={activeTab}
+            onValueChange={value => {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.set("tab", value);
+              router.replace(`${pathname}?${nextParams.toString()}`);
+            }}
+          >
             <TabsList>
               <TabsTrigger value="all">All ({contests.length})</TabsTrigger>
               <TabsTrigger value="open">
@@ -264,5 +285,13 @@ export default function JoinContestPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function JoinContestPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <JoinContestContent />
+    </Suspense>
   );
 }
