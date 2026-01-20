@@ -225,12 +225,12 @@ export default function JoinContestPage() {
         {!isLoading && contests.length > 0 && (
           <Tabs
             className="space-y-6"
+            value={activeTab}
             onValueChange={value => {
               const nextParams = new URLSearchParams(searchParams);
               nextParams.set("tab", value);
               router.replace(`${pathname}?${nextParams.toString()}`);
             }}
-            value={activeTab}
           >
             <TabsList>
               <TabsTrigger value="all">All ({contests.length})</TabsTrigger>
