@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -166,7 +167,7 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-export default function JoinContestPage() {
+function JoinContestContent() {
   const { contests, isLoading, error } = useBoxesContests();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -284,5 +285,13 @@ export default function JoinContestPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function JoinContestPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <JoinContestContent />
+    </Suspense>
   );
 }
