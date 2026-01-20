@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import type { ContestListItem } from "@/app/api/contests/route";
