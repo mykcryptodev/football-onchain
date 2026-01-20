@@ -6,7 +6,7 @@ import { getNFTOwnershipFromThirdweb } from "@/lib/thirdweb-api";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const VERIFY_CONTEST_IDS = [21];
+const VERIFY_CONTEST_IDS = [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];
 const BOXES_ADDRESS = boxes[chain.id];
 
 export async function GET(
