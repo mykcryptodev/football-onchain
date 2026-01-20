@@ -10,6 +10,7 @@ import {
   Blobbie,
   useActiveAccount,
 } from "thirdweb/react";
+import { shortenAddress } from "thirdweb/utils";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -193,6 +194,7 @@ function findBoxPosition(contest: Contest, homeDigit: number, awayDigit: number)
 function BoxOwnerInfo({ address }: { address: string }) {
   const { profile } = useUserProfile(address);
   const avatarUrl = resolveAvatarUrl(profile?.avatar);
+  const displayName = profile?.name || shortenAddress(address);
 
   return (
     <div className="flex items-center gap-2">
@@ -217,7 +219,7 @@ function BoxOwnerInfo({ address }: { address: string }) {
           />
         </AccountProvider>
       )}
-      <span className="truncate">{profile?.name || address}</span>
+      <span className="truncate">{displayName}</span>
     </div>
   );
 }
