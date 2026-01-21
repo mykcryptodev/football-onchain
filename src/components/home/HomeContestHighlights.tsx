@@ -552,62 +552,44 @@ export function HomeContestHighlights() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {userBoxes.map(box => (
-              <Card key={`${box.contestId}-${box.tokenId}`}>
-                <CardHeader>
-                  <CardTitle className="text-base">{box.matchup}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Game start</span>
-                    <span>{dateFormatter.format(box.gameDate)}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Contest</span>
-                    <Link
-                      className="text-primary hover:underline"
-                      href={`/contest/${box.contestId}`}
-                    >
-                      {box.contestTitle}
-                    </Link>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Box</span>
-                    <Link
-                      className="text-primary hover:underline"
-                      href={{
-                        pathname: `/contest/${box.contestId}`,
-                        query: {
-                          boxTokenId: box.tokenId,
-                          owner: box.ownerAddress,
-                        },
-                      }}
-                    >
-                      #{box.boxPosition}
-                    </Link>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Box value</span>
-                    <span>
-                      {box.awayTeamLabel} {box.boxColDigit} / {box.homeTeamLabel}{" "}
-                      {box.boxRowDigit}
-                    </span>
-                  </div>
-                  <div className="flex justify-end">
-                    <Link
-                      className="text-primary hover:underline text-xs"
-                      href={{
-                        pathname: `/contest/${box.contestId}`,
-                        query: {
-                          boxTokenId: box.tokenId,
-                          owner: box.ownerAddress,
-                        },
-                      }}
-                    >
-                      View box
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+              <Link
+                key={`${box.contestId}-${box.tokenId}`}
+                className="block"
+                href={{
+                  pathname: `/contest/${box.contestId}`,
+                  query: {
+                    boxTokenId: box.tokenId,
+                    owner: box.ownerAddress,
+                  },
+                }}
+              >
+                <Card className="transition hover:border-primary/40 hover:shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">{box.matchup}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Game start</span>
+                      <span>{dateFormatter.format(box.gameDate)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Contest</span>
+                      <span>{box.contestTitle}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Box</span>
+                      <span>#{box.boxPosition}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Box value</span>
+                      <span>
+                        {box.awayTeamLabel} {box.boxColDigit} /{" "}
+                        {box.homeTeamLabel} {box.boxRowDigit}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
@@ -636,59 +618,55 @@ export function HomeContestHighlights() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {winningBoxes.map(entry => (
-              <Card key={`${entry.contestId}-${entry.tokenId}`}>
-                <CardHeader>
-                  <CardTitle className="text-base">{entry.matchup}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Game start</span>
-                    <span>{dateFormatter.format(entry.gameDate)}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Contest</span>
-                    <Link
-                      className="text-primary hover:underline"
-                      href={`/contest/${entry.contestId}`}
-                    >
-                      {entry.contestTitle}
-                    </Link>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Box</span>
-                    <Link
-                      className="text-primary hover:underline"
-                      href={{
-                        pathname: `/contest/${entry.contestId}`,
-                        query: {
-                          boxTokenId: entry.tokenId,
-                          owner: entry.owner,
-                        },
-                      }}
-                    >
-                      #{entry.boxPosition}
-                    </Link>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Box value</span>
-                    <span>
-                      {entry.awayTeamLabel} {entry.boxColDigit} /{" "}
-                      {entry.homeTeamLabel} {entry.boxRowDigit}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Winner</span>
-                    <BoxOwnerInfo address={entry.owner} />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 font-semibold">
-                    <span className="text-muted-foreground">Total won</span>
-                    <PrizeAmount
-                      amount={entry.totalAmount}
-                      currencyAddress={entry.currencyAddress}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <Link
+                key={`${entry.contestId}-${entry.tokenId}`}
+                className="block"
+                href={{
+                  pathname: `/contest/${entry.contestId}`,
+                  query: {
+                    boxTokenId: entry.tokenId,
+                    owner: entry.owner,
+                  },
+                }}
+              >
+                <Card className="transition hover:border-primary/40 hover:shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">{entry.matchup}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Game start</span>
+                      <span>{dateFormatter.format(entry.gameDate)}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Contest</span>
+                      <span>{entry.contestTitle}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Box</span>
+                      <span>#{entry.boxPosition}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Box value</span>
+                      <span>
+                        {entry.awayTeamLabel} {entry.boxColDigit} /{" "}
+                        {entry.homeTeamLabel} {entry.boxRowDigit}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Winner</span>
+                      <BoxOwnerInfo address={entry.owner} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 font-semibold">
+                      <span className="text-muted-foreground">Total won</span>
+                      <PrizeAmount
+                        amount={entry.totalAmount}
+                        currencyAddress={entry.currencyAddress}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
