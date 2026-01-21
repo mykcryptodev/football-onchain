@@ -2,7 +2,7 @@
 
 import { useQueries, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ZERO_ADDRESS } from "thirdweb";
 import {
   AccountAvatar,
@@ -13,6 +13,7 @@ import {
 import { shortenAddress } from "thirdweb/utils";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { chain, contests } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
@@ -243,6 +244,8 @@ function PrizeAmount({
 
   return <span>{formattedValue}</span>;
 }
+
+const WINNING_BOXES_PAGE_SIZE = 5;
 
 export function HomeContestHighlights() {
   const account = useActiveAccount();
@@ -516,6 +519,27 @@ export function HomeContestHighlights() {
     return entries.sort((a, b) => b.gameDate.getTime() - a.gameDate.getTime());
   }, [contestData, gameDetailsMap, gameScoresMap]);
 
+  const [winningBoxesPage, setWinningBoxesPage] = useState(1);
+
+  const totalWinningBoxPages = Math.max(
+    1,
+    Math.ceil(winningBoxes.length / WINNING_BOXES_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    setWinningBoxesPage(currentPage =>
+      Math.min(Math.max(currentPage, 1), totalWinningBoxPages),
+    );
+  }, [totalWinningBoxPages]);
+
+  const paginatedWinningBoxes = useMemo(() => {
+    const startIndex = (winningBoxesPage - 1) * WINNING_BOXES_PAGE_SIZE;
+    return winningBoxes.slice(startIndex, startIndex + WINNING_BOXES_PAGE_SIZE);
+  }, [winningBoxes, winningBoxesPage]);
+
+  const showWinningBoxPagination =
+    winningBoxes.length > WINNING_BOXES_PAGE_SIZE;
+
   const isLoading =
     contestsQuery.isLoading ||
     contestDetailsQueries.some(query => query.isLoading) ||
@@ -636,7 +660,7 @@ export function HomeContestHighlights() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {winningBoxes.map(entry => (
+            {paginatedWinningBoxes.map(entry => (
               <Card key={`${entry.contestId}-${entry.tokenId}`}>
                 <CardHeader>
                   <CardTitle className="text-base">{entry.matchup}</CardTitle>
@@ -691,6 +715,36 @@ export function HomeContestHighlights() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {showWinningBoxPagination && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setWinningBoxesPage(currentPage => Math.max(1, currentPage - 1))
+              }
+              disabled={winningBoxesPage <= 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {winningBoxesPage} of {totalWinningBoxPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setWinningBoxesPage(currentPage =>
+                  Math.min(totalWinningBoxPages, currentPage + 1),
+                )
+              }
+              disabled={winningBoxesPage >= totalWinningBoxPages}
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>
