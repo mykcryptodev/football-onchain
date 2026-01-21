@@ -1,7 +1,7 @@
 "use client";
 
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 
@@ -25,6 +25,8 @@ import { useGameDetails } from "@/hooks/useGameDetails";
 
 export default function ContestPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const contestId = params.contestId as string;
 
   // Use the new useContestData hook for data fetching and caching
@@ -48,6 +50,7 @@ export default function ContestPage() {
   );
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isAddMiniAppDialogOpen, setIsAddMiniAppDialogOpen] = useState(false);
+  const autoOpenKeyRef = useRef<string | null>(null);
 
   // Check if user is in mini app
   const { isInMiniApp } = useFarcasterContext();
@@ -83,6 +86,40 @@ export default function ContestPage() {
     setSelectedBoxTokenId(tokenId);
     setIsProfileModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!contest) return;
+
+    const boxTokenIdParam = searchParams.get("boxTokenId");
+    const ownerParam = searchParams.get("owner");
+
+    if (!boxTokenIdParam || !ownerParam) return;
+
+    const parsedTokenId = Number(boxTokenIdParam);
+    if (!Number.isFinite(parsedTokenId)) return;
+
+    const autoOpenKey = `${parsedTokenId}-${ownerParam}`;
+    if (autoOpenKeyRef.current === autoOpenKey) return;
+
+    if (
+      selectedBoxTokenId === parsedTokenId &&
+      selectedUserAddress === ownerParam &&
+      isProfileModalOpen
+    ) {
+      return;
+    }
+
+    autoOpenKeyRef.current = autoOpenKey;
+    setSelectedUserAddress(ownerParam);
+    setSelectedBoxTokenId(parsedTokenId);
+    setIsProfileModalOpen(true);
+  }, [
+    contest,
+    isProfileModalOpen,
+    searchParams,
+    selectedBoxTokenId,
+    selectedUserAddress,
+  ]);
 
   const { handleClaimBoxes: claimBoxes, isLoading: isClaimingBoxes } =
     useClaimBoxes();
@@ -235,6 +272,9 @@ export default function ContestPage() {
           if (!open) {
             setSelectedUserAddress(null);
             setSelectedBoxTokenId(null);
+            if (searchParams.get("boxTokenId") || searchParams.get("owner")) {
+              router.replace(`/contest/${contestId}`, { scroll: false });
+            }
           }
         }}
       />

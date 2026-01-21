@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,6 +36,8 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        <HomeContestHighlights />
 
         {/* Features Section */}
         <div className="grid md:grid-cols-3 gap-8 py-16">
