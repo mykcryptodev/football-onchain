@@ -227,21 +227,6 @@ function JoinContestContent() {
       staleTime: 2 * 60 * 1000,
     });
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-red-500">
-              Error Loading Contests
-            </h1>
-            <p className="text-muted-foreground">{error.message}</p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   const openContests = useMemo(
     () => contests.filter(c => c.boxesCanBeClaimed && c.boxesClaimed < 100),
     [contests],
@@ -268,6 +253,21 @@ function JoinContestContent() {
       ? "..."
       : yoursContests.length
     : 0;
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-red-500">
+              Error Loading Contests
+            </h1>
+            <p className="text-muted-foreground">{error.message}</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
