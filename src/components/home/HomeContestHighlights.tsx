@@ -721,12 +721,12 @@ export function HomeContestHighlights() {
         {showWinningBoxPagination && (
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
-              variant="outline"
+              disabled={winningBoxesPage <= 1}
               size="sm"
+              variant="outline"
               onClick={() =>
                 setWinningBoxesPage(currentPage => Math.max(1, currentPage - 1))
               }
-              disabled={winningBoxesPage <= 1}
             >
               Previous
             </Button>
@@ -734,14 +734,14 @@ export function HomeContestHighlights() {
               Page {winningBoxesPage} of {totalWinningBoxPages}
             </span>
             <Button
-              variant="outline"
+              disabled={winningBoxesPage >= totalWinningBoxPages}
               size="sm"
+              variant="outline"
               onClick={() =>
                 setWinningBoxesPage(currentPage =>
                   Math.min(totalWinningBoxPages, currentPage + 1),
                 )
               }
-              disabled={winningBoxesPage >= totalWinningBoxPages}
             >
               Next
             </Button>
