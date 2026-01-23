@@ -1,10 +1,18 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Trophy, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+import { Suspense, useMemo } from "react";
+import { getContract } from "thirdweb";
+import { getOwnedNFTs } from "thirdweb/extensions/erc721";
+import {
+  AccountAvatar,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
 import type { ContestListItem } from "@/app/api/contests/route";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { boxes, chain } from "@/constants";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -168,6 +177,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 function JoinContestContent() {
+  const account = useActiveAccount();
   const { contests, isLoading, error } = useBoxesContests();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -175,11 +185,69 @@ function JoinContestContent() {
   const tabParam = searchParams.get("tab");
   const activeTab =
     tabParam === "open" ||
-    tabParam === "full" ||
     tabParam === "closed" ||
-    tabParam === "all"
+    tabParam === "all" ||
+    tabParam === "yours"
       ? tabParam
-      : "all";
+      : "open";
+
+  const boxesAddress = boxes[chain.id];
+  const { data: ownedContestIds = [], isLoading: isLoadingOwnedContests } =
+    useQuery({
+      queryKey: ["owned-contests", account?.address],
+      enabled: Boolean(account?.address && boxesAddress),
+      queryFn: async () => {
+        if (!account?.address || !boxesAddress) {
+          return [];
+        }
+
+        const boxesContract = getContract({
+          client,
+          chain,
+          address: boxesAddress,
+        });
+
+        const ownedNFTs = await getOwnedNFTs({
+          contract: boxesContract,
+          owner: account.address,
+        });
+
+        const ownedContestIdsSet = new Set<number>();
+
+        ownedNFTs.forEach(nft => {
+          const tokenId = Number(nft.id);
+          if (!Number.isNaN(tokenId)) {
+            ownedContestIdsSet.add(Math.floor(tokenId / 100));
+          }
+        });
+
+        return Array.from(ownedContestIdsSet);
+      },
+      staleTime: 2 * 60 * 1000,
+    });
+
+  const openContests = useMemo(
+    () => contests.filter(c => c.boxesCanBeClaimed && c.boxesClaimed < 100),
+    [contests],
+  );
+  const closedContests = useMemo(
+    () => contests.filter(c => !c.boxesCanBeClaimed && c.boxesClaimed < 100),
+    [contests],
+  );
+  const ownedContestIdSet = useMemo(
+    () => new Set(ownedContestIds),
+    [ownedContestIds],
+  );
+  const yoursContests = useMemo(
+    () => contests.filter(contest => ownedContestIdSet.has(contest.id)),
+    [contests, ownedContestIdSet],
+  );
+
+  const yoursCount = account?.address
+    ? isLoadingOwnedContests
+      ? "..."
+      : yoursContests.length
+    : 0;
 
   if (error) {
     return (
@@ -195,14 +263,6 @@ function JoinContestContent() {
       </div>
     );
   }
-
-  const openContests = contests.filter(
-    c => c.boxesCanBeClaimed && c.boxesClaimed < 100,
-  );
-  const fullContests = contests.filter(c => c.boxesClaimed >= 100);
-  const closedContests = contests.filter(
-    c => !c.boxesCanBeClaimed && c.boxesClaimed < 100,
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -238,9 +298,7 @@ function JoinContestContent() {
               <TabsTrigger value="open">
                 Open ({openContests.length})
               </TabsTrigger>
-              <TabsTrigger value="full">
-                Full ({fullContests.length})
-              </TabsTrigger>
+              <TabsTrigger value="yours">Yours ({yoursCount})</TabsTrigger>
               <TabsTrigger value="closed">
                 Closed ({closedContests.length})
               </TabsTrigger>
@@ -262,11 +320,15 @@ function JoinContestContent() {
               )}
             </TabsContent>
 
-            <TabsContent className="space-y-4" value="full">
-              {fullContests.length === 0 ? (
-                <EmptyState message="No full contests yet." />
+            <TabsContent className="space-y-4" value="yours">
+              {!account?.address ? (
+                <EmptyState message="Connect your wallet to see contests you've joined." />
+              ) : isLoadingOwnedContests ? (
+                <LoadingSkeleton />
+              ) : yoursContests.length === 0 ? (
+                <EmptyState message="You haven't claimed any boxes yet." />
               ) : (
-                fullContests.map(contest => (
+                yoursContests.map(contest => (
                   <ContestCard key={contest.id} contest={contest} />
                 ))
               )}
