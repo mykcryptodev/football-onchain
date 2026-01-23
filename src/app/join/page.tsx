@@ -185,7 +185,6 @@ function JoinContestContent() {
   const tabParam = searchParams.get("tab");
   const activeTab =
     tabParam === "open" ||
-    tabParam === "full" ||
     tabParam === "closed" ||
     tabParam === "all" ||
     tabParam === "yours"
@@ -229,10 +228,6 @@ function JoinContestContent() {
 
   const openContests = useMemo(
     () => contests.filter(c => c.boxesCanBeClaimed && c.boxesClaimed < 100),
-    [contests],
-  );
-  const fullContests = useMemo(
-    () => contests.filter(c => c.boxesClaimed >= 100),
     [contests],
   );
   const closedContests = useMemo(
@@ -304,9 +299,6 @@ function JoinContestContent() {
                 Open ({openContests.length})
               </TabsTrigger>
               <TabsTrigger value="yours">Yours ({yoursCount})</TabsTrigger>
-              <TabsTrigger value="full">
-                Full ({fullContests.length})
-              </TabsTrigger>
               <TabsTrigger value="closed">
                 Closed ({closedContests.length})
               </TabsTrigger>
@@ -337,16 +329,6 @@ function JoinContestContent() {
                 <EmptyState message="You haven't claimed any boxes yet." />
               ) : (
                 yoursContests.map(contest => (
-                  <ContestCard key={contest.id} contest={contest} />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent className="space-y-4" value="full">
-              {fullContests.length === 0 ? (
-                <EmptyState message="No full contests yet." />
-              ) : (
-                fullContests.map(contest => (
                   <ContestCard key={contest.id} contest={contest} />
                 ))
               )}
