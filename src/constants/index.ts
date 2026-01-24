@@ -97,4 +97,4 @@ export const chainlinkGasLimit: Record<number, bigint> = {
   [baseSepolia.id]: BigInt(1000000),
 };
 
-export const featuredContestIds: number[] = [];
+export const featuredContestIds: number[] = [22];
