@@ -46,6 +46,8 @@ export function FeaturedContestsSection() {
     return null;
   }
 
+  const isSingleFeatured = featuredContests.length === 1;
+
   return (
     <section className="py-12">
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 md:p-8">
@@ -58,9 +60,18 @@ export function FeaturedContestsSection() {
         {isLoading ? (
           <FeaturedSkeleton />
         ) : featuredContests.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div
+            className={`grid gap-4 md:grid-cols-2 ${
+              isSingleFeatured ? "md:grid-cols-1 justify-items-center" : ""
+            }`}
+          >
             {featuredContests.map(contest => (
-              <ContestCard key={contest.id} contest={contest} />
+              <div
+                key={contest.id}
+                className={isSingleFeatured ? "w-full md:max-w-xl" : ""}
+              >
+                <ContestCard contest={contest} />
+              </div>
             ))}
           </div>
         ) : (
