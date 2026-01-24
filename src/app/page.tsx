@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSection";
 import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,8 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        <FeaturedContestsSection />
 
         <HomeContestHighlights />
 
