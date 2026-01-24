@@ -82,8 +82,9 @@ interface UserBoxEntry {
   gameDate: Date;
   boxPosition: number;
   tokenId: number;
-  boxRowDigit: number;
-  boxColDigit: number;
+  boxRowDigit?: number;
+  boxColDigit?: number;
+  randomValuesSet: boolean;
   homeTeamLabel: string;
   awayTeamLabel: string;
   matchup: string;
@@ -381,8 +382,13 @@ export function HomeContestHighlights() {
             gameDate,
             boxPosition: box.tokenId % 100,
             tokenId: box.tokenId,
-            boxRowDigit: contest.rows[Math.floor((box.tokenId % 100) / 10)],
-            boxColDigit: contest.cols[(box.tokenId % 100) % 10],
+            boxRowDigit: contest.randomValuesSet
+              ? contest.rows[Math.floor((box.tokenId % 100) / 10)]
+              : undefined,
+            boxColDigit: contest.randomValuesSet
+              ? contest.cols[(box.tokenId % 100) % 10]
+              : undefined,
+            randomValuesSet: contest.randomValuesSet,
             homeTeamLabel: homeLabel,
             awayTeamLabel: awayLabel,
             matchup,
@@ -613,8 +619,16 @@ export function HomeContestHighlights() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">Box value</span>
                     <span>
-                      {box.awayTeamLabel} {box.boxColDigit} / {box.homeTeamLabel}{" "}
-                      {box.boxRowDigit}
+                      {box.randomValuesSet ? (
+                        <>
+                          {box.awayTeamLabel} {box.boxColDigit} / {box.homeTeamLabel}{" "}
+                          {box.boxRowDigit}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Random values pending
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-end">
