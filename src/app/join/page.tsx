@@ -1,147 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Trophy, Users } from "lucide-react";
+import { Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo } from "react";
 import { getContract } from "thirdweb";
 import { getOwnedNFTs } from "thirdweb/extensions/erc721";
-import {
-  AccountAvatar,
-  AccountProvider,
-  Blobbie,
-  useActiveAccount,
-} from "thirdweb/react";
+import { useActiveAccount } from "thirdweb/react";
 
-import type { ContestListItem } from "@/app/api/contests/route";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ContestCard } from "@/components/contest/ContestCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { boxes, chain } from "@/constants";
+import { boxes, chain, featuredContestIds } from "@/constants";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
-import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
-import { useUserProfile } from "@/hooks/useUserProfile";
-import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
-
-function ContestCard({ contest }: { contest: ContestListItem }) {
-  const { formattedValue: boxCostFormatted } = useFormattedCurrency({
-    amount: BigInt(contest.boxCost.amount),
-    currencyAddress: contest.boxCost.currency,
-  });
-
-  const { profile, isLoading: profileLoading } = useUserProfile(
-    contest.creator,
-  );
-  const avatarUrl = resolveAvatarUrl(profile?.avatar);
-
-  const totalBoxes = 100;
-  const spotsRemaining = totalBoxes - contest.boxesClaimed;
-  const isFull = spotsRemaining === 0;
-  const isOpen = contest.boxesCanBeClaimed && !isFull;
-
-  return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="text-xl mb-2">{contest.title}</CardTitle>
-            {contest.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {contest.description}
-              </p>
-            )}
-            {/* Creator Info */}
-            <div className="flex items-center gap-2 mt-2">
-              {avatarUrl ? (
-                <Avatar className="h-5 w-5">
-                  <AvatarImage
-                    alt={profile?.name || "User avatar"}
-                    src={avatarUrl}
-                  />
-                  <AvatarFallback className="bg-transparent p-0">
-                    <Blobbie
-                      address={contest.creator}
-                      className="size-5 rounded-full"
-                    />
-                  </AvatarFallback>
-                </Avatar>
-              ) : (
-                <AccountProvider address={contest.creator} client={client}>
-                  <AccountAvatar
-                    fallbackComponent={
-                      <Blobbie
-                        address={contest.creator}
-                        className="size-5 rounded-full"
-                      />
-                    }
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "100%",
-                    }}
-                  />
-                </AccountProvider>
-              )}
-              <span className="text-xs text-muted-foreground">
-                {profileLoading
-                  ? "Loading..."
-                  : profile?.name ||
-                    `${contest.creator.slice(0, 6)}…${contest.creator.slice(-4)}`}
-              </span>
-            </div>
-          </div>
-          <Badge
-            variant={isOpen ? "default" : isFull ? "secondary" : "outline"}
-          >
-            {isOpen ? "Open" : isFull ? "Full" : "Closed"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Box Cost</p>
-              <p className="text-lg font-semibold">{boxCostFormatted}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Spots Filled</p>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-lg font-semibold">
-                  {contest.boxesClaimed}/{totalBoxes}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-secondary rounded-full h-2">
-            <div
-              className="bg-primary rounded-full h-2 transition-all"
-              style={{
-                width: `${(contest.boxesClaimed / totalBoxes) * 100}%`,
-              }}
-            />
-          </div>
-
-          {/* Action Button */}
-          <Link className="block" href={`/contest/${contest.id}`}>
-            <Button className="w-full" size="lg" variant="default">
-              {isOpen ? "Join Contest" : "View Contest"}
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function LoadingSkeleton() {
   return (
@@ -249,6 +125,19 @@ function JoinContestContent() {
       : yoursContests.length
     : 0;
 
+  const featuredContests = useMemo(() => {
+    if (featuredContestIds.length === 0) {
+      return [];
+    }
+
+    const contestMap = new Map(contests.map(contest => [contest.id, contest]));
+    return featuredContestIds
+      .map(id => contestMap.get(id))
+      .filter((contest): contest is (typeof contests)[number] =>
+        Boolean(contest),
+      );
+  }, [contests]);
+
   if (error) {
     return (
       <div className="min-h-screen bg-background">
@@ -303,6 +192,27 @@ function JoinContestContent() {
                 Closed ({closedContests.length})
               </TabsTrigger>
             </TabsList>
+
+            {featuredContests.length > 0 && (
+              <section className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      Featured Contests
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Hand-picked contests highlighted by the community.
+                    </p>
+                  </div>
+                  <Badge variant="default">Featured</Badge>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  {featuredContests.map(contest => (
+                    <ContestCard key={contest.id} contest={contest} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             <TabsContent className="space-y-4" value="all">
               {contests.map(contest => (
