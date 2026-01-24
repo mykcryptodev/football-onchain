@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { appName } from "@/constants";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 
 import { Contest } from "./types";
@@ -24,7 +25,7 @@ export function ContestHeader({ contest }: ContestHeaderProps) {
         ? window.location.origin
         : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const shareUrl = `${baseUrl}/contest/${contest.id}`;
-    const shareMessage = `Check out the "${contest.title}" contest on Football Onchain!`;
+    const shareMessage = `Check out the "${contest.title}" contest on ${appName}!`;
 
     try {
       if (isInMiniApp) {

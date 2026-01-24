@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { chain, usdc } from "@/constants";
+import { appName, chain, usdc } from "@/constants";
 import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
@@ -207,7 +207,7 @@ export default function PickemContestClient({
 
   const shareMessage = useMemo(() => {
     const seasonLabel = SEASON_TYPE_LABELS[contest.seasonType];
-    return `I just submitted my picks for Week ${contest.weekNumber} of the ${seasonLabel} on Football Onchain! Think you can beat me?`;
+    return `I just submitted my picks for Week ${contest.weekNumber} of the ${seasonLabel} on ${appName}! Think you can beat me?`;
   }, [contest.seasonType, contest.weekNumber]);
 
   const handleShareModalChange = (open: boolean) => {
@@ -239,7 +239,7 @@ export default function PickemContestClient({
         }
       } else if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
-          title: "Football Onchain Pick'em",
+          title: `${appName} Pick'em`,
           text: shareMessage,
           url: shareUrl,
         });
