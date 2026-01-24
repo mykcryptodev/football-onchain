@@ -223,7 +223,11 @@ export function resolveAvatarUrl(avatar?: string | null): string | null {
       const isPinataGateway =
         url.hostname.includes("pinata") || url.hostname.includes("mypinata");
 
-      if (ipfsMatch && (hasPinataToken || isPinataGateway)) {
+      if (ipfsMatch && isPinataGateway) {
+        if (hasPinataToken) {
+          return avatar;
+        }
+
         const cid = ipfsMatch[1];
         const rest = ipfsMatch[2] || "";
         return `https://ipfs.io/ipfs/${cid}${rest}`;
