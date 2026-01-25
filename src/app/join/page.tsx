@@ -73,6 +73,25 @@ function getMatchupLabel(gameScore?: GameScore | null, gameId?: number) {
   return `${awayLabel} @ ${homeLabel}`;
 }
 
+function formatGameDate(dateString?: string | null) {
+  if (!dateString) {
+    return "Date TBD";
+  }
+
+  const parsedDate = new Date(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Date TBD";
+  }
+
+  return parsedDate.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function JoinContestContent() {
   const account = useActiveAccount();
   const { contests, isLoading, error } = useBoxesContests();
@@ -132,6 +151,21 @@ function JoinContestContent() {
     return Array.from(unique).sort((a, b) => a - b);
   }, [contests]);
 
+  const gameDetailsQueries = useQueries({
+    queries: gameIds.map(gameId => ({
+      queryKey: ["game-details", gameId],
+      queryFn: async () => {
+        const response = await fetch(`/api/games/${gameId}/details`);
+        if (!response.ok) {
+          return null;
+        }
+        return response.json() as Promise<{ date?: string }>;
+      },
+      enabled: gameIds.length > 0,
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+
   const gameScoreQueries = useQueries({
     queries: gameIds.map(gameId => ({
       queryKey: ["game-score", gameId],
@@ -147,6 +181,15 @@ function JoinContestContent() {
     })),
   });
 
+  const gameDetailsMap = useMemo(() => {
+    const map = new Map<number, { date?: string } | null>();
+    gameIds.forEach((gameId, index) => {
+      const data = gameDetailsQueries[index]?.data ?? null;
+      map.set(gameId, data);
+    });
+    return map;
+  }, [gameDetailsQueries, gameIds]);
+
   const gameScoresMap = useMemo(() => {
     const map = new Map<number, GameScore | null>();
     gameIds.forEach((gameId, index) => {
@@ -155,6 +198,38 @@ function JoinContestContent() {
     });
     return map;
   }, [gameIds, gameScoreQueries]);
+
+  const gameOptions = useMemo(() => {
+    return [...gameIds]
+      .map(gameId => {
+        const details = gameDetailsMap.get(gameId);
+        const dateLabel = formatGameDate(details?.date);
+        const matchupLabel = getMatchupLabel(
+          gameScoresMap.get(gameId),
+          gameId,
+        );
+        const dateValue = details?.date
+          ? new Date(details.date).getTime()
+          : null;
+        return {
+          gameId,
+          label: `${matchupLabel} • ${dateLabel}`,
+          dateValue,
+        };
+      })
+      .sort((a, b) => {
+        if (a.dateValue === null && b.dateValue === null) {
+          return b.gameId - a.gameId;
+        }
+        if (a.dateValue === null) {
+          return 1;
+        }
+        if (b.dateValue === null) {
+          return -1;
+        }
+        return b.dateValue - a.dateValue;
+      });
+  }, [gameDetailsMap, gameIds, gameScoresMap]);
 
   const filteredContests = useMemo(() => {
     if (selectedGameId === "all") {
@@ -282,9 +357,12 @@ function JoinContestContent() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All games</SelectItem>
-                    {gameIds.map(gameId => (
-                      <SelectItem key={gameId} value={gameId.toString()}>
-                        {getMatchupLabel(gameScoresMap.get(gameId), gameId)}
+                    {gameOptions.map(option => (
+                      <SelectItem
+                        key={option.gameId}
+                        value={option.gameId.toString()}
+                      >
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
