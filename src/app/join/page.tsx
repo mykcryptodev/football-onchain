@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -10,9 +10,17 @@ import { getOwnedNFTs } from "thirdweb/extensions/erc721";
 import { useActiveAccount } from "thirdweb/react";
 
 import { ContestCard } from "@/components/contest/ContestCard";
+import type { GameScore } from "@/components/contest/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { boxes, chain, featuredContestIds } from "@/constants";
@@ -52,6 +60,19 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function getMatchupLabel(gameScore?: GameScore | null, gameId?: number) {
+  if (!gameScore) {
+    return gameId ? `Game ${gameId}` : "Game";
+  }
+
+  const homeLabel =
+    gameScore.homeTeamAbbreviation || gameScore.homeTeamName || "Home";
+  const awayLabel =
+    gameScore.awayTeamAbbreviation || gameScore.awayTeamName || "Away";
+
+  return `${awayLabel} @ ${homeLabel}`;
+}
+
 function JoinContestContent() {
   const account = useActiveAccount();
   const { contests, isLoading, error } = useBoxesContests();
@@ -66,6 +87,9 @@ function JoinContestContent() {
     tabParam === "yours"
       ? tabParam
       : "open";
+  const gameFilterParam = searchParams.get("gameId") ?? "all";
+  const selectedGameId =
+    gameFilterParam === "all" ? "all" : gameFilterParam;
 
   const boxesAddress = boxes[chain.id];
   const { data: ownedContestIds = [], isLoading: isLoadingOwnedContests } =
@@ -102,21 +126,67 @@ function JoinContestContent() {
       staleTime: 2 * 60 * 1000,
     });
 
+  const gameIds = useMemo(() => {
+    const unique = new Set<number>();
+    contests.forEach(contest => unique.add(contest.gameId));
+    return Array.from(unique).sort((a, b) => a - b);
+  }, [contests]);
+
+  const gameScoreQueries = useQueries({
+    queries: gameIds.map(gameId => ({
+      queryKey: ["game-score", gameId],
+      queryFn: async () => {
+        const response = await fetch(`/api/games/${gameId}/scores`);
+        if (!response.ok) {
+          return null;
+        }
+        return response.json() as Promise<GameScore>;
+      },
+      enabled: gameIds.length > 0,
+      staleTime: 60 * 1000,
+    })),
+  });
+
+  const gameScoresMap = useMemo(() => {
+    const map = new Map<number, GameScore | null>();
+    gameIds.forEach((gameId, index) => {
+      const data = gameScoreQueries[index]?.data ?? null;
+      map.set(gameId, data);
+    });
+    return map;
+  }, [gameIds, gameScoreQueries]);
+
+  const filteredContests = useMemo(() => {
+    if (selectedGameId === "all") {
+      return contests;
+    }
+    return contests.filter(
+      contest => contest.gameId.toString() === selectedGameId,
+    );
+  }, [contests, selectedGameId]);
+
   const openContests = useMemo(
-    () => contests.filter(c => c.boxesCanBeClaimed && c.boxesClaimed < 100),
-    [contests],
+    () =>
+      filteredContests.filter(
+        c => c.boxesCanBeClaimed && c.boxesClaimed < 100,
+      ),
+    [filteredContests],
   );
   const closedContests = useMemo(
-    () => contests.filter(c => !c.boxesCanBeClaimed && c.boxesClaimed < 100),
-    [contests],
+    () =>
+      filteredContests.filter(
+        c => !c.boxesCanBeClaimed && c.boxesClaimed < 100,
+      ),
+    [filteredContests],
   );
   const ownedContestIdSet = useMemo(
     () => new Set(ownedContestIds),
     [ownedContestIds],
   );
   const yoursContests = useMemo(
-    () => contests.filter(contest => ownedContestIdSet.has(contest.id)),
-    [contests, ownedContestIdSet],
+    () =>
+      filteredContests.filter(contest => ownedContestIdSet.has(contest.id)),
+    [filteredContests, ownedContestIdSet],
   );
 
   const yoursCount = account?.address
@@ -130,13 +200,15 @@ function JoinContestContent() {
       return [];
     }
 
-    const contestMap = new Map(contests.map(contest => [contest.id, contest]));
+    const contestMap = new Map(
+      filteredContests.map(contest => [contest.id, contest]),
+    );
     return featuredContestIds
       .map(id => contestMap.get(id))
       .filter((contest): contest is (typeof contests)[number] =>
         Boolean(contest),
       );
-  }, [contests]);
+  }, [filteredContests]);
 
   if (error) {
     return (
@@ -182,16 +254,43 @@ function JoinContestContent() {
               router.replace(`${pathname}?${nextParams.toString()}`);
             }}
           >
-            <TabsList>
-              <TabsTrigger value="all">All ({contests.length})</TabsTrigger>
-              <TabsTrigger value="open">
-                Open ({openContests.length})
-              </TabsTrigger>
-              <TabsTrigger value="yours">Yours ({yoursCount})</TabsTrigger>
-              <TabsTrigger value="closed">
-                Closed ({closedContests.length})
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <TabsList>
+                <TabsTrigger value="all">
+                  All ({filteredContests.length})
+                </TabsTrigger>
+                <TabsTrigger value="open">
+                  Open ({openContests.length})
+                </TabsTrigger>
+                <TabsTrigger value="yours">Yours ({yoursCount})</TabsTrigger>
+                <TabsTrigger value="closed">
+                  Closed ({closedContests.length})
+                </TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Filter by game</span>
+                <Select
+                  value={selectedGameId}
+                  onValueChange={value => {
+                    const nextParams = new URLSearchParams(searchParams);
+                    nextParams.set("gameId", value);
+                    router.replace(`${pathname}?${nextParams.toString()}`);
+                  }}
+                >
+                  <SelectTrigger className="w-[220px] bg-background">
+                    <SelectValue placeholder="All games" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All games</SelectItem>
+                    {gameIds.map(gameId => (
+                      <SelectItem key={gameId} value={gameId.toString()}>
+                        {getMatchupLabel(gameScoresMap.get(gameId), gameId)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {featuredContests.length > 0 && (
               <section className="rounded-xl border border-primary/20 bg-primary/5 p-6">
@@ -215,9 +314,13 @@ function JoinContestContent() {
             )}
 
             <TabsContent className="space-y-4" value="all">
-              {contests.map(contest => (
-                <ContestCard key={contest.id} contest={contest} />
-              ))}
+              {filteredContests.length === 0 ? (
+                <EmptyState message="No contests match that game filter." />
+              ) : (
+                filteredContests.map(contest => (
+                  <ContestCard key={contest.id} contest={contest} />
+                ))
+              )}
             </TabsContent>
 
             <TabsContent className="space-y-4" value="open">
