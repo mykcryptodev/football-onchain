@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -239,7 +240,7 @@ export default function ContestPage() {
         {/* Stats */}
         <ContestStats contest={contest} />
         {ownedBoxesCount > 0 && openseaCollectionUrl ? (
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-center">
             <Button asChild variant="outline">
               <Link
                 href={openseaCollectionUrl}
@@ -247,6 +248,7 @@ export default function ContestPage() {
                 target="_blank"
               >
                 Sell my box{ownedBoxesCount > 1 ? "es" : ""}
+                <ExternalLink className="size-4" />
               </Link>
             </Button>
           </div>
