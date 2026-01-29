@@ -3,6 +3,35 @@ import { NextRequest, NextResponse } from "next/server";
 const ESPN_BASE_URL =
   "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary";
 
+type ESPNCompetitor = {
+  team?: {
+    abbreviation?: string;
+    displayName?: string;
+    name?: string;
+    color?: string;
+    alternateColor?: string;
+  };
+};
+
+const isPatriotsTeam = (team: ESPNCompetitor | undefined) => {
+  const abbreviation = team?.team?.abbreviation?.toLowerCase();
+  const displayName = team?.team?.displayName?.toLowerCase();
+  const name = team?.team?.name?.toLowerCase();
+  return (
+    abbreviation === "ne" ||
+    displayName?.includes("patriots") ||
+    name?.includes("patriots")
+  );
+};
+
+const getTeamColor = (team: ESPNCompetitor | undefined) => {
+  if (!team?.team) return undefined;
+  if (isPatriotsTeam(team) && team.team.alternateColor) {
+    return team.team.alternateColor;
+  }
+  return team.team.color;
+};
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> },
@@ -114,8 +143,8 @@ export async function POST(
       awayTeamName: awayTeam.team?.displayName || awayTeam.team?.name || "Away Team",
       homeTeamAbbreviation: homeTeam.team?.abbreviation,
       awayTeamAbbreviation: awayTeam.team?.abbreviation,
-      homeTeamColor: homeTeam.team?.color,
-      awayTeamColor: awayTeam.team?.color,
+      homeTeamColor: getTeamColor(homeTeam),
+      awayTeamColor: getTeamColor(awayTeam),
       scoringPlays: scoringPlays.map(
         (play: {
           id: string;
