@@ -77,6 +77,17 @@ export default function ContestFaqPage() {
               wins that quarter.
             </p>
           </section>
+
+          <div className="text-sm">
+            <Link
+              className="text-muted-foreground hover:text-foreground underline underline-offset-4"
+              href="https://x.com/mykcryptodev/status/2012635832713175139"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Technical deep dive for nerds
+            </Link>
+          </div>
         </div>
       </main>
     </div>
