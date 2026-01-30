@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
@@ -18,7 +17,6 @@ import {
   PayoutsCard,
   UserProfileModal,
 } from "@/components/contest";
-import { Button } from "@/components/ui/button";
 import { contests } from "@/constants";
 import { isMiniAppAdded } from "@/hooks/useAddMiniApp";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";

@@ -2,8 +2,8 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import Link from "next/link";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 import { baseSepolia } from "thirdweb/chains";
+import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
