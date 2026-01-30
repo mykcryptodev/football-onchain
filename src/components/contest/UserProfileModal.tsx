@@ -1,12 +1,15 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
+import Link from "next/link";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+import { baseSepolia } from "thirdweb/chains";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { boxes, chain } from "@/constants";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useTeamColors } from "@/hooks/useTeamColors";
@@ -29,6 +32,7 @@ interface UserProfileModalProps {
   contest?: Contest | null;
   gameScore?: GameScore | null;
   boxTokenId?: number | null;
+  currentUserAddress?: string | null;
 }
 
 export function UserProfileModal({
@@ -38,6 +42,7 @@ export function UserProfileModal({
   contest,
   gameScore,
   boxTokenId,
+  currentUserAddress,
 }: UserProfileModalProps) {
   const { profile, isLoading: profileLoading } = useUserProfile(address);
   const { isInMiniApp } = useFarcasterContext();
@@ -359,6 +364,20 @@ export function UserProfileModal({
   const awayTeamColor = formatTeamColor(gameScore?.awayTeamColor);
   const homeTeamColor = formatTeamColor(gameScore?.homeTeamColor);
   const avatarUrl = resolveAvatarUrl(profile?.avatar);
+  const isViewerOwner =
+    currentUserAddress &&
+    currentUserAddress.toLowerCase() === address.toLowerCase();
+  const canViewProfile =
+    profile?.farcasterUsername || (isInMiniApp && profile?.fid);
+  const openseaBaseUrl =
+    chain.id === baseSepolia.id
+      ? "https://testnets.opensea.io"
+      : "https://opensea.io";
+  const chainSlug = chain.id === baseSepolia.id ? "base-sepolia" : "base";
+  const openseaBoxUrl = `${openseaBaseUrl}/assets/${chainSlug}/${
+    boxes[chain.id]
+  }/${boxTokenId}`;
+  const showSellBox = isViewerOwner && Boolean(openseaBoxUrl);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -417,16 +436,28 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
-                    {(profile?.farcasterUsername ||
-                      (isInMiniApp && profile?.fid)) && (
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleViewProfile}
-                        >
-                          View Profile
-                        </Button>
+                    {(canViewProfile || showSellBox) && (
+                      <div className="mt-2 flex justify-end gap-2">
+                        {showSellBox && (
+                          <Button asChild size="sm" variant="outline">
+                            <Link
+                              href={openseaBoxUrl}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              Sell Box
+                            </Link>
+                          </Button>
+                        )}
+                        {canViewProfile && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleViewProfile}
+                          >
+                            View Profile
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
