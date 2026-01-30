@@ -17,7 +17,7 @@ import {
   PayoutsCard,
   UserProfileModal,
 } from "@/components/contest";
-import { contests } from "@/constants";
+import { chain, contests } from "@/constants";
 import { isMiniAppAdded } from "@/hooks/useAddMiniApp";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
