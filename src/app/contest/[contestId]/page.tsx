@@ -1,9 +1,13 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
+import { baseSepolia } from "thirdweb/chains";
+import { useActiveAccount } from "thirdweb/react";
 
 import {
   AddMiniAppDialog,
@@ -16,7 +20,8 @@ import {
   PayoutsCard,
   UserProfileModal,
 } from "@/components/contest";
-import { chain, contests } from "@/constants";
+import { Button } from "@/components/ui/button";
+import { boxes, chain, contests } from "@/constants";
 import { isMiniAppAdded } from "@/hooks/useAddMiniApp";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
@@ -28,6 +33,7 @@ export default function ContestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contestId = params.contestId as string;
+  const account = useActiveAccount();
 
   // Use the new useContestData hook for data fetching and caching
   const {
@@ -54,6 +60,27 @@ export default function ContestPage() {
 
   // Check if user is in mini app
   const { isInMiniApp } = useFarcasterContext();
+
+  const ownedBoxesCount = useMemo(() => {
+    const address = account?.address?.toLowerCase();
+    if (!address) return 0;
+
+    return boxOwners.filter(
+      box => box.owner.toLowerCase() === address && box.owner !== ZERO_ADDRESS,
+    ).length;
+  }, [account?.address, boxOwners]);
+
+  const openseaCollectionUrl = useMemo(() => {
+    if (!account?.address || ownedBoxesCount === 0) return null;
+    const chainSlug = chain.id === baseSepolia.id ? "base-sepolia" : "base";
+    const openseaBaseUrl =
+      chain.id === baseSepolia.id
+        ? "https://testnets.opensea.io"
+        : "https://opensea.io";
+    return `${openseaBaseUrl}/assets/${chainSlug}/${
+      boxes[chain.id]
+    }?search[owner]=${account.address}`;
+  }, [account?.address, ownedBoxesCount]);
 
   const handleBoxClick = (boxPosition: number) => {
     if (!contest?.boxesCanBeClaimed) return;
@@ -212,6 +239,20 @@ export default function ContestPage() {
 
         {/* Stats */}
         <ContestStats contest={contest} />
+        {ownedBoxesCount > 0 && openseaCollectionUrl ? (
+          <div className="mt-4 mb-4 flex justify-center">
+            <Button asChild variant="outline">
+              <Link
+                href={openseaCollectionUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Sell my box{ownedBoxesCount > 1 ? "es" : ""}
+                <ExternalLink className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        ) : null}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Football Grid */}
