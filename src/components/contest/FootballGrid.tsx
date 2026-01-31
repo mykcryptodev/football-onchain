@@ -43,11 +43,11 @@ function ClaimedBoxAvatar({ owner }: { owner: string }) {
       <AccountProvider address={owner} client={client}>
         <AccountAvatar
           fallbackComponent={
-            <Blobbie address={owner} className="size-4 sm:size-6 rounded-full" />
+            <Blobbie address={owner} className="size-6 sm:size-8 rounded-full" />
           }
           style={{
-            width: "clamp(16px, 4vw, 24px)",
-            height: "clamp(16px, 4vw, 24px)",
+            width: "clamp(24px, 5vw, 32px)",
+            height: "clamp(24px, 5vw, 32px)",
             borderRadius: "100%",
           }}
         />
@@ -56,12 +56,12 @@ function ClaimedBoxAvatar({ owner }: { owner: string }) {
   }
 
   return (
-    <Avatar className="size-4 sm:size-6">
+    <Avatar className="size-6 sm:size-8">
       {avatarUrl ? (
         <AvatarImage alt={profile?.name || "User avatar"} src={avatarUrl} />
       ) : null}
       <AvatarFallback className="bg-transparent p-0">
-        <Blobbie address={owner} className="size-4 sm:size-6 rounded-full" />
+        <Blobbie address={owner} className="size-6 sm:size-8 rounded-full" />
       </AvatarFallback>
     </Avatar>
   );
