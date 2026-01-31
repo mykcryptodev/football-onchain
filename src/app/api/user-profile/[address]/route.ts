@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getContract } from "thirdweb";
 import { defineChain } from "thirdweb/chains";
-import { getNFT as getErc1155NFT } from "thirdweb/extensions/erc1155";
 import { getNFT as getErc721NFT } from "thirdweb/extensions/erc721";
+import { getNFT as getErc1155NFT } from "thirdweb/extensions/erc1155";
 import { getSocialProfiles } from "thirdweb/social";
 
 import { fetchFarcasterBioByAddress } from "@/lib/neynar";
