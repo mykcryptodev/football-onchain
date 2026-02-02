@@ -21,7 +21,10 @@ export async function POST(
   }
 
   if (!redis) {
-    return NextResponse.json({ refreshed: false, reason: "Redis not configured" });
+    return NextResponse.json({
+      refreshed: false,
+      reason: "Redis not configured",
+    });
   }
 
   let chainId = chain.id;
@@ -35,7 +38,8 @@ export async function POST(
   }
 
   const cacheKey = getContestCacheKey(contestId, chainId);
-  await safeRedisOperation(() => redis.del(cacheKey), null);
+  const redisClient = redis;
+  await safeRedisOperation(() => redisClient.del(cacheKey), null);
 
   return NextResponse.json({ refreshed: true });
 }
