@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { chain, contests } from "@/constants";
-import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
@@ -85,7 +84,6 @@ export function BoxOwnersSection({
     null,
   );
   const contestAddress = contests[chain.id].toLowerCase();
-  const { isInMiniApp } = useFarcasterContext();
   const { profile } = useUserProfile(selectedOwner?.address ?? null);
   const selectedAvatarUrl = resolveAvatarUrl(profile?.avatar);
 
@@ -114,13 +112,13 @@ export function BoxOwnersSection({
   }, [boxOwners, contestAddress]);
 
   const handleViewProfile = async () => {
-    if (isInMiniApp && profile?.fid) {
+    if (profile?.fid) {
       try {
         await sdk.actions.viewProfile({ fid: profile.fid });
+        return;
       } catch (error) {
         console.error("Error viewing profile:", error);
       }
-      return;
     }
 
     if (profile?.farcasterUsername) {
@@ -236,8 +234,7 @@ export function BoxOwnersSection({
                   </p>
                 </div>
               )}
-              {(profile?.farcasterUsername ||
-                (isInMiniApp && profile?.fid)) && (
+              {(profile?.farcasterUsername || profile?.fid) && (
                 <div className="flex justify-end">
                   <Button
                     size="sm"
