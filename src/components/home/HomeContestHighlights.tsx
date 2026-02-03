@@ -89,6 +89,7 @@ interface UserBoxEntry {
   awayTeamLabel: string;
   matchup: string;
   ownerAddress: string;
+  contestCreator: string;
 }
 
 interface WinningBoxEntry {
@@ -393,6 +394,7 @@ export function HomeContestHighlights() {
             awayTeamLabel: awayLabel,
             matchup,
             ownerAddress,
+            contestCreator: contest.creator,
           }));
       })
       .sort((a, b) => b.gameDate.getTime() - a.gameDate.getTime());
@@ -600,6 +602,10 @@ export function HomeContestHighlights() {
                     >
                       {box.contestTitle}
                     </Link>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Host</span>
+                    <BoxOwnerInfo address={box.contestCreator} />
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground">Box</span>
