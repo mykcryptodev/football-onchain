@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { boxes, chain } from "@/constants";
-import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -45,8 +44,6 @@ export function UserProfileModal({
   currentUserAddress,
 }: UserProfileModalProps) {
   const { profile, isLoading: profileLoading } = useUserProfile(address);
-  const { isInMiniApp } = useFarcasterContext();
-
   // Calculate prize amounts for quarters and scoring plays
   const getPrizeAmounts = () => {
     if (!contest) return null;
@@ -241,14 +238,14 @@ export function UserProfileModal({
   });
 
   const handleViewProfile = async () => {
-    if (isInMiniApp && profile?.fid) {
+    if (profile?.fid) {
       try {
         await sdk.actions.viewProfile({ fid: profile.fid });
         onOpenChange(false);
+        return;
       } catch (error) {
         console.error("Error viewing profile:", error);
       }
-      return;
     }
 
     const farcasterUsername = profile?.farcasterUsername;
@@ -367,8 +364,7 @@ export function UserProfileModal({
   const isViewerOwner =
     currentUserAddress &&
     currentUserAddress.toLowerCase() === address.toLowerCase();
-  const canViewProfile =
-    profile?.farcasterUsername || (isInMiniApp && profile?.fid);
+  const canViewProfile = profile?.farcasterUsername || profile?.fid;
   const openseaBaseUrl =
     chain.id === baseSepolia.id
       ? "https://testnets.opensea.io"
