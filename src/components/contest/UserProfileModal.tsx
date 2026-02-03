@@ -443,9 +443,21 @@ export function UserProfileModal({
         throw new Error("Connected wallet cannot sign typed data.");
       }
 
+      const resolvedPrimaryType =
+        protocolData?.primary_type ||
+        protocolData?.primaryType ||
+        Object.keys(protocolData.types || {}).find(
+          typeName => typeName !== "EIP712Domain",
+        );
+
+      if (!resolvedPrimaryType) {
+        throw new Error("OpenSea did not provide a primary type.");
+      }
+
       const signature = await account.signTypedData({
         domain: protocolData.domain,
         types: protocolData.types,
+        primaryType: resolvedPrimaryType,
         message,
       });
 
