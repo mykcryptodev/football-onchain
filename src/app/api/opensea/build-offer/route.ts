@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 const OPENSEA_BASE_URL = "https://api.opensea.io/api/v2";
 const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY;
+const OPENSEA_TIMEOUT_MS = 12000;
 
 const getOpenSeaChain = () =>
   chain.id === baseSepolia.id ? "base_sepolia" : "base";
@@ -63,6 +64,9 @@ export async function POST(request: NextRequest) {
     const endpoint =
       side === "sell" ? "listings/build" : "offers/build";
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OPENSEA_TIMEOUT_MS);
+
     const response = await fetch(`${OPENSEA_BASE_URL}/${endpoint}`, {
       method: "POST",
       headers: {
@@ -71,7 +75,8 @@ export async function POST(request: NextRequest) {
         "X-API-KEY": OPENSEA_API_KEY,
       },
       body: JSON.stringify(payload),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
 
     const data = await response.json().catch(() => null);
 
@@ -89,6 +94,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return NextResponse.json(
+        { error: "OpenSea request timed out. Please try again." },
+        { status: 504 },
+      );
+    }
+
     console.error("OpenSea build order error:", error);
     return NextResponse.json(
       { error: "Unexpected error while building OpenSea order." },
