@@ -650,8 +650,8 @@ export function UserProfileModal({
                   onChange={event => setListingPrice(event.target.value)}
                 />
                 <Button
-                  onClick={() => handleOpenSeaOrder("sell")}
                   disabled={listingLoading || !listingPrice}
+                  onClick={() => handleOpenSeaOrder("sell")}
                 >
                   {listingLoading ? "Listing..." : "List on OpenSea"}
                 </Button>
@@ -666,8 +666,8 @@ export function UserProfileModal({
                   onChange={event => setOfferPrice(event.target.value)}
                 />
                 <Button
-                  onClick={() => handleOpenSeaOrder("buy")}
                   disabled={offerLoading || !offerPrice}
+                  onClick={() => handleOpenSeaOrder("buy")}
                 >
                   {offerLoading ? "Submitting..." : "Make Offer"}
                 </Button>
