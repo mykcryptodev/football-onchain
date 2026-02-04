@@ -21,9 +21,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { side, signature, protocol_data: protocolData } = body ?? {};
+    const {
+      side,
+      signature,
+      protocol_data: protocolData,
+      parameters,
+    } = body ?? {};
 
-    if (!signature || !protocolData || (side !== "buy" && side !== "sell")) {
+    if (
+      !signature ||
+      (side !== "buy" && side !== "sell") ||
+      (!protocolData && !parameters)
+    ) {
       return NextResponse.json(
         { error: "Missing required fields for OpenSea order submission." },
         { status: 400 },
@@ -35,6 +44,17 @@ export async function POST(request: NextRequest) {
         ? `orders/${getOpenSeaChain()}/seaport/listings`
         : `orders/${getOpenSeaChain()}/seaport/offers`;
 
+    const submissionPayload =
+      side === "sell"
+        ? {
+            parameters: parameters ?? protocolData?.parameters,
+            signature,
+          }
+        : {
+            protocol_data: protocolData,
+            signature,
+          };
+
     const response = await fetch(`${OPENSEA_BASE_URL}/${endpoint}`, {
       method: "POST",
       headers: {
@@ -42,10 +62,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         "X-API-KEY": OPENSEA_API_KEY,
       },
-      body: JSON.stringify({
-        protocol_data: protocolData,
-        signature,
-      }),
+      body: JSON.stringify(submissionPayload),
     });
 
     const data = await response.json().catch(() => null);

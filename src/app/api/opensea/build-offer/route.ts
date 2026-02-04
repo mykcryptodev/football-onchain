@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
       payload.chain = getOpenSeaChain();
       payload.payment_token_address =
         "0x0000000000000000000000000000000000000000";
-      payload.price = price.toString();
+      payload.start_amount = price.toString();
+      payload.end_amount = price.toString();
       payload.expiration_time = expiresAt;
     }
 
