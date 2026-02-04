@@ -22,9 +22,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { side, offerer, tokenId, price, expirationTime } = body ?? {};
+    const {
+      side,
+      offerer,
+      tokenId,
+      price,
+      expirationTime,
+      collectionSlug,
+      protocolAddress,
+      offerProtectionEnabled,
+    } = body ?? {};
 
-    if (!offerer || !tokenId || !price || (side !== "buy" && side !== "sell")) {
+    if (!offerer || (side !== "buy" && side !== "sell")) {
       return NextResponse.json(
         { error: "Missing required fields for OpenSea order build." },
         { status: 400 },
@@ -39,27 +48,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!collectionSlug && tokenId === undefined && side === "buy") {
+      return NextResponse.json(
+        { error: "Missing tokenId or collectionSlug for offer build." },
+        { status: 400 },
+      );
+    }
+
     const expiresAt =
       typeof expirationTime === "number"
         ? expirationTime
         : Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       offerer,
       quantity: 1,
-      criteria: {
-        asset: {
-          contract_address: contractAddress,
-          token_id: tokenId.toString(),
-        },
-      },
-      protocol: "seaport",
-      chain: getOpenSeaChain(),
-      payment_token_address:
-        "0x0000000000000000000000000000000000000000",
-      price: price.toString(),
-      expiration_time: expiresAt,
+      criteria: collectionSlug
+        ? {
+            collection: {
+              slug: collectionSlug,
+            },
+          }
+        : {
+            asset: {
+              contract_address: contractAddress,
+              token_id: tokenId?.toString(),
+            },
+          },
     };
+
+    if (protocolAddress) {
+      payload.protocol_address = protocolAddress;
+    }
+
+    if (typeof offerProtectionEnabled === "boolean") {
+      payload.offer_protection_enabled = offerProtectionEnabled;
+    }
+
+    if (side === "sell") {
+      if (!tokenId || !price) {
+        return NextResponse.json(
+          { error: "Missing tokenId or price for listing build." },
+          { status: 400 },
+        );
+      }
+
+      payload.protocol = "seaport";
+      payload.chain = getOpenSeaChain();
+      payload.payment_token_address =
+        "0x0000000000000000000000000000000000000000";
+      payload.price = price.toString();
+      payload.expiration_time = expiresAt;
+    }
 
     const endpoint =
       side === "sell" ? "listings/build" : "offers/build";
