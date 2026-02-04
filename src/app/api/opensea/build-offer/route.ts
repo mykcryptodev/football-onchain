@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 const OPENSEA_BASE_URL = "https://api.opensea.io/api/v2";
 const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY;
 const OPENSEA_TIMEOUT_MS = 12000;
+const OPENSEA_COLLECTION_SLUG = "super-bowl-squares-onchain";
 
 const getOpenSeaChain = () =>
   chain.id === baseSepolia.id ? "base_sepolia" : "base";
@@ -48,7 +49,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!collectionSlug && tokenId === undefined && side === "buy") {
+    if (
+      !collectionSlug &&
+      tokenId === undefined &&
+      side === "buy" &&
+      !OPENSEA_COLLECTION_SLUG
+    ) {
       return NextResponse.json(
         { error: "Missing tokenId or collectionSlug for offer build." },
         { status: 400 },
@@ -63,18 +69,19 @@ export async function POST(request: NextRequest) {
     const payload: Record<string, unknown> = {
       offerer,
       quantity: 1,
-      criteria: collectionSlug
-        ? {
-            collection: {
-              slug: collectionSlug,
+      criteria:
+        side === "buy" && (collectionSlug || OPENSEA_COLLECTION_SLUG)
+          ? {
+              collection: {
+                slug: collectionSlug || OPENSEA_COLLECTION_SLUG,
+              },
+            }
+          : {
+              asset: {
+                contract_address: contractAddress,
+                token_id: tokenId?.toString(),
+              },
             },
-          }
-        : {
-            asset: {
-              contract_address: contractAddress,
-              token_id: tokenId?.toString(),
-            },
-          },
     };
 
     if (protocolAddress) {
