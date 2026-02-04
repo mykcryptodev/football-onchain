@@ -2,13 +2,22 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { toUnits } from "thirdweb";
 import { baseSepolia } from "thirdweb/chains";
-import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
+import {
+  AccountAvatar,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { boxes, chain } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useTeamColors } from "@/hooks/useTeamColors";
@@ -43,6 +52,11 @@ export function UserProfileModal({
   boxTokenId,
   currentUserAddress,
 }: UserProfileModalProps) {
+  const account = useActiveAccount();
+  const [listingPrice, setListingPrice] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [listingLoading, setListingLoading] = useState(false);
+  const [offerLoading, setOfferLoading] = useState(false);
   const { profile, isLoading: profileLoading } = useUserProfile(address);
   // Calculate prize amounts for quarters and scoring plays
   const getPrizeAmounts = () => {
@@ -373,7 +387,115 @@ export function UserProfileModal({
   const openseaBoxUrl = `${openseaBaseUrl}/assets/${chainSlug}/${
     boxes[chain.id]
   }/${boxTokenId}`;
-  const showSellBox = isViewerOwner && Boolean(openseaBoxUrl);
+  const showOpenSeaLink = Boolean(openseaBoxUrl);
+
+  const handleOpenSeaOrder = async (side: "buy" | "sell") => {
+    if (!account?.address) {
+      toast.error("Connect your wallet to trade on OpenSea.");
+      return;
+    }
+
+    if (!boxTokenId) {
+      toast.error("Select a box before trading on OpenSea.");
+      return;
+    }
+
+    const priceInput = side === "sell" ? listingPrice : offerPrice;
+    if (!priceInput || Number(priceInput) <= 0) {
+      toast.error("Enter a valid ETH amount.");
+      return;
+    }
+
+    const setLoading = side === "sell" ? setListingLoading : setOfferLoading;
+
+    try {
+      setLoading(true);
+      const priceWei = toUnits(priceInput, 18);
+
+      const buildResponse = await fetch("/api/opensea/build-offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          side,
+          offerer: account.address,
+          tokenId: boxTokenId,
+          price: priceWei.toString(),
+        }),
+      });
+
+      if (!buildResponse.ok) {
+        const errorPayload = await buildResponse.json().catch(() => null);
+        throw new Error(errorPayload?.error || "Failed to build OpenSea order.");
+      }
+
+      const buildData = await buildResponse.json();
+      const protocolData = buildData?.protocol_data;
+      const message =
+        protocolData?.message ||
+        protocolData?.value ||
+        protocolData?.parameters;
+
+      if (!protocolData?.domain || !protocolData?.types || !message) {
+        throw new Error("OpenSea did not return signing data.");
+      }
+
+      if (!account.signTypedData) {
+        throw new Error("Connected wallet cannot sign typed data.");
+      }
+
+      const resolvedPrimaryType =
+        protocolData?.primary_type ||
+        protocolData?.primaryType ||
+        Object.keys(protocolData.types || {}).find(
+          typeName => typeName !== "EIP712Domain",
+        );
+
+      if (!resolvedPrimaryType) {
+        throw new Error("OpenSea did not provide a primary type.");
+      }
+
+      const signature = await account.signTypedData({
+        domain: protocolData.domain,
+        types: protocolData.types,
+        primaryType: resolvedPrimaryType,
+        message,
+      });
+
+      const submitResponse = await fetch("/api/opensea/submit-offer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          side,
+          signature,
+          protocol_data: {
+            ...protocolData,
+          },
+        }),
+      });
+
+      if (!submitResponse.ok) {
+        const errorPayload = await submitResponse.json().catch(() => null);
+        throw new Error(
+          errorPayload?.error || "Failed to submit OpenSea order.",
+        );
+      }
+
+      toast.success(
+        side === "sell"
+          ? "Listing submitted to OpenSea."
+          : "Offer submitted to OpenSea.",
+      );
+    } catch (error) {
+      console.error("OpenSea order error:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to place OpenSea order.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -432,16 +554,16 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
-                    {(canViewProfile || showSellBox) && (
+                    {(canViewProfile || showOpenSeaLink) && (
                       <div className="mt-2 flex justify-end gap-2">
-                        {showSellBox && (
+                        {showOpenSeaLink && (
                           <Button asChild size="sm" variant="outline">
                             <Link
                               href={openseaBoxUrl}
                               rel="noreferrer"
                               target="_blank"
                             >
-                              Sell Box
+                              View on OpenSea
                             </Link>
                           </Button>
                         )}
@@ -513,6 +635,54 @@ export function UserProfileModal({
             {!hasRandomValues && (
               <div className="mt-3 text-sm text-muted-foreground">
                 random values for boxes have not yet been assigned
+              </div>
+            )}
+          </div>
+
+          {/* OpenSea Secondary Market */}
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">Trade on OpenSea</h3>
+              <p className="text-xs text-muted-foreground">
+                Submit listings or offers using OpenSea&apos;s API (signature
+                required).
+              </p>
+            </div>
+            {!account?.address && (
+              <p className="text-xs text-muted-foreground">
+                Connect your wallet to list or make an offer.
+              </p>
+            )}
+            {account?.address && isViewerOwner && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  inputMode="decimal"
+                  placeholder="List price in ETH"
+                  value={listingPrice}
+                  onChange={event => setListingPrice(event.target.value)}
+                />
+                <Button
+                  disabled={listingLoading || !listingPrice}
+                  onClick={() => handleOpenSeaOrder("sell")}
+                >
+                  {listingLoading ? "Listing..." : "List on OpenSea"}
+                </Button>
+              </div>
+            )}
+            {account?.address && !isViewerOwner && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  inputMode="decimal"
+                  placeholder="Offer price in ETH"
+                  value={offerPrice}
+                  onChange={event => setOfferPrice(event.target.value)}
+                />
+                <Button
+                  disabled={offerLoading || !offerPrice}
+                  onClick={() => handleOpenSeaOrder("buy")}
+                >
+                  {offerLoading ? "Submitting..." : "Make Offer"}
+                </Button>
               </div>
             )}
           </div>
