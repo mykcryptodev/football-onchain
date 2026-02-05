@@ -21,7 +21,13 @@ import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
 import { SwapModal } from "./SwapModal";
-import { BoxOwner, Contest, GameScore, PayoutStrategyType } from "./types";
+import {
+  BoxOwner,
+  Contest,
+  GameScore,
+  OpenSeaListing,
+  PayoutStrategyType,
+} from "./types";
 
 interface FootballGridProps {
   contest: Contest;
@@ -32,6 +38,7 @@ interface FootballGridProps {
   onClaimedBoxClick?: (address: string, tokenId: number) => void;
   onClaimBoxes?: () => void;
   isClaimingBoxes?: boolean;
+  listings?: Map<number, OpenSeaListing>;
 }
 
 function ClaimedBoxAvatar({ owner }: { owner: string }) {
@@ -43,7 +50,10 @@ function ClaimedBoxAvatar({ owner }: { owner: string }) {
       <AccountProvider address={owner} client={client}>
         <AccountAvatar
           fallbackComponent={
-            <Blobbie address={owner} className="size-6 sm:size-8 rounded-full" />
+            <Blobbie
+              address={owner}
+              className="size-6 sm:size-8 rounded-full"
+            />
           }
           style={{
             width: "clamp(24px, 5vw, 32px)",
@@ -76,6 +86,7 @@ export function FootballGrid({
   onClaimedBoxClick,
   onClaimBoxes,
   isClaimingBoxes = false,
+  listings,
 }: FootballGridProps) {
   const account = useActiveAccount();
   const currentUserAddress = account?.address?.toLowerCase();
@@ -104,19 +115,19 @@ export function FootballGrid({
 
   const { data: walletBalance, refetch: refetchWalletBalance } =
     useWalletBalance(
-    {
-      address: account?.address,
-      chain,
-      client,
-      tokenAddress:
-        contest.boxCost.currency.toLowerCase() === ZERO_ADDRESS.toLowerCase()
-          ? undefined
-          : contest.boxCost.currency,
-    },
-    {
-      enabled: Boolean(account?.address),
-    },
-  );
+      {
+        address: account?.address,
+        chain,
+        client,
+        tokenAddress:
+          contest.boxCost.currency.toLowerCase() === ZERO_ADDRESS.toLowerCase()
+            ? undefined
+            : contest.boxCost.currency,
+      },
+      {
+        enabled: Boolean(account?.address),
+      },
+    );
   const { start: startBalanceRefresh } = useBalanceRefresh({
     refetch: refetchWalletBalance,
   });
@@ -360,16 +371,22 @@ export function FootballGrid({
                     box.owner !== ZERO_ADDRESS &&
                     isRealUser(box.owner);
 
-                  // Check if this is the current user's box
                   const isMyBox =
                     currentUserAddress &&
                     box?.owner &&
                     box.owner.toLowerCase() === currentUserAddress;
 
-                  // Determine border color - green for winners, default for others
+                  const isForSale = listings?.has(expectedTokenId) ?? false;
+
                   const borderColor = isWinner
                     ? "border-emerald-400 dark:border-emerald-500"
                     : "border-border";
+
+                  const ringStyle = isForSale
+                    ? "ring-2 ring-amber-400/80"
+                    : isMyBox
+                      ? "ring-2 ring-sky-400/80"
+                      : "";
 
                   return (
                     <div
@@ -385,8 +402,8 @@ export function FootballGrid({
                                box?.owner,
                              )
                        }
-                       ${isClaimedByUser && !isWinner && !isMyBox ? "cursor-pointer hover:bg-muted/70" : ""}
-                       ${isMyBox ? "ring-2 ring-sky-400/80" : ""}
+                       ${isClaimedByUser && !isWinner && !isMyBox && !isForSale ? "cursor-pointer hover:bg-muted/70" : ""}
+                       ${ringStyle}
                      `}
                       onClick={() => {
                         if (isClaimedByUser && onClaimedBoxClick && box) {
@@ -396,11 +413,15 @@ export function FootballGrid({
                         }
                       }}
                     >
-                      {isMyBox && (
+                      {isForSale ? (
+                        <span className="absolute right-0.5 top-0.5 rounded-full bg-amber-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                          Sale
+                        </span>
+                      ) : isMyBox ? (
                         <span className="absolute right-0.5 top-0.5 rounded-full bg-sky-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
                           You
                         </span>
-                      )}
+                      ) : null}
                       {!isClaimedByUser && (
                         <div className="font-mono text-[10px] sm:text-xs">
                           {boxPosition}

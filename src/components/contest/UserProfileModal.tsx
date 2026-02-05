@@ -1,15 +1,13 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import Link from "next/link";
-import { baseSepolia } from "thirdweb/chains";
+import { useState } from "react";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { boxes, chain } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useTeamColors } from "@/hooks/useTeamColors";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -22,7 +20,15 @@ import {
 import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
 
-import { Contest, GameScore, PayoutStrategyType, ScoringPlay } from "./types";
+import { BuyBoxSection } from "./BuyBoxSection";
+import { SellBoxForm } from "./SellBoxForm";
+import {
+  Contest,
+  GameScore,
+  OpenSeaListing,
+  PayoutStrategyType,
+  ScoringPlay,
+} from "./types";
 
 interface UserProfileModalProps {
   address: string | null;
@@ -32,6 +38,7 @@ interface UserProfileModalProps {
   gameScore?: GameScore | null;
   boxTokenId?: number | null;
   currentUserAddress?: string | null;
+  listing?: OpenSeaListing | null;
 }
 
 export function UserProfileModal({
@@ -42,7 +49,9 @@ export function UserProfileModal({
   gameScore,
   boxTokenId,
   currentUserAddress,
+  listing,
 }: UserProfileModalProps) {
+  const [showSellForm, setShowSellForm] = useState(false);
   const { profile, isLoading: profileLoading } = useUserProfile(address);
   // Calculate prize amounts for quarters and scoring plays
   const getPrizeAmounts = () => {
@@ -365,15 +374,7 @@ export function UserProfileModal({
     currentUserAddress &&
     currentUserAddress.toLowerCase() === address.toLowerCase();
   const canViewProfile = profile?.farcasterUsername || profile?.fid;
-  const openseaBaseUrl =
-    chain.id === baseSepolia.id
-      ? "https://testnets.opensea.io"
-      : "https://opensea.io";
-  const chainSlug = chain.id === baseSepolia.id ? "base-sepolia" : "base";
-  const openseaBoxUrl = `${openseaBaseUrl}/assets/${chainSlug}/${
-    boxes[chain.id]
-  }/${boxTokenId}`;
-  const showSellBox = isViewerOwner && Boolean(openseaBoxUrl);
+  const isForSale = listing !== undefined && listing !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -432,35 +433,56 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
-                    {(canViewProfile || showSellBox) && (
-                      <div className="mt-2 flex justify-end gap-2">
-                        {showSellBox && (
-                          <Button asChild size="sm" variant="outline">
-                            <Link
-                              href={openseaBoxUrl}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              Sell Box
-                            </Link>
-                          </Button>
-                        )}
-                        {canViewProfile && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleViewProfile}
-                          >
-                            View Profile
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                    <div className="mt-2 flex justify-end gap-2">
+                      {isViewerOwner && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowSellForm(!showSellForm)}
+                        >
+                          {showSellForm
+                            ? "Hide"
+                            : listing
+                              ? "Manage Listing"
+                              : "Sell Box"}
+                        </Button>
+                      )}
+                      {canViewProfile && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleViewProfile}
+                        >
+                          View Profile
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
             </div>
           </div>
+
+          {/* Marketplace Section */}
+          {contest && boxTokenId !== null && boxTokenId !== undefined && (
+            <div className="border-t pt-4">
+              {isViewerOwner && showSellForm ? (
+                <SellBoxForm
+                  contestId={contest.id}
+                  existingListing={listing}
+                  tokenId={boxTokenId}
+                  onSuccess={() => onOpenChange(false)}
+                />
+              ) : isForSale && listing ? (
+                <BuyBoxSection
+                  contestId={contest.id}
+                  currentUserAddress={currentUserAddress ?? undefined}
+                  listing={listing}
+                  onSuccess={() => onOpenChange(false)}
+                />
+              ) : null}
+            </div>
+          )}
 
           {/* Box Value - With Team Icons and Abbreviations */}
           <div className="text-center py-4">

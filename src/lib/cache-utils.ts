@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { chain } from "@/constants";
 
 import { queryKeys } from "./query-keys";
-import { getContestCacheKey, redis } from "./redis";
+import { getContestCacheKey, getListingsCacheKey, redis } from "./redis";
 
 /**
  * Invalidate contest cache by contest ID (Redis only)
@@ -80,9 +80,6 @@ export async function getContestFromCache(
   return await redis.get(cacheKey);
 }
 
-/**
- * Set contest data in cache with default TTL
- */
 export async function setContestInCache(
   contestId: string,
   data: unknown,
@@ -91,5 +88,43 @@ export async function setContestInCache(
   if (!redis) return;
 
   const cacheKey = getContestCacheKey(contestId, chainId);
-  await redis.setex(cacheKey, 3600, data); // 1 hour TTL
+  await redis.setex(cacheKey, 3600, data);
+}
+
+export async function invalidateListingsCache(
+  contestId: string,
+  queryClient: QueryClient,
+  chainId: number = chain.id,
+): Promise<void> {
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:99",message:"invalidateListingsCache called",data:{ contestId,chainId },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"C" }) }).catch(()=>{});
+  // #endregion
+  const refreshResponse = await fetch(`/api/opensea/listings/${contestId}/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chainId }),
+  });
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:107",message:"Redis refresh response",data:{ contestId,status:refreshResponse.status,ok:refreshResponse.ok },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"C" }) }).catch(()=>{});
+  // #endregion
+
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:112",message:"Before invalidateQueries",data:{ contestId,queryKey:queryKeys.boxListings(contestId) },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+  // #endregion
+  await queryClient.invalidateQueries({
+    queryKey: queryKeys.boxListings(contestId),
+  });
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:118",message:"After invalidateQueries completed",data:{ contestId },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+  // #endregion
+}
+
+export async function invalidateListingsRedisCache(
+  contestId: string,
+  chainId?: number,
+): Promise<void> {
+  if (!redis) return;
+
+  const cacheKey = getListingsCacheKey(contestId, chainId);
+  await redis.del(cacheKey);
 }

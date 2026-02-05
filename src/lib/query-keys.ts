@@ -1,11 +1,12 @@
 import { chain } from "@/constants";
 
 export const queryKeys = {
-  // Contest data
   contest: (contestId: string) => ["contest", chain.id, contestId] as const,
   gameScores: (gameId: string) => ["gameScores", gameId] as const,
   gameDetails: (gameId: string) => ["gameDetails", gameId] as const,
   boxesContests: () => ["boxesContests", chain.id] as const,
+  boxListings: (contestId: string) =>
+    ["boxListings", chain.id, contestId] as const,
 
   // Comments
   comments: (contestId: string) => ["comments", contestId] as const,

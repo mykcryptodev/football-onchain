@@ -94,3 +94,55 @@ export interface BoxOwner {
   row: number;
   col: number;
 }
+
+// OpenSea Listing Types
+// For Sale styling: ring-amber-400/80 (ring), bg-amber-500 (badge)
+
+export interface OpenSeaListingPrice {
+  current: {
+    currency: string;
+    decimals: number;
+    value: string; // Price in wei
+  };
+}
+
+export interface OpenSeaListingMaker {
+  address: string;
+}
+
+export interface OpenSeaListing {
+  order_hash: string;
+  chain: string;
+  type: string;
+  price: OpenSeaListingPrice;
+  protocol_address: string;
+  protocol_data: {
+    parameters: {
+      offerer: string;
+      zone: string;
+      offer: Array<{
+        itemType: number;
+        token: string;
+        identifierOrCriteria: string;
+        startAmount: string;
+        endAmount: string;
+      }>;
+      consideration: Array<{
+        itemType: number;
+        token: string;
+        identifierOrCriteria: string;
+        startAmount: string;
+        endAmount: string;
+        recipient: string;
+      }>;
+      startTime: string;
+      endTime: string;
+    };
+    signature: string;
+  };
+  maker: OpenSeaListingMaker;
+  taker: OpenSeaListingMaker | null;
+  expiration_time: number;
+  remaining_quantity: number;
+  status: string;
+}

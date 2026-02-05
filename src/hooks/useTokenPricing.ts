@@ -29,7 +29,26 @@ export function useTokenPricing(tokenAddress: string): UseTokenPricingResult {
       }
 
       if (lowerAddress === ZERO_ADDRESS.toLowerCase()) {
-        return null;
+        const ethResponse = await fetch(
+          `/api/tokens?chainId=${chain.id}&name=ETH`,
+        );
+
+        if (!ethResponse.ok) {
+          console.warn("Failed to fetch ETH price");
+          return { priceUsd: 0, decimals: 18 };
+        }
+
+        const ethData: TokensResponse = await ethResponse.json();
+        const ethToken = ethData.result.tokens[0];
+
+        if (!ethToken) {
+          return { priceUsd: 0, decimals: 18 };
+        }
+
+        return {
+          priceUsd: ethToken.priceUsd,
+          decimals: 18,
+        };
       }
 
       const response = await fetch(
