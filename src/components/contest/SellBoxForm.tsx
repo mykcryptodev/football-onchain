@@ -35,8 +35,6 @@ export function SellBoxForm({
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState<ListingCurrency>("ETH");
   const [durationDays, setDurationDays] = useState("7");
-  const [buyerAddress, setBuyerAddress] = useState("");
-  const [showPrivateListing, setShowPrivateListing] = useState(false);
 
   const {
     createListing,
@@ -70,7 +68,6 @@ export function SellBoxForm({
         currency,
         contestId,
         durationDays: parseInt(durationDays),
-        buyerAddress: buyerAddress || undefined,
       });
       onSuccess?.();
     } catch (err) {
@@ -181,28 +178,6 @@ export function SellBoxForm({
                 <SelectItem value="30">30 Days</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Button
-              className="h-auto p-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-              size="sm"
-              type="button"
-              variant="ghost"
-              onClick={() => setShowPrivateListing(!showPrivateListing)}
-            >
-              {showPrivateListing ? "−" : "+"} Reserve for specific buyer
-            </Button>
-
-            {showPrivateListing && (
-              <Input
-                className="font-mono text-xs"
-                disabled={isPending}
-                placeholder="Buyer Address (0x...)"
-                value={buyerAddress}
-                onChange={e => setBuyerAddress(e.target.value)}
-              />
-            )}
           </div>
 
           {error && (
