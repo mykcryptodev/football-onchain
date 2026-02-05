@@ -19,6 +19,7 @@ import {
 } from "@/components/contest";
 import { chain, contests } from "@/constants";
 import { isMiniAppAdded } from "@/hooks/useAddMiniApp";
+import { useBoxListings } from "@/hooks/useBoxListings";
 import { useClaimBoxes } from "@/hooks/useClaimBoxes";
 import { useContestData } from "@/hooks/useContestData";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
@@ -41,6 +42,9 @@ export default function ContestPage() {
 
   // Fetch game details for additional game information
   const { data: gameDetails } = useGameDetails(contest?.gameId);
+
+  // Fetch OpenSea listings for this contest
+  const { listings } = useBoxListings(contestId);
 
   // Local UI state
   const [selectedBoxes, setSelectedBoxes] = useState<number[]>([]);
@@ -223,6 +227,7 @@ export default function ContestPage() {
               contest={contest}
               gameScore={gameScore}
               isClaimingBoxes={isClaimingBoxes}
+              listings={listings}
               selectedBoxes={selectedBoxes}
               onBoxClick={handleBoxClick}
               onClaimBoxes={handleClaimBoxes}
@@ -268,6 +273,7 @@ export default function ContestPage() {
         contest={contest}
         currentUserAddress={account?.address ?? null}
         gameScore={gameScore}
+        listing={selectedBoxTokenId ? listings.get(selectedBoxTokenId) : null}
         open={isProfileModalOpen}
         onOpenChange={open => {
           setIsProfileModalOpen(open);

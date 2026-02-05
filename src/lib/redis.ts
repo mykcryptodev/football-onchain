@@ -41,13 +41,18 @@ export const getGameDetailsCacheKey = (gameId: string) => {
   return `game-details:${gameId}`;
 };
 
-// Cache TTL constants
+export const getListingsCacheKey = (contestId: string, chainId?: number) => {
+  const currentChainId = chainId || chain.id;
+  return `opensea:listings:${currentChainId}:${contestId}`;
+};
+
 export const CACHE_TTL = {
-  CONTEST: 3600, // 1 hour in seconds
-  CONTESTS_LIST: 300, // 5 minutes in seconds
-  USER_PROFILE: 900, // 15 minutes in seconds
-  USER_BIO: 86400, // 24 hours in seconds - heavily cached
-  GAME_DETAILS: 300, // 5 minutes in seconds
+  CONTEST: 3600,
+  CONTESTS_LIST: 300,
+  USER_PROFILE: 900,
+  USER_BIO: 86400,
+  GAME_DETAILS: 300,
+  OPENSEA_LISTINGS: 300,
 } as const;
 
 /**

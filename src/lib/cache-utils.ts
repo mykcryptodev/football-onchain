@@ -3,7 +3,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { chain } from "@/constants";
 
 import { queryKeys } from "./query-keys";
-import { getContestCacheKey, redis } from "./redis";
+import { getContestCacheKey, getListingsCacheKey, redis } from "./redis";
 
 /**
  * Invalidate contest cache by contest ID (Redis only)
@@ -80,9 +80,6 @@ export async function getContestFromCache(
   return await redis.get(cacheKey);
 }
 
-/**
- * Set contest data in cache with default TTL
- */
 export async function setContestInCache(
   contestId: string,
   data: unknown,
@@ -91,5 +88,31 @@ export async function setContestInCache(
   if (!redis) return;
 
   const cacheKey = getContestCacheKey(contestId, chainId);
-  await redis.setex(cacheKey, 3600, data); // 1 hour TTL
+  await redis.setex(cacheKey, 3600, data);
+}
+
+export async function invalidateListingsCache(
+  contestId: string,
+  queryClient: QueryClient,
+  chainId: number = chain.id,
+): Promise<void> {
+  await fetch(`/api/opensea/listings/${contestId}/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chainId }),
+  });
+
+  await queryClient.invalidateQueries({
+    queryKey: queryKeys.boxListings(contestId),
+  });
+}
+
+export async function invalidateListingsRedisCache(
+  contestId: string,
+  chainId?: number,
+): Promise<void> {
+  if (!redis) return;
+
+  const cacheKey = getListingsCacheKey(contestId, chainId);
+  await redis.del(cacheKey);
 }
