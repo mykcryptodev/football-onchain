@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { chain } from "@/constants";
 import {
   getCancelledOrdersKey,
+  getContestCacheKey,
   getListingsCacheKey,
   redis,
   safeRedisOperation,
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest) {
 
     const listingsCacheKey = getListingsCacheKey(contestId, chainId);
     await safeRedisOperation(() => redis!.del(listingsCacheKey), null);
+
+    const contestCacheKey = getContestCacheKey(contestId, chainId);
+    await safeRedisOperation(() => redis!.del(contestCacheKey), null);
 
     return NextResponse.json({ success: true });
   } catch (error) {
