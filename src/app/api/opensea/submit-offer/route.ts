@@ -26,30 +26,39 @@ export async function POST(request: NextRequest) {
       signature,
       protocol_data: protocolData,
       parameters,
+      listing,
     } = body ?? {};
 
-    if (
-      !signature ||
-      (side !== "buy" && side !== "sell") ||
-      (!protocolData && !parameters)
-    ) {
+    if (!signature || (side !== "buy" && side !== "sell")) {
       return NextResponse.json(
         { error: "Missing required fields for OpenSea order submission." },
         { status: 400 },
       );
     }
 
+    if (side === "sell" && !listing && !parameters && !protocolData?.parameters) {
+      return NextResponse.json(
+        { error: "Missing listing parameters for OpenSea listing submission." },
+        { status: 400 },
+      );
+    }
+
+    if (side === "buy" && !protocolData) {
+      return NextResponse.json(
+        { error: "Missing protocol data for OpenSea offer submission." },
+        { status: 400 },
+      );
+    }
+
     const endpoint =
-      side === "sell"
-        ? `orders/${getOpenSeaChain()}/seaport/listings`
-        : `orders/${getOpenSeaChain()}/seaport/offers`;
+      side === "sell" ? "listings" : `orders/${getOpenSeaChain()}/seaport/offers`;
 
     const submissionPayload =
       side === "sell"
-        ? {
+        ? (listing ?? {
             parameters: parameters ?? protocolData?.parameters,
             signature,
-          }
+          })
         : {
             protocol_data: protocolData,
             signature,
