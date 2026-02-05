@@ -6,6 +6,7 @@ import { OpenSeaListing } from "@/components/contest/types";
 import { boxes, chain } from "@/constants";
 import {
   CACHE_TTL,
+  getCancelledOrdersKey,
   getListingsCacheKey,
   redis,
   safeRedisOperation,
@@ -48,10 +49,12 @@ async function checkOrderValid(orderHash: string): Promise<boolean> {
       params: [orderHash as `0x${string}`],
     });
 
-    const [, isCancelled, totalFilled, totalSize] = result;
+    const [isValidated, isCancelled, totalFilled, totalSize] = result;
     const isFullyFilled = totalSize > BigInt(0) && totalFilled >= totalSize;
+    const isValid = !isCancelled && !isFullyFilled;
 
-    return !isCancelled && !isFullyFilled;
+
+    return isValid;
   } catch (error) {
     console.error(`Failed to check order status for ${orderHash}:`, error);
     return true;
@@ -63,8 +66,36 @@ async function filterValidListings(
 ): Promise<OpenSeaListing[]> {
   if (listings.length === 0) return [];
 
+  // Get all cancelled order hashes from Redis
+  const cancelledOrdersKey = getCancelledOrdersKey();
+  const cancelledOrders =
+    (await safeRedisOperation(() => redis?.smembers(cancelledOrdersKey), [])) ||
+    [];
+  const cancelledSet = new Set(cancelledOrders.map((h) => h.toLowerCase()));
+
+  // Filter and check remaining orders
   const statusChecks = await Promise.all(
-    listings.map(listing => checkOrderValid(listing.order_hash)),
+    listings.map(async (listing) => {
+      const hashLower = listing.order_hash.toLowerCase();
+
+      // Check Redis first - if marked cancelled, skip on-chain check
+      if (cancelledSet.has(hashLower)) {
+        return false;
+      }
+
+      // Check on-chain status
+      const isValid = await checkOrderValid(listing.order_hash);
+
+      // If on-chain says cancelled, add to Redis for future requests
+      if (!isValid && redis) {
+        await safeRedisOperation(
+          () => redis.sadd(cancelledOrdersKey, hashLower),
+          null,
+        );
+      }
+
+      return isValid;
+    }),
   );
 
   return listings.filter((_, index) => statusChecks[index]);

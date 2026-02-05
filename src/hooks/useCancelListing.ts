@@ -8,7 +8,6 @@ import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 
 import { OpenSeaListing } from "@/components/contest/types";
 import { chain } from "@/constants";
-import { invalidateListingsCache } from "@/lib/cache-utils";
 import { queryKeys } from "@/lib/query-keys";
 import { client } from "@/providers/Thirdweb";
 
@@ -87,23 +86,46 @@ export function useCancelListing(): UseCancelListingReturn {
 
       await sendTransaction(tx);
 
+
+      // Notify server to mark order as cancelled in Redis
+      try {
+        await fetch("/api/opensea/orders/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderHash: listing.order_hash,
+            contestId: contestId.toString(),
+            chainId: chain.id,
+          }),
+        });
+      } catch (error) {
+        console.warn("Failed to notify server of cancellation:", error);
+        // Don't throw - the optimistic update will still work
+      }
+
       queryClient.setQueryData(
         queryKeys.boxListings(contestId.toString()),
         (
           oldData: { listings: OpenSeaListing[]; cached: boolean } | undefined,
         ) => {
           if (!oldData) return oldData;
+          const filteredListings = oldData.listings.filter(
+            l =>
+              l.order_hash.toLowerCase() !== listing.order_hash.toLowerCase(),
+          );
           return {
             ...oldData,
-            listings: oldData.listings.filter(
-              l =>
-                l.order_hash.toLowerCase() !== listing.order_hash.toLowerCase(),
-            ),
+            listings: filteredListings,
           };
         },
       );
 
-      await invalidateListingsCache(contestId.toString(), queryClient);
+      // NOTE: We intentionally do NOT call invalidateListingsCache here.
+      // The optimistic update above already removed the listing from the cache.
+      // Calling invalidateQueries would trigger an immediate refetch, and the
+      // RPC node may return stale data (isCancelled=false) due to blockchain
+      // propagation delay, which would overwrite our correct optimistic update.
+      // The 30-second background refetch will eventually sync the state.
     },
     onError: err => {
       const error =

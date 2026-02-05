@@ -46,6 +46,11 @@ export const getListingsCacheKey = (contestId: string, chainId?: number) => {
   return `opensea:listings:${currentChainId}:${contestId}`;
 };
 
+export const getCancelledOrdersKey = (chainId?: number) => {
+  const currentChainId = chainId || chain.id;
+  return `cancelled:orders:${currentChainId}`;
+};
+
 export const CACHE_TTL = {
   CONTEST: 3600,
   CONTESTS_LIST: 300,
