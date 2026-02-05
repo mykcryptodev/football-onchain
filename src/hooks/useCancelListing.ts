@@ -63,13 +63,13 @@ export function useCancelListing(): UseCancelListingReturn {
           BigInt(item.endAmount),
           item.recipient,
         ]),
-        0,
+        orderParams.orderType,
         BigInt(orderParams.startTime),
         BigInt(orderParams.endTime),
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        BigInt(orderParams.startTime),
-        "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-        BigInt(0),
+        orderParams.zoneHash,
+        BigInt(orderParams.salt),
+        orderParams.conduitKey,
+        BigInt(orderParams.counter),
       ];
 
       const iface = new ethers.Interface(SEAPORT_CANCEL_ABI);
@@ -85,7 +85,6 @@ export function useCancelListing(): UseCancelListingReturn {
       });
 
       await sendTransaction(tx);
-
 
       // Notify server to mark order as cancelled in Redis
       try {

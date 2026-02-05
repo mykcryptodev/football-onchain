@@ -135,8 +135,14 @@ export interface OpenSeaListing {
         endAmount: string;
         recipient: string;
       }>;
+      orderType: number;
       startTime: string;
       endTime: string;
+      zoneHash: string;
+      salt: string;
+      conduitKey: string;
+      counter: string;
+      totalOriginalConsiderationItems: number;
     };
     signature: string;
   };
