@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { chain, usdc } from "@/constants";
 import { useCancelListing } from "@/hooks/useCancelListing";
 import { ListingCurrency, useCreateListing } from "@/hooks/useCreateListing";
 import { useTokenPricing } from "@/hooks/useTokenPricing";
@@ -33,8 +32,8 @@ export function SellBoxForm({
   onSuccess,
 }: SellBoxFormProps) {
   const [price, setPrice] = useState("");
-  const [currency, setCurrency] = useState<ListingCurrency>("ETH");
   const [durationDays, setDurationDays] = useState("7");
+  const currency: ListingCurrency = "ETH";
 
   const {
     createListing,
@@ -48,14 +47,9 @@ export function SellBoxForm({
     error: cancelError,
   } = useCancelListing();
 
-  const { pricing } = useTokenPricing(
-    currency === "ETH" ? ZERO_ADDRESS : usdc[chain.id] || "",
-  );
+  const { pricing } = useTokenPricing(ZERO_ADDRESS);
 
-  const usdValue =
-    currency === "USDC"
-      ? parseFloat(price || "0")
-      : parseFloat(price || "0") * (pricing?.priceUsd || 0);
+  const usdValue = parseFloat(price || "0") * (pricing?.priceUsd || 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,7 +123,7 @@ export function SellBoxForm({
                   className="font-mono"
                   disabled={isPending}
                   min="0"
-                  placeholder="Price"
+                  placeholder="Price in ETH"
                   step="0.000001"
                   type="number"
                   value={price}
@@ -140,44 +134,32 @@ export function SellBoxForm({
                   }}
                 />
               </div>
-              <Select
-                disabled={isPending}
-                value={currency}
-                onValueChange={(v: ListingCurrency) => setCurrency(v)}
-              >
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ETH">ETH</SelectItem>
-                  <SelectItem value="USDC">USDC</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col">
+                <label className="text-xs text-muted-foreground mb-1">
+                  Expires
+                </label>
+                <Select
+                  disabled={isPending}
+                  value={durationDays}
+                  onValueChange={setDurationDays}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 Day</SelectItem>
+                    <SelectItem value="3">3 Days</SelectItem>
+                    <SelectItem value="7">7 Days</SelectItem>
+                    <SelectItem value="30">30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {price && !isNaN(parseFloat(price)) && (
               <p className="text-right text-xs text-muted-foreground">
                 ≈ ${usdValue.toFixed(2)} USD
               </p>
             )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Duration</label>
-            <Select
-              disabled={isPending}
-              value={durationDays}
-              onValueChange={setDurationDays}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Day</SelectItem>
-                <SelectItem value="3">3 Days</SelectItem>
-                <SelectItem value="7">7 Days</SelectItem>
-                <SelectItem value="30">30 Days</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {error && (
