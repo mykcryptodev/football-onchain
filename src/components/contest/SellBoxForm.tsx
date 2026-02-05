@@ -118,12 +118,15 @@ export function SellBoxForm({
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <div className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 flex flex-col">
+                <label className="text-xs text-muted-foreground mb-1">
+                  Price in ETH
+                </label>
                 <Input
                   className="font-mono"
                   disabled={isPending}
                   min="0"
-                  placeholder="Price in ETH"
+                  placeholder="ETH"
                   step="0.000001"
                   type="number"
                   value={price}
