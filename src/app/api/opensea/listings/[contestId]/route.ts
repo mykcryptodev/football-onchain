@@ -53,7 +53,6 @@ async function checkOrderValid(orderHash: string): Promise<boolean> {
     const isFullyFilled = totalSize > BigInt(0) && totalFilled >= totalSize;
     const isValid = !isCancelled && !isFullyFilled;
 
-
     return isValid;
   } catch (error) {
     console.error(`Failed to check order status for ${orderHash}:`, error);
@@ -69,13 +68,13 @@ async function filterValidListings(
   // Get all cancelled order hashes from Redis
   const cancelledOrdersKey = getCancelledOrdersKey();
   const cancelledOrders =
-    (await safeRedisOperation(() => redis?.smembers(cancelledOrdersKey), [])) ||
+    (await safeRedisOperation(() => redis!.smembers(cancelledOrdersKey), [])) ||
     [];
-  const cancelledSet = new Set(cancelledOrders.map((h) => h.toLowerCase()));
+  const cancelledSet = new Set(cancelledOrders.map(h => h.toLowerCase()));
 
   // Filter and check remaining orders
   const statusChecks = await Promise.all(
-    listings.map(async (listing) => {
+    listings.map(async listing => {
       const hashLower = listing.order_hash.toLowerCase();
 
       // Check Redis first - if marked cancelled, skip on-chain check
@@ -89,7 +88,7 @@ async function filterValidListings(
       // If on-chain says cancelled, add to Redis for future requests
       if (!isValid && redis) {
         await safeRedisOperation(
-          () => redis.sadd(cancelledOrdersKey, hashLower),
+          () => redis!.sadd(cancelledOrdersKey, hashLower),
           null,
         );
       }

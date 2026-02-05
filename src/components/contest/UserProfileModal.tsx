@@ -1,6 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
+import { useState } from "react";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +51,7 @@ export function UserProfileModal({
   currentUserAddress,
   listing,
 }: UserProfileModalProps) {
+  const [showSellForm, setShowSellForm] = useState(false);
   const { profile, isLoading: profileLoading } = useUserProfile(address);
   // Calculate prize amounts for quarters and scoring plays
   const getPrizeAmounts = () => {
@@ -431,8 +433,21 @@ export function UserProfileModal({
                         Farcaster ID: {profile.fid}
                       </div>
                     )}
-                    {canViewProfile && (
-                      <div className="mt-2 flex justify-end">
+                    <div className="mt-2 flex justify-end gap-2">
+                      {isViewerOwner && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowSellForm(!showSellForm)}
+                        >
+                          {showSellForm
+                            ? "Hide"
+                            : listing
+                              ? "Manage Listing"
+                              : "Sell Box"}
+                        </Button>
+                      )}
+                      {canViewProfile && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -440,8 +455,8 @@ export function UserProfileModal({
                         >
                           View Profile
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -451,7 +466,7 @@ export function UserProfileModal({
           {/* Marketplace Section */}
           {contest && boxTokenId !== null && boxTokenId !== undefined && (
             <div className="border-t pt-4">
-              {isViewerOwner ? (
+              {isViewerOwner && showSellForm ? (
                 <SellBoxForm
                   contestId={contest.id}
                   existingListing={listing}

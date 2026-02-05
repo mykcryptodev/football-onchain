@@ -44,13 +44,13 @@ export async function POST(request: NextRequest) {
     const orderHashLower = orderHash.toLowerCase();
 
     await safeRedisOperation(
-      () => redis.sadd(cancelledOrdersKey, orderHashLower),
+      () => redis!.sadd(cancelledOrdersKey, orderHashLower),
       null,
     );
 
     // Delete the listings cache for this contest to force a refresh
     const listingsCacheKey = getListingsCacheKey(contestId, chainId);
-    await safeRedisOperation(() => redis.del(listingsCacheKey), null);
+    await safeRedisOperation(() => redis!.del(listingsCacheKey), null);
 
     return NextResponse.json({ success: true });
   } catch (error) {

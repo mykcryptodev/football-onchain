@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ethers } from "ethers";
 import { useState } from "react";
 import { getContract, readContract } from "thirdweb";
+import { ethers6Adapter } from "thirdweb/adapters/ethers6";
 import { setApprovalForAll } from "thirdweb/extensions/erc721";
 import { useActiveAccount, useSendAndConfirmTransaction } from "thirdweb/react";
 
@@ -39,12 +40,6 @@ const OPENSEA_CONDUIT_KEY =
 const OPENSEA_FEE_RECIPIENT = "0x0000a26b00c1F0DF003000390027140000fAa719";
 const OPENSEA_FEE_BPS = 100; // 1% (100 basis points)
 
-declare global {
-  interface Window {
-    ethereum?: ethers.Eip1193Provider;
-  }
-}
-
 export function useCreateListing(): UseCreateListingReturn {
   const account = useActiveAccount();
   const queryClient = useQueryClient();
@@ -62,10 +57,6 @@ export function useCreateListing(): UseCreateListingReturn {
     mutationFn: async (params: CreateListingParams) => {
       if (!account?.address) {
         throw new Error("No wallet connected");
-      }
-
-      if (typeof window === "undefined" || !window.ethereum) {
-        throw new Error("No wallet provider available");
       }
 
       const {
@@ -99,8 +90,11 @@ export function useCreateListing(): UseCreateListingReturn {
         }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const signer = await ethers6Adapter.signer.toEthers({
+        client,
+        chain,
+        account,
+      });
 
       const seaport = new Seaport(signer, {
         overrides: {
