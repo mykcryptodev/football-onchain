@@ -96,15 +96,27 @@ export async function invalidateListingsCache(
   queryClient: QueryClient,
   chainId: number = chain.id,
 ): Promise<void> {
-  await fetch(`/api/opensea/listings/${contestId}/refresh`, {
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:99",message:"invalidateListingsCache called",data:{ contestId,chainId },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"C" }) }).catch(()=>{});
+  // #endregion
+  const refreshResponse = await fetch(`/api/opensea/listings/${contestId}/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chainId }),
   });
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:107",message:"Redis refresh response",data:{ contestId,status:refreshResponse.status,ok:refreshResponse.ok },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"C" }) }).catch(()=>{});
+  // #endregion
 
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:112",message:"Before invalidateQueries",data:{ contestId,queryKey:queryKeys.boxListings(contestId) },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+  // #endregion
   await queryClient.invalidateQueries({
     queryKey: queryKeys.boxListings(contestId),
   });
+  // #region agent log
+  fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"cache-utils.ts:118",message:"After invalidateQueries completed",data:{ contestId },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+  // #endregion
 }
 
 export async function invalidateListingsRedisCache(

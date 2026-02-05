@@ -39,7 +39,13 @@ export async function POST(
 
   const cacheKey = getListingsCacheKey(contestId, chainId);
   const redisClient = redis;
-  await safeRedisOperation(() => redisClient.del(cacheKey), null);
+  // #region agent log
+  console.log(`[DEBUG] Refresh route: deleting Redis key=${cacheKey}, contestId=${contestId}, chainId=${chainId}`);
+  // #endregion
+  const deleteResult = await safeRedisOperation(() => redisClient.del(cacheKey), null);
+  // #region agent log
+  console.log(`[DEBUG] Refresh route: Redis del result=${deleteResult}`);
+  // #endregion
 
   return NextResponse.json({ refreshed: true });
 }

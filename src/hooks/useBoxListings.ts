@@ -32,11 +32,18 @@ export function useBoxListings(
   const query = useQuery({
     queryKey: queryKeys.boxListings(contestIdStr),
     queryFn: async (): Promise<ListingsResponse> => {
+      // #region agent log
+      fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"useBoxListings.ts:36",message:"queryFn executing fetch",data:{ contestId:contestIdStr },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+      // #endregion
       const response = await fetch(`/api/opensea/listings/${contestIdStr}`);
       if (!response.ok) {
         throw new Error("Failed to fetch listings");
       }
-      return response.json();
+      const data = await response.json();
+      // #region agent log
+      fetch("http://127.0.0.1:7245/ingest/456ee47a-dde0-48bf-94fa-c3805bcf5e6b",{ method:"POST",headers:{ "Content-Type":"application/json" },body:JSON.stringify({ location:"useBoxListings.ts:44",message:"queryFn received data",data:{ contestId:contestIdStr,listingCount:data.listings?.length,cached:data.cached,orderHashes:data.listings?.map((l:OpenSeaListing)=>l.order_hash) },timestamp:Date.now(),sessionId:"debug-session",hypothesisId:"A" }) }).catch(()=>{});
+      // #endregion
+      return data;
     },
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
