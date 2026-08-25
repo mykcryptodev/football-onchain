@@ -263,8 +263,13 @@ export default function CreatePickemForm() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2025">2025</SelectItem>
+              {[new Date().getFullYear() - 1, new Date().getFullYear()].map(
+                year => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
         </div>
