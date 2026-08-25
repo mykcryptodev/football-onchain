@@ -52,5 +52,10 @@ deploy-and-update-oracle :; chmod +x ./scripts/deploy_and_update_oracle.sh && ./
 verify-oracle   :; [ -f .env ] && set -a && source .env && set +a; forge verify-contract $(ADDRESS) contracts/src/GameScoreOracle.sol:GameScoreOracle --chain base --constructor-args $$(cast abi-encode "constructor(address)" 0xf9B8fc078197181C841c296C876945aaa425B278) --watch
 verify-cre-oracle :; [ -f .env ] && set -a && source .env && set +a; forge verify-contract $(ADDRESS) contracts/src/CREScoreOracle.sol:CREScoreOracle --chain base --constructor-args $$(cast abi-encode "constructor(address)" $(or $(FORWARDER),0xF8344CFd5c43616a4366C34E3EEE75af79a74482)) --watch
 deploy-cre-oracle-base :; [ -f .env ] && set -a && source .env && set +a; forge script script/DeployCREScoreOracle.s.sol:DeployCREScoreOracle --rpc-url https://mainnet.base.org --broadcast -vvv
+# Reclaim LINK from sunset Chainlink Functions subscription #6 (Base mainnet)
+# Dry run:  make cancel-clf-subscription-dry SENDER=0x9036464e4ecd2d40d21ee38a0398aedd6805a09b
+# Real run: make cancel-clf-subscription PRIVATE_KEY=0x...
+cancel-clf-subscription-dry :; forge script script/CancelCLFSubscription.s.sol --rpc-url https://mainnet.base.org -vvv
+cancel-clf-subscription :; [ -f .env ] && set -a && source .env && set +a; forge script script/CancelCLFSubscription.s.sol --rpc-url https://mainnet.base.org --broadcast -vvv
 fix-contest-0   :; [ -f .env ] && set -a && source .env && set +a; npx hardhat run scripts/fix_contest_0.ts --network base
 test-oracle-fix :; forge test --match-contract GameScoreOracleSortTest -vvv
