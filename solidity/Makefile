@@ -50,5 +50,7 @@ deploy-fixed-oracle-base :; [ -f .env ] && set -a && source .env && set +a; forg
 deploy-oracle-steps :; ./scripts/deploy_oracle_steps.sh $(CHAINLINK_SUBSCRIPTION_ID)
 deploy-and-update-oracle :; chmod +x ./scripts/deploy_and_update_oracle.sh && ./scripts/deploy_and_update_oracle.sh $(NETWORK) $(CONTESTS_ADDRESS) $(PICKEM_ADDRESS)
 verify-oracle   :; [ -f .env ] && set -a && source .env && set +a; forge verify-contract $(ADDRESS) contracts/src/GameScoreOracle.sol:GameScoreOracle --chain base --constructor-args $$(cast abi-encode "constructor(address)" 0xf9B8fc078197181C841c296C876945aaa425B278) --watch
+verify-cre-oracle :; [ -f .env ] && set -a && source .env && set +a; forge verify-contract $(ADDRESS) contracts/src/CREScoreOracle.sol:CREScoreOracle --chain base --constructor-args $$(cast abi-encode "constructor(address)" $(or $(FORWARDER),0xF8344CFd5c43616a4366C34E3EEE75af79a74482)) --watch
+deploy-cre-oracle-base :; [ -f .env ] && set -a && source .env && set +a; forge script script/DeployCREScoreOracle.s.sol:DeployCREScoreOracle --rpc-url https://mainnet.base.org --broadcast -vvv
 fix-contest-0   :; [ -f .env ] && set -a && source .env && set +a; npx hardhat run scripts/fix_contest_0.ts --network base
 test-oracle-fix :; forge test --match-contract GameScoreOracleSortTest -vvv

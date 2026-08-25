@@ -1,0 +1,16 @@
+{
+  "name": "football-onchain-cre",
+  "version": "1.0.0",
+  "description": "CRE workflow: ESPN NFL scores/results -> CREScoreOracle on Base",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./workflow/main.ts --outfile=./dist/output.wasm --target=wasm",
+    "simulate": "cre workflow simulate ./workflow"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "^1.0.1",
+    "viem": "^2.55.19",
+    "zod": "^3.23.8"
+  }
+}
