@@ -41,9 +41,15 @@ interface IERC20Balance {
 /// timeoutRequests() (all are past their timeoutTimestamp), then cancels the subscription,
 /// sending the remaining LINK to the broadcaster (or RECIPIENT if set).
 ///
-/// The 5 pending commitments below were recovered from the coordinator's OracleRequest
+/// The pending commitment below was recovered from the coordinator's OracleRequest
 /// events (coordinator 0xd93d7778…), with adminFee corrected to the router's own config
-/// value of 0. Each was verified against the router's on-chain commitment hash.
+/// value of 0, and verified against the router's on-chain commitment hash.
+///
+/// HISTORY: the first broadcast run (2026-08-25) timed out 4 of the 5 requests before
+/// dying on the EIP-7702 in-flight tx limit. Those 4 were removed from this script
+/// because forge broadcasts reverted try/catch calls as real transactions and aborts
+/// on the first on-chain revert — the try/catch only helps in simulation. Only the
+/// final remaining request (b765…) is timed out here, then the subscription is cancelled.
 ///
 /// Usage (dry run):
 ///   SENDER=0x9036464e4ecd2d40d21ee38a0398aedd6805a09b forge script script/CancelCLFSubscription.s.sol --rpc-url https://mainnet.base.org -vvv
@@ -109,64 +115,11 @@ contract CancelCLFSubscription is Script {
     }
 
     function _pendingCommitments() internal pure returns (Commitment[] memory c) {
-        c = new Commitment[](5);
+        c = new Commitment[](1);
 
-        // Oracle 0x03C3… (contest-82 game-score requests), 2026-08-25
+        // Consumer2 0x318c…, 2026-08-25 — the only request still pending after the
+        // partial first run cleared the other four.
         c[0] = Commitment({
-            requestId: 0xfa24f051e85bd29bbc20db5d3d67c49a288d45d8978db10e02ab98bbbaf38b62,
-            coordinator: COORDINATOR,
-            estimatedTotalCostJuels: 556916570607749310,
-            client: ORACLE,
-            subscriptionId: SUBSCRIPTION_ID,
-            callbackGasLimit: 300000,
-            adminFee: 0,
-            donFee: 0,
-            gasOverheadBeforeCallback: 163500,
-            gasOverheadAfterCallback: 57000,
-            timeoutTimestamp: 1787622647
-        });
-        c[1] = Commitment({
-            requestId: 0xba3fb863b1100ebc1212d21969e318c75a60300671063baf3faa4f426142eae6,
-            coordinator: COORDINATOR,
-            estimatedTotalCostJuels: 554152010296169105,
-            client: ORACLE,
-            subscriptionId: SUBSCRIPTION_ID,
-            callbackGasLimit: 300000,
-            adminFee: 0,
-            donFee: 0,
-            gasOverheadBeforeCallback: 163500,
-            gasOverheadAfterCallback: 57000,
-            timeoutTimestamp: 1787623447
-        });
-
-        // Consumer2 0x318c…, 2026-08-25
-        c[2] = Commitment({
-            requestId: 0x7dbf72ef5c6c05bbfa6852d410856fe96cabe8287538b0bf297caa5d83876ab1,
-            coordinator: COORDINATOR,
-            estimatedTotalCostJuels: 556933522093715005,
-            client: CONSUMER2,
-            subscriptionId: SUBSCRIPTION_ID,
-            callbackGasLimit: 300000,
-            adminFee: 0,
-            donFee: 0,
-            gasOverheadBeforeCallback: 163500,
-            gasOverheadAfterCallback: 57000,
-            timeoutTimestamp: 1787622185
-        });
-        c[3] = Commitment({
-            requestId: 0x1802811c79556d60666e05fc2b05eb02b0f1b7c2ea8594fb0a2160e3de57cde3,
-            coordinator: COORDINATOR,
-            estimatedTotalCostJuels: 556932591656354404,
-            client: CONSUMER2,
-            subscriptionId: SUBSCRIPTION_ID,
-            callbackGasLimit: 300000,
-            adminFee: 0,
-            donFee: 0,
-            gasOverheadBeforeCallback: 163500,
-            gasOverheadAfterCallback: 57000,
-            timeoutTimestamp: 1787622233
-        });
-        c[4] = Commitment({
             requestId: 0xb76576c78159d3a78fa261157d2043dbc2b56c7718f65e70b714e1fc003b9892,
             coordinator: COORDINATOR,
             estimatedTotalCostJuels: 556917817088521992,
