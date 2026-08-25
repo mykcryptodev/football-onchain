@@ -80,10 +80,16 @@ export default function CreatePickemForm() {
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
   const { tokens, fetchTokens } = useTokens();
+  // NFL seasons span calendar years: Jan/Feb games (playoffs) belong to the
+  // season that started the previous year. Hardcode to the current season year.
+  const currentSeasonYear = (() => {
+    const now = new Date();
+    return now.getFullYear() - (now.getMonth() < 2 ? 1 : 0);
+  })();
   const [formData, setFormData] = useState({
     seasonType: "2",
     weekNumber: "",
-    year: new Date().getFullYear().toString(),
+    year: currentSeasonYear.toString(),
     entryFee: "0.01",
     payoutType: "0",
     customDeadline: "",
@@ -250,25 +256,7 @@ export default function CreatePickemForm() {
   return (
     <div className="space-y-6">
       {/* Season Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label htmlFor="year">Year</Label>
-          <Select
-            value={formData.year}
-            onValueChange={(value: string) =>
-              setFormData({ ...formData, year: value })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2025">2025</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="seasonType">Season Type</Label>
           <Select
