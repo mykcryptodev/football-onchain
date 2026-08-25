@@ -1,0 +1,5 @@
+{
+  "chainSelectorName": "ethereum-mainnet-base-1",
+  "oracleAddress": "0x0000000000000000000000000000000000000000",
+  "gasLimit": "500000"
+}
