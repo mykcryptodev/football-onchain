@@ -6,8 +6,10 @@ import {
   type Address,
   createPublicClient,
   createWalletClient,
+  formatGwei,
   type Hex,
   http,
+  parseGwei,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base } from "viem/chains";
@@ -119,7 +121,23 @@ export async function readWeekResultsFinalized(
 
 // ---------- oracle write ----------
 
+// Optional ceiling on what we'll pay per write. Unset = no cap (viem/RPC
+// default fee estimation, uncapped). Checked against the network's current
+// maxFeePerGas — the same figure viem would otherwise fill in unsupervised.
+async function assertGasPriceUnderCap(): Promise<void> {
+  const capGwei = process.env.ORACLE_MAX_GAS_PRICE_GWEI;
+  if (!capGwei) return;
+  const { maxFeePerGas } = await publicClient.estimateFeesPerGas();
+  const capWei = parseGwei(capGwei);
+  if (maxFeePerGas !== undefined && maxFeePerGas > capWei) {
+    throw new Error(
+      `network gas price ${formatGwei(maxFeePerGas)} gwei exceeds ORACLE_MAX_GAS_PRICE_GWEI cap (${capGwei} gwei) — write skipped`,
+    );
+  }
+}
+
 export async function writeReport(report: Hex): Promise<Hex> {
+  await assertGasPriceUnderCap();
   const { account, client } = getWriterClient();
   const { request } = await publicClient.simulateContract({
     address: oracleAddress,
