@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { chain } from "@/constants";
 
@@ -31,9 +31,12 @@ export function useTokens(initialSearchQuery?: string) {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
+  const latestRequestId = useRef(0);
 
   const fetchTokens = useCallback(
     async (page: number = 1, append: boolean = false) => {
+      const requestId = ++latestRequestId.current;
+
       if (append) {
         setLoadingMore(true);
       } else {
@@ -59,6 +62,11 @@ export function useTokens(initialSearchQuery?: string) {
           const data: TokensResponse = await response.json();
           const newTokens = data.result.tokens;
 
+          // Ignore this response if a newer search/page request has since
+          // been issued — otherwise a slow, now-stale request can resolve
+          // after a faster newer one and clobber its results.
+          if (requestId !== latestRequestId.current) return;
+
           if (append) {
             setTokens(prev => [...prev, ...newTokens]);
           } else {
@@ -76,8 +84,10 @@ export function useTokens(initialSearchQuery?: string) {
         console.error("Error fetching tokens:", error);
         throw error;
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === latestRequestId.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [searchQuery],
