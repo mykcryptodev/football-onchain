@@ -15,6 +15,8 @@ import {
   calculateWeekId,
   ESPN_SUMMARY,
   ESPN_SCOREBOARD,
+  type EspnScoreboard,
+  type EspnSummary,
   fetchJson,
   GAME_SCORES_PARAMS,
   SCORE_CHANGES_PARAMS,
@@ -34,7 +36,7 @@ const check = (label: string, actual: unknown, expected: unknown) => {
 };
 
 // ---- game scores ----
-const summary = await fetchJson(`${ESPN_SUMMARY}?event=${GAME_ID}`);
+const summary = await fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${GAME_ID}`);
 const gsPayload = buildGameScoresPayload(summary, GAME_ID);
 const [
   rt0,
@@ -78,7 +80,7 @@ check("sc packed words", scPacked.length, 1);
 
 // ---- week games (week 2 preseason 2026 = the contest 82 week) ----
 const weekId = calculateWeekId(2026n, 1, 2);
-const scoreboard = await fetchJson(
+const scoreboard = await fetchJson<EspnScoreboard>(
   `${ESPN_SCOREBOARD}?year=2026&seasontype=1&week=2`,
 );
 const wgPayload = buildWeekGamesPayload(scoreboard, weekId);
@@ -98,7 +100,7 @@ check("wg contains contest-82 game", wgPacked.some((w) => {
 
 // ---- week results ----
 const wrPayload = await buildWeekResultsPayload(weekId, scoreboard, (id) =>
-  fetchJson(`${ESPN_SUMMARY}?event=${id}`),
+  fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${id}`),
 );
 const [rt3, wrWeekId, allCompleted, wrCount, packedResults, tbPoints, tbGame] =
   decodeAbiParameters(WEEK_RESULTS_PARAMS, wrPayload);

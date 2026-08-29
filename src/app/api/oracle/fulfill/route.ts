@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { decodeEventLog, type Hex } from "viem";
 
@@ -5,10 +6,10 @@ import { CRE_ORACLE_ABI } from "@/lib/oracle/abi";
 import { notifyError } from "@/lib/oracle/discord";
 import {
   syncGameScore,
+  type SyncResult,
   syncScoreChanges,
   syncWeekGames,
   syncWeekResults,
-  type SyncResult,
 } from "@/lib/oracle/sync";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,11 @@ export const maxDuration = 300;
  * (they pay the request gas; onchain cooldowns rate-limit them).
  * We fulfill by writing the fresh ESPN data — after re-checking onchain
  * state, so duplicate/spam events never cost us a write.
+ *
+ * Auth: thirdweb signs every delivery with the webhook's secret —
+ * header `x-webhook-signature` = HMAC-SHA256 hex of the RAW body.
+ * ORACLE_WEBHOOK_SECRET must be the secret thirdweb shows after
+ * creating the webhook (Project → Tokens → Webhooks).
  */
 
 const EVENT_SIGS: Record<string, "gameScores" | "scoreChanges" | "weekGames" | "weekResults"> = {
@@ -29,14 +35,13 @@ const EVENT_SIGS: Record<string, "gameScores" | "scoreChanges" | "weekGames" | "
   WeekResultsRequested: "weekResults",
 };
 
-function authorized(req: NextRequest): boolean {
+function verifySignature(rawBody: string, signature: string | null): boolean {
   const secret = process.env.ORACLE_WEBHOOK_SECRET;
-  if (!secret) return false;
-  // thirdweb Insight webhooks can carry a shared secret header
-  return (
-    req.headers.get("x-oracle-webhook-secret") === secret ||
-    req.headers.get("authorization") === `Bearer ${secret}`
-  );
+  if (!secret || !signature) return false;
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 interface WebhookLog {
@@ -44,18 +49,33 @@ interface WebhookLog {
   data: Hex;
 }
 
-function extractLogs(body: any): WebhookLog[] {
-  // Tolerate common webhook envelope shapes: single log, array of logs,
-  // or { data: { logs: [...] } } / { logs: [...] } wrappers.
-  if (Array.isArray(body)) return body;
-  if (body?.data?.logs) return body.data.logs;
-  if (body?.logs) return body.logs;
-  if (body?.topics && body?.data) return [body];
+interface InsightEventItem {
+  status?: string;
+  data?: WebhookLog;
+}
+
+function extractLogs(body: unknown): WebhookLog[] {
+  if (Array.isArray(body)) return body as WebhookLog[];
+  if (!body || typeof body !== "object") return [];
+  const b = body as Record<string, unknown>;
+  // thirdweb Insight envelope: { topic: "v1.events", timestamp, data: [{ data: { topics, data, ... }, status, type, id }] }
+  if (b.topic === "v1.events" && Array.isArray(b.data)) {
+    return (b.data as InsightEventItem[])
+      .filter((item) => item?.status === "new" && item?.data?.topics)
+      .map((item) => item.data as WebhookLog);
+  }
+  // Tolerate other shapes: { data: { logs: [...] } } / { logs: [...] } wrappers, single log.
+  const nested = b.data as { logs?: WebhookLog[] } | undefined;
+  if (nested && Array.isArray(nested.logs)) return nested.logs;
+  if (Array.isArray(b.logs)) return b.logs as WebhookLog[];
+  if (Array.isArray(b.topics) && typeof b.data === "string")
+    return [b as unknown as WebhookLog];
   return [];
 }
 
 export async function POST(req: NextRequest) {
-  if (!authorized(req)) {
+  const rawBody = await req.text();
+  if (!verifySignature(rawBody, req.headers.get("x-webhook-signature"))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -63,7 +83,7 @@ export async function POST(req: NextRequest) {
 
   let logs: WebhookLog[];
   try {
-    logs = extractLogs(await req.json());
+    logs = extractLogs(JSON.parse(rawBody));
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

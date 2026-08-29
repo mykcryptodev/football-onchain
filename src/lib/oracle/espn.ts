@@ -24,9 +24,37 @@ export const WEEK_RESULTS_PARAMS = parseAbiParameters(
   "uint8 reportType, uint256 weekId, uint256 allCompleted, uint8 gameCount, uint256 packedResults, uint256 tiebreakerTotalPoints, uint256 tiebreakerGameId",
 );
 
+// Minimal structural types for the ESPN API fields we actually read.
+export interface EspnCompetitor {
+  homeAway: string;
+  score?: string;
+  linescores?: { displayValue?: string }[];
+}
+
+export interface EspnSummary {
+  header: {
+    competitions: {
+      competitors: EspnCompetitor[];
+      status: { type: { completed?: boolean }; period?: number };
+    }[];
+  };
+  scoringPlays?: { homeScore?: number; awayScore?: number }[];
+}
+
+export interface EspnScoreboardEvent {
+  id: string;
+  date: string;
+  competitions: { competitors: EspnCompetitor[] }[];
+  status: { type: { completed?: boolean } };
+}
+
+export interface EspnScoreboard {
+  events?: EspnScoreboardEvent[];
+}
+
 const lastDigit = (n: number): bigint => BigInt(n.toString().slice(-1));
 
-export const fetchJson = async (url: string): Promise<any> => {
+export const fetchJson = async <T = unknown>(url: string): Promise<T> => {
   const resp = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
@@ -36,30 +64,31 @@ export const fetchJson = async (url: string): Promise<any> => {
     cache: "no-store",
   });
   if (!resp.ok) throw new Error(`ESPN HTTP ${resp.status} for ${url}`);
-  return resp.json();
+  return resp.json() as Promise<T>;
 };
 
-export const fetchGameSummary = (gameId: bigint | string) =>
-  fetchJson(`${ESPN_SUMMARY}?event=${gameId}`);
+export const fetchGameSummary = (
+  gameId: bigint | string,
+): Promise<EspnSummary> => fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${gameId}`);
 
 export const fetchWeekScoreboard = (
   year: bigint | number,
   seasonType: number,
   weekNumber: number,
-) =>
-  fetchJson(
+): Promise<EspnScoreboard> =>
+  fetchJson<EspnScoreboard>(
     `${ESPN_SCOREBOARD}?year=${year}&seasontype=${seasonType}&week=${weekNumber}`,
   );
 
 // ---------- game scores (reportType 0) ----------
 
 export const buildGameScoresPayload = (
-  data: any,
+  data: EspnSummary,
   gameId: bigint,
 ): `0x${string}` => {
   const teams = data.header.competitions[0].competitors;
-  const homeTeam = teams.find((t: any) => t.homeAway === "home");
-  const awayTeam = teams.find((t: any) => t.homeAway === "away");
+  const homeTeam = teams.find((t) => t.homeAway === "home");
+  const awayTeam = teams.find((t) => t.homeAway === "away");
   if (!homeTeam || !awayTeam)
     throw new Error("Unable to find home or away team");
 
@@ -115,7 +144,7 @@ export const buildGameScoresPayload = (
 // ---------- score changes (reportType 1) ----------
 
 export const buildScoreChangesPayload = (
-  data: any,
+  data: EspnSummary,
   gameId: bigint,
 ): `0x${string}` => {
   const scoreChanges = data.scoringPlays || [];
@@ -141,10 +170,10 @@ export const buildScoreChangesPayload = (
 // ---------- week games (reportType 2) ----------
 
 export const buildWeekGamesPayload = (
-  data: any,
+  data: EspnScoreboard,
   weekId: bigint,
 ): `0x${string}` => {
-  const events = (data?.events || []).sort((a: any, b: any) =>
+  const events = (data?.events || []).sort((a, b) =>
     a.id.localeCompare(b.id),
   );
   const packed: bigint[] = [];
@@ -162,10 +191,10 @@ export const buildWeekGamesPayload = (
 
 export const buildWeekResultsPayload = async (
   weekId: bigint,
-  scoreboardData: any,
-  fetchSummary: (gameId: string) => Promise<any>,
+  scoreboardData: EspnScoreboard,
+  fetchSummary: (gameId: string) => Promise<EspnSummary>,
 ): Promise<`0x${string}`> => {
-  const events = (scoreboardData?.events || []).sort((a: any, b: any) =>
+  const events = (scoreboardData?.events || []).sort((a, b) =>
     a.id.localeCompare(b.id),
   );
   let packedResults = 0n;
@@ -175,8 +204,8 @@ export const buildWeekResultsPayload = async (
   for (let i = 0; i < events.length; i++) {
     const v = events[i];
     const competitors = v.competitions[0].competitors;
-    const home = competitors.find((t: any) => t.homeAway === "home");
-    const away = competitors.find((t: any) => t.homeAway === "away");
+    const home = competitors.find((t) => t.homeAway === "home");
+    const away = competitors.find((t) => t.homeAway === "away");
     if (v.status.type.completed && home && away) {
       if (Number(home.score) > Number(away.score))
         packedResults |= 1n << BigInt(i);

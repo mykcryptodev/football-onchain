@@ -12,7 +12,6 @@ import { abi as contestsAbi } from "@/constants/abis/contests";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 
 import {
-  oracleAddress,
   publicClient,
   readGameScore,
   readScoreChangesAvailable,
@@ -20,6 +19,7 @@ import {
   readWeekResultsFinalized,
   writeReport,
 } from "./chain";
+import { notifyError } from "./discord";
 import {
   buildGameScoresPayload,
   buildScoreChangesPayload,
@@ -29,7 +29,6 @@ import {
   fetchGameSummary,
   fetchWeekScoreboard,
 } from "./espn";
-import { notifyError } from "./discord";
 
 const contestsAddress = contests[
   appChain.id as keyof typeof contests

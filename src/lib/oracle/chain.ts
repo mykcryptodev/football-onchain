@@ -3,11 +3,11 @@
  * Reads use a public client; writes use the reporter wallet (ORACLE_REPORTER_PRIVATE_KEY).
  */
 import {
+  type Address,
   createPublicClient,
   createWalletClient,
-  http,
-  type Address,
   type Hex,
+  http,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { base } from "viem/chains";
