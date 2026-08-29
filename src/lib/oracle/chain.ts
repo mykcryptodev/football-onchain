@@ -41,7 +41,11 @@ export const publicClient = createPublicClient({
 export function getReporterAccount() {
   const pk = process.env.ORACLE_REPORTER_PRIVATE_KEY;
   if (!pk) throw new Error("ORACLE_REPORTER_PRIVATE_KEY is not set");
-  return privateKeyToAccount(pk as Hex);
+  // Tolerate a missing 0x prefix — viem requires it and a bare hex key
+  // fails every write with "invalid private key".
+  return privateKeyToAccount(
+    (pk.startsWith("0x") ? pk : `0x${pk}`) as Hex,
+  );
 }
 
 export function getWriterClient() {
