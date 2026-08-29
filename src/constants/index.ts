@@ -27,7 +27,7 @@ export const boxes = {
 
 export const gameScoreOracle = {
   [baseSepolia.id]: "0xFf8D5B025fC0061Ba41bFfcD1A9049F066B91Fe6",
-  [base.id]: "0xE8556A166BC1991b48b1cD1A63962599489a0E8d",
+  [base.id]: "0x091335a14f803290cE8dA8Bd72C4c0f08eD4e903",
 };
 
 export const scoreChangesPayoutStrategy = {
