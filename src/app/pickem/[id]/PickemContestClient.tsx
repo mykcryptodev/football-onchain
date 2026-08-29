@@ -1,11 +1,11 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { AlertCircle, ArrowLeft, Clock, Share2, Shuffle } from "lucide-react";
+import { AlertCircle, ArrowLeft, Clock, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { FC, useEffect, useMemo, useState } from "react";
+import { FC, SVGProps, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { appName, chain, usdc } from "@/constants";
 import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
@@ -112,6 +113,22 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
   2: "Top 5",
 };
 
+function XIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
+      <path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z" />
+    </svg>
+  );
+}
+
+function FarcasterIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
+      <path d="M18.24.24H5.76C2.5789.24 0 2.8188 0 6v12c0 3.1811 2.5789 5.76 5.76 5.76h12.48c3.1812 0 5.76-2.5789 5.76-5.76V6C24 2.8188 21.4212.24 18.24.24m.8155 17.1662v.504c.2868-.0256.5458.1905.5439.479v.5688h-5.1437v-.5688c-.0019-.2885.2576-.5047.5443-.479v-.504c0-.22.1525-.402.358-.458l-.0095-4.3645c-.1589-1.7366-1.6402-3.0979-3.4435-3.0979-1.8038 0-3.2846 1.3613-3.4435 3.0979l-.0096 4.3578c.2276.0424.5318.2083.5395.4648v.504c.2863-.0256.5457.1905.5438.479v.5688H4.3915v-.5688c-.0019-.2885.2575-.5047.5438-.479v-.504c0-.2529.2011-.4548.4536-.4724v-7.895h-.4905L4.2898 7.008l2.6405-.0005V5.0419h9.9495v1.9656h2.8219l-.6091 2.0314h-.4901v7.8949c.2519.0177.453.2195.453.4724" />
+    </svg>
+  );
+}
+
 interface PickemContestClientProps {
   contest: ContestData;
 }
@@ -131,6 +148,7 @@ export default function PickemContestClient({
   const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const [shareText, setShareText] = useState("");
 
   // Use the new hooks for games and picks management
   const { games } = useWeekGames({
@@ -210,6 +228,12 @@ export default function PickemContestClient({
     return `I just submitted my picks for Week ${contest.weekNumber} of the ${seasonLabel} on ${appName}! Think you can beat me?`;
   }, [contest.seasonType, contest.weekNumber]);
 
+  useEffect(() => {
+    if (shareModalOpen) {
+      setShareText(shareMessage);
+    }
+  }, [shareModalOpen, shareMessage]);
+
   const handleShareModalChange = (open: boolean) => {
     setShareModalOpen(open);
     if (!open) {
@@ -217,17 +241,42 @@ export default function PickemContestClient({
     }
   };
 
-  const handleShare = async () => {
+  const handleShareToX = async () => {
     const shareUrl =
       typeof window !== "undefined" ? window.location.href : undefined;
-    const shareText = shareUrl ? `${shareMessage}\n${shareUrl}` : shareMessage;
+    const intentUrl = `https://twitter.com/intent/tweet?${new URLSearchParams(
+      {
+        text: shareText,
+        ...(shareUrl ? { url: shareUrl } : {}),
+      },
+    ).toString()}`;
+
+    try {
+      setShareLoading(true);
+      if (isInMiniApp) {
+        await sdk.actions.openUrl(intentUrl);
+      } else if (typeof window !== "undefined") {
+        window.open(intentUrl, "_blank", "noopener,noreferrer");
+      }
+      handleShareModalChange(false);
+    } catch (error) {
+      console.error("Error opening X compose window:", error);
+      toast.error("Failed to open X");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleShareToFarcaster = async () => {
+    const shareUrl =
+      typeof window !== "undefined" ? window.location.href : undefined;
 
     try {
       setShareLoading(true);
 
       if (isInMiniApp) {
         const result = await sdk.actions.composeCast({
-          text: shareMessage,
+          text: shareText,
           embeds: shareUrl ? [shareUrl] : undefined,
         });
 
@@ -237,20 +286,15 @@ export default function PickemContestClient({
         } else {
           toast.info("Cast sharing cancelled");
         }
-      } else if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title: `${appName} Pick'em`,
-          text: shareMessage,
-          url: shareUrl,
-        });
-        toast.success("Thanks for sharing your picks!");
+      } else if (typeof window !== "undefined") {
+        const composeUrl = `https://warpcast.com/~/compose?${new URLSearchParams(
+          {
+            text: shareText,
+            ...(shareUrl ? { "embeds[]": shareUrl } : {}),
+          },
+        ).toString()}`;
+        window.open(composeUrl, "_blank", "noopener,noreferrer");
         handleShareModalChange(false);
-      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(shareText);
-        toast.success("Share message copied to clipboard");
-        handleShareModalChange(false);
-      } else {
-        toast.error("Sharing is not supported on this device");
       }
     } catch (error) {
       if ((error as Error)?.name === "AbortError") {
@@ -843,22 +887,41 @@ export default function PickemContestClient({
           </DialogHeader>
 
           <div className="space-y-4">
-            <p className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
-              {shareMessage}
-            </p>
+            <Textarea
+              className="min-h-24 resize-none text-sm"
+              value={shareText}
+              onChange={(event) => setShareText(event.target.value)}
+            />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <div className="flex w-full gap-2">
+              <Button
+                className="flex-1 bg-black text-white hover:bg-black/90"
+                disabled={shareLoading}
+                type="button"
+                onClick={handleShareToX}
+              >
+                <XIcon className="mr-2 h-4 w-4" />
+                Compose Post
+              </Button>
+              <Button
+                className="flex-1 bg-[#8A63D2] text-white hover:bg-[#8A63D2]/90"
+                disabled={shareLoading}
+                type="button"
+                onClick={handleShareToFarcaster}
+              >
+                <FarcasterIcon className="mr-2 h-4 w-4" />
+                Compose Cast
+              </Button>
+            </div>
             <Button
+              className="w-full"
               type="button"
               variant="outline"
               onClick={() => handleShareModalChange(false)}
             >
               Skip for now
-            </Button>
-            <Button disabled={shareLoading} type="button" onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" />
-              {shareLoading ? "Sharing..." : "Compose cast"}
             </Button>
           </DialogFooter>
         </DialogContent>
