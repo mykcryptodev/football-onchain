@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { decodeEventLog, type Hex } from "viem";
+import { decodeEventLog, type Hex, toEventSelector } from "viem";
 
 import { CRE_ORACLE_ABI } from "@/lib/oracle/abi";
 import { notifyError } from "@/lib/oracle/discord";
@@ -28,11 +28,16 @@ export const maxDuration = 300;
  * creating the webhook (Project → Tokens → Webhooks).
  */
 
-const EVENT_SIGS: Record<string, "gameScores" | "scoreChanges" | "weekGames" | "weekResults"> = {
-  GameScoresRequested: "gameScores",
-  ScoreChangesRequested: "scoreChanges",
-  WeekGamesRequested: "weekGames",
-  WeekResultsRequested: "weekResults",
+// Pre-filter on topics[0] so foreign logs in the same delivery (test events,
+// other contracts) are skipped before decodeEventLog can throw on them.
+const REQUESTED_SELECTORS: Record<
+  string,
+  "gameScores" | "scoreChanges" | "weekGames" | "weekResults"
+> = {
+  [toEventSelector("GameScoresRequested(uint256,bytes32)")]: "gameScores",
+  [toEventSelector("ScoreChangesRequested(uint256,bytes32)")]: "scoreChanges",
+  [toEventSelector("WeekGamesRequested(uint256,bytes32)")]: "weekGames",
+  [toEventSelector("WeekResultsRequested(uint256,bytes32)")]: "weekResults",
 };
 
 function verifySignature(rawBody: string, signature: string | null): boolean {
@@ -89,14 +94,14 @@ export async function POST(req: NextRequest) {
   }
 
   for (const log of logs) {
+    const kind = REQUESTED_SELECTORS[log.topics[0] ?? ""];
+    if (!kind) continue;
     try {
       const decoded = decodeEventLog({
         abi: CRE_ORACLE_ABI,
         topics: log.topics as [Hex, ...Hex[]],
         data: log.data,
       });
-      const kind = EVENT_SIGS[decoded.eventName ?? ""];
-      if (!kind) continue;
 
       const args = decoded.args as { gameId?: bigint; weekId?: bigint };
       if (kind === "gameScores" && args.gameId !== undefined) {
@@ -109,13 +114,10 @@ export async function POST(req: NextRequest) {
         await syncWeekResults(args.weekId, result);
       }
     } catch (e) {
-      // decodeEventLog throws on non-matching logs — that's fine, skip silently.
-      // Real write failures throw from the sync* calls above.
+      // Selector matched but decode/sync failed — real error, alert.
       const msg = (e as Error).message;
-      if (!msg.includes("does not match") && !msg.includes("Unable to find")) {
-        result.errors.push(msg);
-        await notifyError(`fulfill error: ${msg}`);
-      }
+      result.errors.push(msg);
+      await notifyError(`fulfill error: ${msg}`);
     }
   }
 

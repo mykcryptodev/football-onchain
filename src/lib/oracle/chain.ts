@@ -20,11 +20,22 @@ export const oracleAddress = gameScoreOracle[
   appChain.id as keyof typeof gameScoreOracle
 ] as Address;
 
-const rpcUrl = process.env.ORACLE_RPC_URL; // optional override; defaults to viem's Base public RPC
+// Default to the thirdweb RPC keyed by our client ID — the public Base RPC
+// rate-limits aggressively. ORACLE_RPC_URL overrides (e.g. a dedicated
+// Alchemy/QuickNode endpoint) when set.
+const rpcUrl =
+  process.env.ORACLE_RPC_URL ||
+  (process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
+    ? `https://${base.id}.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
+    : undefined);
+
+// Back off instead of failing the sync on transient RPC errors.
+const transport = () =>
+  http(rpcUrl, { retryCount: 5, retryDelay: 2000, timeout: 30_000 });
 
 export const publicClient = createPublicClient({
   chain: base,
-  transport: http(rpcUrl),
+  transport: transport(),
 });
 
 export function getReporterAccount() {
@@ -40,7 +51,7 @@ export function getWriterClient() {
     client: createWalletClient({
       account,
       chain: base,
-      transport: http(rpcUrl),
+      transport: transport(),
     }),
   };
 }
