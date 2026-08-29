@@ -15,7 +15,8 @@ import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/Confir
  * - getGameScores always returns requestInProgress=false (no async request lifecycle)
  *
  * Write path: CRE workflow -> signed report -> KeystoneForwarder -> onReport().
- * The owner may also call onReport directly as a manual escape hatch.
+ * A designated `reporter` address (e.g. the app's self-hosted oracle writer) may
+ * also call onReport, and the owner retains a manual escape hatch.
  */
 contract CREScoreOracle is ConfirmedOwner {
     struct GameScore {
@@ -63,6 +64,10 @@ contract CREScoreOracle is ConfirmedOwner {
     // CRE KeystoneForwarder address authorized to deliver reports
     address public forwarder;
 
+    // Additional address authorized to deliver reports (self-hosted oracle writer).
+    // Optional: address(0) disables it. CRE remains usable via the forwarder gate.
+    address public reporter;
+
     mapping(uint256 gameId => GameScore gameScore) public gameScores;
     mapping(uint256 gameId => uint256[] packedScoreChanges) public gameScoreChanges;
     mapping(uint256 weekId => WeekGames) public weekGames;
@@ -81,6 +86,7 @@ contract CREScoreOracle is ConfirmedOwner {
     event WeekResultsRequested(uint256 indexed weekId, bytes32 requestId);
     event WeekResultsUpdated(uint256 indexed weekId, uint8 gameCount, bool allGamesCompleted);
     event ForwarderUpdated(address indexed forwarder);
+    event ReporterUpdated(address indexed reporter);
 
     error ScoreChangeIndexOutOfBounds();
     error CooldownNotMet();
@@ -100,16 +106,22 @@ contract CREScoreOracle is ConfirmedOwner {
         emit ForwarderUpdated(forwarder_);
     }
 
+    function setReporter(address reporter_) external onlyOwner {
+        reporter = reporter_;
+        emit ReporterUpdated(reporter_);
+    }
+
     ////////////////////////////////////
     ///////////  WRITE PATH  ///////////
     ////////////////////////////////////
 
     /**
-     * @notice CRE report entry point. Called by the KeystoneForwarder (or owner as manual override).
+     * @notice CRE report entry point. Called by the KeystoneForwarder, the designated
+     *         reporter, or the owner as manual override.
      * @param report ABI-encoded payload; first field is the uint8 report type
      */
     function onReport(bytes calldata, bytes calldata report) external {
-        if (msg.sender != forwarder && msg.sender != owner()) {
+        if (msg.sender != forwarder && msg.sender != reporter && msg.sender != owner()) {
             revert UnauthorizedCaller();
         }
 
