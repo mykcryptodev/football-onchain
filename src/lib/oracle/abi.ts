@@ -11,17 +11,17 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "gameId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "",
         "type": "bool",
-        "internalType": "bool"
-      }
+        "internalType": "bool",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -30,27 +30,27 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "year",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "seasonType",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "weekNumber",
         "type": "uint8",
-        "internalType": "uint8"
-      }
+        "internalType": "uint8",
+      },
     ],
     "outputs": [
       {
         "name": "weekId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
-    "stateMutability": "pure"
+    "stateMutability": "pure",
   },
   {
     "type": "function",
@@ -60,10 +60,10 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "",
         "type": "address",
-        "internalType": "address"
-      }
+        "internalType": "address",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -72,22 +72,22 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "gameId",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "packedScoreChanges",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -96,47 +96,47 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "gameId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "id",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "qComplete",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "requestInProgress",
         "type": "bool",
-        "internalType": "bool"
+        "internalType": "bool",
       },
       {
         "name": "gameCompleted",
         "type": "bool",
-        "internalType": "bool"
+        "internalType": "bool",
       },
       {
         "name": "packedQuarterScores",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "packedQuarterDigits",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "totalScoreChanges",
         "type": "uint8",
-        "internalType": "uint8"
-      }
+        "internalType": "uint8",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -145,62 +145,62 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "gameId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "homeQ1LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "homeQ2LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "homeQ3LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "homeFLastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "awayQ1LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "awayQ2LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "awayQ3LastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "awayFLastDigit",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "qComplete",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "requestInProgress",
         "type": "bool",
-        "internalType": "bool"
-      }
+        "internalType": "bool",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -209,16 +209,16 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "",
         "type": "bytes",
-        "internalType": "bytes"
+        "internalType": "bytes",
       },
       {
         "name": "report",
         "type": "bytes",
-        "internalType": "bytes"
-      }
+        "internalType": "bytes",
+      },
     ],
     "outputs": [],
-    "stateMutability": "nonpayable"
+    "stateMutability": "nonpayable",
   },
   {
     "type": "function",
@@ -228,10 +228,10 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "",
         "type": "address",
-        "internalType": "address"
-      }
+        "internalType": "address",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -240,37 +240,37 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "weekId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "seasonType",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "weekNumber",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "year",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "gamesCount",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "isFinalized",
         "type": "bool",
-        "internalType": "bool"
-      }
+        "internalType": "bool",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "function",
@@ -279,42 +279,42 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "weekId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
     "outputs": [
       {
         "name": "weekId",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "packedResults",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "gamesCount",
         "type": "uint8",
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "isFinalized",
         "type": "bool",
-        "internalType": "bool"
+        "internalType": "bool",
       },
       {
         "name": "tiebreakerTotalPoints",
         "type": "uint256",
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "tiebreakerGameId",
         "type": "uint256",
-        "internalType": "uint256"
-      }
+        "internalType": "uint256",
+      },
     ],
-    "stateMutability": "view"
+    "stateMutability": "view",
   },
   {
     "type": "event",
@@ -324,16 +324,16 @@ export const CRE_ORACLE_ABI = [
         "name": "gameId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -343,16 +343,16 @@ export const CRE_ORACLE_ABI = [
         "name": "gameId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -362,16 +362,16 @@ export const CRE_ORACLE_ABI = [
         "name": "gameId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -381,16 +381,16 @@ export const CRE_ORACLE_ABI = [
         "name": "gameId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -400,16 +400,16 @@ export const CRE_ORACLE_ABI = [
         "name": "weekId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -419,16 +419,16 @@ export const CRE_ORACLE_ABI = [
         "name": "weekId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "gameCount",
         "type": "uint8",
         "indexed": false,
-        "internalType": "uint8"
-      }
+        "internalType": "uint8",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -438,16 +438,16 @@ export const CRE_ORACLE_ABI = [
         "name": "weekId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "requestId",
         "type": "bytes32",
         "indexed": false,
-        "internalType": "bytes32"
-      }
+        "internalType": "bytes32",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "event",
@@ -457,47 +457,47 @@ export const CRE_ORACLE_ABI = [
         "name": "weekId",
         "type": "uint256",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint256",
       },
       {
         "name": "gameCount",
         "type": "uint8",
         "indexed": false,
-        "internalType": "uint8"
+        "internalType": "uint8",
       },
       {
         "name": "allGamesCompleted",
         "type": "bool",
         "indexed": false,
-        "internalType": "bool"
-      }
+        "internalType": "bool",
+      },
     ],
-    "anonymous": false
+    "anonymous": false,
   },
   {
     "type": "error",
     "name": "CooldownNotMet",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
     "name": "GameNotCompleted",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
     "name": "ScoreChangeIndexOutOfBounds",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
     "name": "ScoreChangesAlreadyStored",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
     "name": "UnauthorizedCaller",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
@@ -506,18 +506,18 @@ export const CRE_ORACLE_ABI = [
       {
         "name": "reportType",
         "type": "uint8",
-        "internalType": "uint8"
-      }
-    ]
+        "internalType": "uint8",
+      },
+    ],
   },
   {
     "type": "error",
     "name": "WeekGamesAlreadyFinalized",
-    "inputs": []
+    "inputs": [],
   },
   {
     "type": "error",
     "name": "WeekResultsAlreadyFinalized",
-    "inputs": []
-  }
+    "inputs": [],
+  },
 ] as const;
