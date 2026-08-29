@@ -130,10 +130,25 @@ export async function syncGameScore(
   gameId: bigint,
   result: SyncResult,
 ): Promise<void> {
-  const [onchain, espn] = await Promise.all([
-    readGameScore(gameId),
-    fetchGameSummary(gameId),
-  ]);
+  let onchain: Awaited<ReturnType<typeof readGameScore>>;
+  let espn: Awaited<ReturnType<typeof fetchGameSummary>>;
+  try {
+    [onchain, espn] = await Promise.all([
+      readGameScore(gameId),
+      fetchGameSummary(gameId),
+    ]);
+  } catch (e) {
+    // Junk gameIds (bad contest data) 404 on ESPN — skip quietly, don't alert.
+    if ((e as Error).message.includes("ESPN HTTP 404")) {
+      result.skips.push(`scores:${gameId}:no-espn-game`);
+      return;
+    }
+    throw e;
+  }
+  if (!espn?.header?.competitions?.length) {
+    result.skips.push(`scores:${gameId}:no-espn-game`);
+    return;
+  }
   const payload = buildGameScoresPayload(espn, gameId);
 
   // Decode the fresh payload's packed values to compare against onchain.

@@ -22,9 +22,13 @@ export const oracleAddress = gameScoreOracle[
 
 const rpcUrl = process.env.ORACLE_RPC_URL; // optional override; defaults to viem's Base public RPC
 
+// Public RPCs rate-limit aggressively; back off instead of failing the sync.
+const transport = () =>
+  http(rpcUrl, { retryCount: 5, retryDelay: 2000, timeout: 30_000 });
+
 export const publicClient = createPublicClient({
   chain: base,
-  transport: http(rpcUrl),
+  transport: transport(),
 });
 
 export function getReporterAccount() {
@@ -40,7 +44,7 @@ export function getWriterClient() {
     client: createWalletClient({
       account,
       chain: base,
-      transport: http(rpcUrl),
+      transport: transport(),
     }),
   };
 }
