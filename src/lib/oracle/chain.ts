@@ -133,6 +133,16 @@ export async function writeReport(report: Hex): Promise<Hex> {
     account,
   });
   const hash = await client.writeContract(request);
-  await publicClient.waitForTransactionReceipt({ hash });
+  // Public RPCs can lag on tx propagation — viem's default receipt wait
+  // (~1 block) gives up with "receipt could not be found" / timeout even
+  // though the tx lands fine a few seconds later. Wait generously; the
+  // next sync tick's delta-check makes any real miss self-healing anyway.
+  await publicClient.waitForTransactionReceipt({
+    hash,
+    timeout: 120_000,
+    pollingInterval: 4_000,
+    retryCount: 5,
+    retryDelay: 3_000,
+  });
   return hash;
 }
