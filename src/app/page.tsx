@@ -27,7 +27,7 @@ export default function Home() {
             NFL game — all onchain.
           </p>
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            <Card className="flex flex-col">
+            <Card className="flex flex-col order-2 md:order-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Grid3x3 className="h-6 w-6" />
@@ -52,7 +52,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col">
+            <Card className="flex flex-col order-1 md:order-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-2xl">
                   <Trophy className="h-6 w-6" />
