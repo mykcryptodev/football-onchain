@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import CreatePickemForm from "@/components/pickem/CreatePickemForm";
 import MyPickems from "@/components/pickem/MyPickems";
@@ -14,8 +15,11 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function PickemPage() {
-  const [activeTab, setActiveTab] = useState("contests");
+function PickemPageContent() {
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") === "create" ? "create" : "contests",
+  );
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -61,5 +65,13 @@ export default function PickemPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function PickemPage() {
+  return (
+    <Suspense fallback={null}>
+      <PickemPageContent />
+    </Suspense>
   );
 }

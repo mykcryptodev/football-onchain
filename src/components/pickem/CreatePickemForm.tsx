@@ -24,6 +24,7 @@ import {
   chainlinkGasLimit,
   chainlinkJobId,
   chainlinkSubscriptionId,
+  pickem,
   usdc,
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
@@ -216,7 +217,7 @@ export default function CreatePickemForm() {
         ? Math.floor(new Date(formData.customDeadline).getTime() / 1000)
         : 0;
 
-      await createContest({
+      const receipt = await createContest({
         seasonType: parseInt(formData.seasonType),
         weekNumber: parseInt(formData.weekNumber),
         year: parseInt(formData.year),
@@ -227,7 +228,23 @@ export default function CreatePickemForm() {
       });
 
       toast.success("Pick'em contest created successfully!");
-      router.push("/pickem");
+
+      // ContestCreated event has signature: event ContestCreated(uint256 indexed contestId, address indexed creator, ...)
+      // The contestId is in topics[1] as an indexed parameter
+      const contestCreatedLog = receipt.logs.find(
+        log =>
+          log.address.toLowerCase() === pickem[chain.id].toLowerCase() &&
+          log.topics &&
+          log.topics.length >= 2,
+      );
+
+      if (contestCreatedLog && contestCreatedLog.topics[1]) {
+        const contestId = BigInt(contestCreatedLog.topics[1]);
+        router.push(`/pickem/${contestId}`);
+      } else {
+        console.error("ContestCreated event not found in receipt", receipt);
+        router.push("/pickem");
+      }
     } catch (error) {
       console.error("Error creating contest:", error);
       toast.error("Failed to create contest");
