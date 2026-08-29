@@ -1,6 +1,8 @@
+import { Grid3x3, Trophy } from "lucide-react";
 import Link from "next/link";
 
 import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSection";
+import { FeaturedPickemContestsSection } from "@/components/home/FeaturedPickemContestsSection";
 import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,27 +20,68 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center py-16">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Superbowl Squares
+            Football Onchain
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            Join the ultimate football squares experience. Create contests,
-            invite friends, and win big!
+          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto">
+            Play Superbowl Squares or Pick&apos;em with your friends for any
+            NFL game — all onchain.
           </p>
-          <div className="flex gap-4 justify-center flex-col sm:flex-row">
-            <Link href="/contest/create">
-              <Button className="text-lg px-8" size="lg">
-                Create Contest
-              </Button>
-            </Link>
-            <Link href="/join">
-              <Button className="text-lg px-8" size="lg" variant="outline">
-                Join Contest
-              </Button>
-            </Link>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
+            <Card className="flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Grid3x3 className="h-6 w-6" />
+                  Superbowl Squares
+                </CardTitle>
+                <CardDescription>
+                  Grab squares on a 10x10 grid and win when the score matches
+                  your numbers at the end of any quarter.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-auto flex gap-3 flex-col sm:flex-row">
+                <Link className="flex-1" href="/contest/create">
+                  <Button className="w-full" size="lg">
+                    Create Contest
+                  </Button>
+                </Link>
+                <Link className="flex-1" href="/join">
+                  <Button className="w-full" size="lg" variant="outline">
+                    Join Contest
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="flex flex-col">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Trophy className="h-6 w-6" />
+                  Pick&apos;em
+                </CardTitle>
+                <CardDescription>
+                  Predict the winner of every game in an NFL week and compete
+                  for the biggest prize pool.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-auto flex gap-3 flex-col sm:flex-row">
+                <Link className="flex-1" href="/pickem?tab=create">
+                  <Button className="w-full" size="lg">
+                    Create Contest
+                  </Button>
+                </Link>
+                <Link className="flex-1" href="/pickem">
+                  <Button className="w-full" size="lg" variant="outline">
+                    Browse Contests
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
         <FeaturedContestsSection />
+
+        <FeaturedPickemContestsSection />
 
         <HomeContestHighlights />
 

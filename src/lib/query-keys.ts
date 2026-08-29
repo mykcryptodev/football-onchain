@@ -19,5 +19,6 @@ export const queryKeys = {
 
   // Pick'em
   pickemContest: (contestId: number) => ["pickemContest", contestId] as const,
+  pickemContests: () => ["pickemContests", chain.id] as const,
   adminContests: () => ["adminContests"] as const,
 } as const;
