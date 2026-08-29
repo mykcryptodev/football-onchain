@@ -80,6 +80,51 @@ contract CREScoreOracleTest is Test {
         assertEq(oracle.forwarder(), stranger);
     }
 
+    // ---------- reporter role ----------
+
+    function test_setReporter_onlyOwner() public {
+        vm.prank(stranger);
+        vm.expectRevert("Only callable by owner");
+        oracle.setReporter(stranger);
+
+        oracle.setReporter(stranger);
+        assertEq(oracle.reporter(), stranger);
+    }
+
+    function test_onReport_reporterCanWrite() public {
+        address reporter = address(0xFE11);
+        oracle.setReporter(reporter);
+
+        bytes memory report = _gameScoresReport(GAME_ID, 75, false, 0, 0, _packDigits(1, 4, 0, 0, 2, 5, 0, 0));
+        vm.prank(reporter);
+        oracle.onReport("", report);
+
+        (,,,,,,,, uint8 qComplete,) = oracle.getGameScores(GAME_ID);
+        assertEq(qComplete, 75);
+    }
+
+    function test_onReport_revertsAfterReporterRevoked() public {
+        address reporter = address(0xFE11);
+        oracle.setReporter(reporter);
+        oracle.setReporter(address(0));
+
+        bytes memory report = _gameScoresReport(GAME_ID, 100, true, 0, 0, 0);
+        vm.prank(reporter);
+        vm.expectRevert(CREScoreOracle.UnauthorizedCaller.selector);
+        oracle.onReport("", report);
+    }
+
+    function test_onReport_forwarderStillWorksWithReporterSet() public {
+        oracle.setReporter(address(0xFE11));
+
+        bytes memory report = _gameScoresReport(GAME_ID, 100, true, 0, 0, 0);
+        vm.prank(forwarder);
+        oracle.onReport("", report);
+
+        (,,,,,,,, uint8 qComplete,) = oracle.getGameScores(GAME_ID);
+        assertEq(qComplete, 100);
+    }
+
     // ---------- game scores ----------
 
     function test_gameScores_writeAndUnpack() public {
