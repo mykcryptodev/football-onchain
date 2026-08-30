@@ -1,6 +1,7 @@
 export type PickResult =
   | "correct"
   | "wrong"
+  | "tie"
   | "live-winning"
   | "live-losing"
   | "pending";
@@ -10,6 +11,7 @@ export interface ScoredGame {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  completed?: boolean;
 }
 
 export interface RankableEntry {
@@ -25,7 +27,8 @@ export interface RankedEntry {
   rank: number;
 }
 
-export function isGameComplete(status?: string): boolean {
+export function isGameComplete(status?: string, completed?: boolean): boolean {
+  if (completed) return true;
   if (!status) return false;
   const normalized = status.toLowerCase();
   return (
@@ -40,7 +43,7 @@ export function isGameInProgress(
   homeScore?: number,
   awayScore?: number,
 ): boolean {
-  if (isGameComplete(status)) return false;
+  if (isGameComplete(status, undefined)) return false;
 
   const normalized = (status ?? "").toLowerCase();
   if (
@@ -71,7 +74,7 @@ export function getCurrentWinner(
 
 export function getPickResult(game: ScoredGame, pick: number): PickResult {
   const winner = getCurrentWinner(game.homeScore, game.awayScore);
-  const complete = isGameComplete(game.status);
+  const complete = isGameComplete(game.status, game.completed);
   const inProgress = isGameInProgress(
     game.status,
     game.homeScore,
@@ -79,7 +82,7 @@ export function getPickResult(game: ScoredGame, pick: number): PickResult {
   );
 
   if (complete) {
-    if (winner === null) return "pending";
+    if (winner === null) return "tie";
     return pick === winner ? "correct" : "wrong";
   }
 
@@ -104,7 +107,7 @@ export function countLiveScore(
     if (!game) continue;
 
     const hasStarted =
-      isGameComplete(game.status) ||
+      isGameComplete(game.status, game.completed) ||
       isGameInProgress(game.status, game.homeScore, game.awayScore);
     if (!hasStarted) continue;
 

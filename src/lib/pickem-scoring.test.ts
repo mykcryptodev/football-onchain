@@ -65,6 +65,21 @@ describe("pickem scoring", () => {
     ).toBe("live-losing");
   });
 
+  test("marks a finished tie instead of pending", () => {
+    expect(
+      getPickResult(
+        {
+          gameId: "401873305",
+          homeScore: 9,
+          awayScore: 9,
+          status: "STATUS_FINAL",
+          completed: true,
+        },
+        1,
+      ),
+    ).toBe("tie");
+  });
+
   test("leaves unstarted games pending", () => {
     expect(getPickResult({ gameId: "1", status: "STATUS_SCHEDULED" }, 1)).toBe(
       "pending",
@@ -97,6 +112,26 @@ describe("pickem scoring", () => {
     expect(countLiveScore([1, 0, 1], ["1", "2", "3"], gamesById)).toEqual({
       correctPicks: 2,
       scoredGames: 2,
+    });
+  });
+
+  test("counts a finished tie as played but not correct", () => {
+    const gamesById = new Map([
+      [
+        "401873305",
+        {
+          gameId: "401873305",
+          homeScore: 9,
+          awayScore: 9,
+          status: "STATUS_FINAL",
+          completed: true,
+        },
+      ],
+    ]);
+
+    expect(countLiveScore([1], ["401873305"], gamesById)).toEqual({
+      correctPicks: 0,
+      scoredGames: 1,
     });
   });
 

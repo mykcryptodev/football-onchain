@@ -26,6 +26,7 @@ export interface CurrentWeekGamePick {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  completed?: boolean;
   pick: number;
   result: PickResult;
 }
@@ -61,6 +62,7 @@ interface WeekGameApi {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  completed?: boolean;
 }
 
 interface UseMyCurrentWeekPicksReturn {
@@ -225,6 +227,7 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
                   homeScore: game.homeScore,
                   awayScore: game.awayScore,
                   status: game.status,
+                  completed: game.completed,
                   pick,
                   result: getPickResult(game, pick),
                 };
