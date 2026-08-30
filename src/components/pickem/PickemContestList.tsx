@@ -263,7 +263,7 @@ export default function PickemContestList() {
 
     try {
       await updateContestResults(contestId);
-      toast.success("Contest results updated. You can calculate winners next.");
+      toast.success("Onchain scores synced. You can calculate winners next.");
       await fetchContests();
     } catch (error) {
       const e = error as Error;
@@ -528,7 +528,7 @@ export default function PickemContestList() {
               >
                 {fetchingResults[contest.id]
                   ? "Recording scores..."
-                  : "Step 1: Record NFL scores on-chain"}
+                  : "Record scores onchain"}
               </Button>
             )}
             {/* Only show Finalize Games button if oracle has finalized the week's results */}
@@ -541,8 +541,8 @@ export default function PickemContestList() {
                 onClick={() => handleFinalizeGames(contest.id)}
               >
                 {finalizingGames[contest.id]
-                  ? "Applying scores..."
-                  : "Step 2: Apply scores to this contest"}
+                  ? "Syncing scores..."
+                  : "Sync onchain scores"}
               </Button>
             )}
           </>
