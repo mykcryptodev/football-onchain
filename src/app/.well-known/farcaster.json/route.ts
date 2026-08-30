@@ -31,6 +31,11 @@ export async function GET() {
       ogTitle: appName,
       ogDescription: appDescription,
       ogImageUrl: `${URL}/og.png`,
+      requiredCapabilities: [
+        "haptics.impactOccurred",
+        "haptics.notificationOccurred",
+        "haptics.selectionChanged",
+      ],
       noindex: false,
     },
   });

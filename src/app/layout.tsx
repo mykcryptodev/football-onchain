@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono, Lexend_Deca } from "next/font/google";
 import { headers } from "next/headers";
 
+import { HapticButtonProvider } from "@/components/HapticButtonProvider";
 import { Navigation } from "@/components/navigation";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -93,6 +94,7 @@ export default function RootLayout({
             <ThirdwebProvider>
               <DisplayTokenProvider>
                 <FarcasterProvider>
+                  <HapticButtonProvider />
                   <Navigation />
                   {children}
                 </FarcasterProvider>
