@@ -11,6 +11,7 @@ import Link from "next/link";
 
 import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSection";
 import { FeaturedPickemContestsSection } from "@/components/home/FeaturedPickemContestsSection";
+import { FeaturedPickemHero } from "@/components/home/FeaturedPickemHero";
 import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
 import { Button } from "@/components/ui/button";
 
@@ -71,56 +72,7 @@ export default function Home() {
           </div>
 
           <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
-            <div className="field-board relative aspect-[4/5] overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] sm:p-7">
-              <div className="absolute inset-0 field-lines opacity-80" />
-              <div className="relative flex h-full flex-col justify-between">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a8c6b4]">
-                      Sunday pool
-                    </p>
-                    <p className="mt-2 text-2xl font-bold tracking-tight">
-                      Week 1 Pick&apos;em
-                    </p>
-                  </div>
-                  <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
-                    14 games
-                  </div>
-                </div>
-
-                <div className="relative mx-auto flex aspect-square w-[78%] items-center justify-center rounded-full border border-white/25 bg-black/10">
-                  <div className="absolute inset-[12%] rounded-full border border-dashed border-white/25" />
-                  <div className="text-center">
-                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#a8c6b4]">
-                      Prize pool
-                    </p>
-                    <p className="mt-2 text-5xl font-black tracking-[-0.06em] sm:text-6xl">
-                      $420
-                    </p>
-                    <p className="mt-3 text-sm text-[#cbd8cf]">
-                      18 friends have entered
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
-                    <Grid3x3 className="size-5 text-[#bdd4c5]" />
-                    <p className="mt-3 font-semibold">Squares</p>
-                    <p className="mt-1 text-xs text-[#b7c8bc]">
-                      Every quarter matters
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/15 bg-[#e5ff4f] p-4 text-[#142018]">
-                    <Trophy className="size-5" />
-                    <p className="mt-3 font-semibold">Pick&apos;em</p>
-                    <p className="mt-1 text-xs text-[#3e4c42]">
-                      Call every winner
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <FeaturedPickemHero contestId={3} />
           </div>
         </div>
       </section>

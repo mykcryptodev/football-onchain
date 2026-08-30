@@ -99,4 +99,4 @@ export const chainlinkGasLimit: Record<number, bigint> = {
 
 export const featuredContestIds: number[] = [77, 73, 74, 76, 70];
 
-export const featuredPickemContestIds: number[] = [];
+export const featuredPickemContestIds: number[] = [3];
