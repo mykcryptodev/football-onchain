@@ -118,10 +118,15 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto flex flex-col gap-3 pt-4 sm:flex-row">
-              <Button asChild className="flex-1" size="lg">
+              <Button asChild className="h-14 flex-1" size="lg">
                 <Link href="/contest/create">Create contest</Link>
               </Button>
-              <Button asChild className="flex-1" size="lg" variant="outline">
+              <Button
+                asChild
+                className="h-14 flex-1"
+                size="lg"
+                variant="outline"
+              >
                 <Link href="/join">Join contest</Link>
               </Button>
             </CardContent>
@@ -139,10 +144,15 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent className="mt-auto flex flex-col gap-3 pt-4 sm:flex-row">
-              <Button asChild className="flex-1" size="lg">
+              <Button asChild className="h-14 flex-1" size="lg">
                 <Link href="/pickem?tab=create">Create contest</Link>
               </Button>
-              <Button asChild className="flex-1" size="lg" variant="outline">
+              <Button
+                asChild
+                className="h-14 flex-1"
+                size="lg"
+                variant="outline"
+              >
                 <Link href="/pickem">Browse contests</Link>
               </Button>
             </CardContent>
