@@ -156,9 +156,9 @@ export function FootballGrid({
         : "bg-background";
     }
 
-    // Selected boxes - keep blue for selection feedback
+    // Selected boxes - brand accent for selection feedback
     if (selectedBoxes.includes(boxPosition)) {
-      return "bg-blue-500 text-white";
+      return "bg-brand text-brand-foreground";
     }
 
     // Check if this box belongs to the current user
@@ -171,7 +171,7 @@ export function FootballGrid({
     if (box.owner !== ZERO_ADDRESS && isRealUser(box.owner)) {
       if (isMyBox) {
         // Highlight current user's boxes with a subtle accent
-        return "bg-muted/30";
+        return "bg-brand-muted";
       }
       // Neutral for other users' boxes
       return "bg-background";

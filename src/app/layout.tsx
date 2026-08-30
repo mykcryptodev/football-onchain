@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Lexend_Deca } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 
 import { Navigation } from "@/components/navigation";
@@ -17,10 +18,19 @@ import ThirdwebProvider from "@/providers/Thirdweb";
 
 import "./globals.css";
 
-const lexendDeca = Lexend_Deca({
-  variable: "--font-lexend-deca",
-  subsets: ["latin"],
+// Segment ships Medium and Bold only. Each file is mapped to two weight
+// classes so the font-normal/semibold utilities already used across the app
+// resolve to a real face instead of a synthesised one.
+const segment = localFont({
+  variable: "--font-segment",
   display: "swap",
+  fallback: ["system-ui", "sans-serif"],
+  src: [
+    { path: "../../public/fonts/Segment/Segment-Medium.otf", weight: "400", style: "normal" },
+    { path: "../../public/fonts/Segment/Segment-Medium.otf", weight: "500", style: "normal" },
+    { path: "../../public/fonts/Segment/Segment-Bold.otf", weight: "600", style: "normal" },
+    { path: "../../public/fonts/Segment/Segment-Bold.otf", weight: "700", style: "normal" },
+  ],
 });
 
 const geistMono = Geist_Mono({
@@ -67,7 +77,7 @@ export async function generateMetadata(): Promise<Metadata> {
       appName,
       imageUrl: ogImageUrl,
       splashImageUrl: `${baseUrl}/icon.png`,
-      splashBackgroundColor: "#000000",
+      splashBackgroundColor: "#1a1613",
       url: fullUrl,
     }),
   };
@@ -81,7 +91,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <body
-        className={`${lexendDeca.variable} ${geistMono.variable} antialiased`}
+        className={`${segment.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           disableTransitionOnChange
