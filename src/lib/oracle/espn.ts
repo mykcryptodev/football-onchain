@@ -6,6 +6,8 @@
  */
 import { encodeAbiParameters, parseAbiParameters } from "viem";
 
+import { fetchJsonWithRetry as fetchJson } from "./espn-retry";
+
 export const ESPN_SUMMARY =
   "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary";
 export const ESPN_SCOREBOARD =
@@ -54,18 +56,7 @@ export interface EspnScoreboard {
 
 const lastDigit = (n: number): bigint => BigInt(n.toString().slice(-1));
 
-export const fetchJson = async <T = unknown>(url: string): Promise<T> => {
-  const resp = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      // ESPN edge 403s browser-impersonating UAs but allows curl
-      "User-Agent": "curl/8.0",
-    },
-    cache: "no-store",
-  });
-  if (!resp.ok) throw new Error(`ESPN HTTP ${resp.status} for ${url}`);
-  return resp.json() as Promise<T>;
-};
+export { fetchJson };
 
 export const fetchGameSummary = (
   gameId: bigint | string,
