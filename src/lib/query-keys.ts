@@ -21,4 +21,7 @@ export const queryKeys = {
   pickemContest: (contestId: number) => ["pickemContest", contestId] as const,
   pickemContests: () => ["pickemContests", chain.id] as const,
   adminContests: () => ["adminContests"] as const,
+  currentNflWeek: () => ["currentNflWeek"] as const,
+  myCurrentWeekPicks: (address?: string, weekKey?: string) =>
+    ["myCurrentWeekPicks", chain.id, address, weekKey] as const,
 } as const;
