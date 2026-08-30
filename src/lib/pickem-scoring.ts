@@ -59,6 +59,15 @@ export function isGameInProgress(
   return (homeScore ?? 0) > 0 || (awayScore ?? 0) > 0;
 }
 
+export function isFinishedTie(game: ScoredGame): boolean {
+  return (
+    isGameComplete(game.status, game.completed) &&
+    game.homeScore !== undefined &&
+    game.awayScore !== undefined &&
+    game.homeScore === game.awayScore
+  );
+}
+
 export function getCurrentWinner(
   homeScore?: number,
   awayScore?: number,

@@ -4,6 +4,7 @@ import {
   countLiveScore,
   formatPlace,
   getPickResult,
+  isFinishedTie,
   isGameComplete,
   isGameInProgress,
   rankEntries,
@@ -78,6 +79,26 @@ describe("pickem scoring", () => {
         1,
       ),
     ).toBe("wrong");
+  });
+
+  test("detects a finished tie", () => {
+    expect(
+      isFinishedTie({
+        gameId: "401873305",
+        homeScore: 9,
+        awayScore: 9,
+        status: "STATUS_FINAL",
+        completed: true,
+      }),
+    ).toBe(true);
+    expect(
+      isFinishedTie({
+        gameId: "1",
+        homeScore: 24,
+        awayScore: 17,
+        status: "STATUS_FINAL",
+      }),
+    ).toBe(false);
   });
 
   test("leaves unstarted games pending", () => {

@@ -15,7 +15,7 @@ import {
   useMyCurrentWeekPicks,
 } from "@/hooks/useMyCurrentWeekPicks";
 import { formatKickoffTime } from "@/lib/date";
-import { SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
+import { isFinishedTie, SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
 import { cn } from "@/lib/utils";
 
 function resultStyles(result: CurrentWeekGamePick["result"]) {
@@ -109,8 +109,9 @@ function TeamMark({
 }
 
 function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
-  const pickedAway = game.pick === 0;
-  const pickedHome = game.pick === 1;
+  const finishedTie = isFinishedTie(game);
+  const pickedAway = !finishedTie && game.pick === 0;
+  const pickedHome = !finishedTie && game.pick === 1;
   const hasScore = game.homeScore !== undefined && game.awayScore !== undefined;
   const showScore =
     hasScore &&
