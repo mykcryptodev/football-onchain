@@ -29,23 +29,23 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center space-x-8">
-          <Link className="flex items-center space-x-2" href="/">
-            <Image alt={appName} height={32} src="/icon.png" width={32} />
-            <span className="font-bold text-xl">{appName}</span>
+    <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-8">
+          <Link className="flex items-center gap-2" href="/">
+            <Image alt={appName} height={28} src="/icon.png" width={28} />
+            <span className="font-semibold text-base tracking-tight">{appName}</span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center gap-6">
             <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               href="/contest/create"
             >
               Create Contest
             </Link>
             <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               href="/join"
             >
               Join Contest
@@ -53,7 +53,7 @@ export function Navigation() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 gap-2">
+        <div className="flex items-center gap-3">
           <ConnectButton
             chain={chain}
             client={client}

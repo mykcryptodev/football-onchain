@@ -22,12 +22,12 @@ function PickemPageContent() {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">NFL Pick&apos;em</h1>
-        <p className="text-muted-foreground text-lg">
+        <h1 className="text-3xl font-semibold tracking-tight mb-2">NFL Pick&apos;em</h1>
+        <p className="text-base text-muted-foreground">
           Predict winners for all games in an NFL week. Most correct picks wins
-          the prize pool!
+          the prize pool.
         </p>
       </div>
 
@@ -36,7 +36,7 @@ function PickemPageContent() {
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="inline-flex">
           <TabsTrigger value="contests">Contests</TabsTrigger>
           <TabsTrigger value="create">Create Contest</TabsTrigger>
           <TabsTrigger value="my-pickems">My Pick&apos;ems</TabsTrigger>

@@ -48,7 +48,7 @@ function PrizeDisplay({
   });
 
   return (
-    <p className="font-bold text-green-600 dark:text-green-400">
+    <p className="font-bold font-mono tabular-nums text-primary">
       {isLoading ? "..." : formattedValue}
     </p>
   );
@@ -180,7 +180,7 @@ export default function PickemLeaderboard({
 
         <div className="space-y-4">
           {/* Prize Pool Info */}
-          <Card className="p-4 bg-accent/50">
+          <Card className="p-4 bg-muted">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export default function PickemLeaderboard({
               entries.map(entry => (
                 <Card
                   key={entry.tokenId}
-                  className={`p-4 ${entry.address === account?.address ? "border-primary" : ""}`}
+                  className={`p-4 ${entry.address === account?.address ? "border-primary bg-accent/20" : ""}`}
                 >
                   <div className="flex items-center gap-4">
                     {/* Rank */}
@@ -286,7 +286,7 @@ export default function PickemLeaderboard({
           </div>
 
           {/* Payout Structure */}
-          <Card className="p-4 bg-accent/30">
+          <Card className="p-4 bg-muted">
             <p className="text-sm font-medium mb-2">Payout Structure</p>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">

@@ -558,8 +558,8 @@ export function HomeContestHighlights() {
     <section className="py-12 space-y-10">
       <div className="space-y-4">
         <div>
-          <h2 className="text-3xl font-bold">Your Recent & Upcoming Boxes</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-semibold tracking-tight">Your Recent Boxes</h2>
+          <p className="text-sm text-muted-foreground">
             Track your boxes for games from the last two weeks or any upcoming matchups.
           </p>
         </div>
@@ -660,9 +660,9 @@ export function HomeContestHighlights() {
 
       <div className="space-y-4">
         <div>
-          <h2 className="text-3xl font-bold">Winning Boxes</h2>
-          <p className="text-muted-foreground">
-            Boxes that have already hit winning numbers and their total payout amounts.
+          <h2 className="text-2xl font-semibold tracking-tight">Winning Boxes</h2>
+          <p className="text-sm text-muted-foreground">
+            Boxes that have hit winning numbers and their payout amounts.
           </p>
         </div>
 

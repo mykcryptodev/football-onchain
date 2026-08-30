@@ -152,13 +152,13 @@ export function FootballGrid({
     if (!box) {
       // Default neutral styling for unclaimed boxes
       return contest?.boxesCanBeClaimed
-        ? "bg-background hover:bg-muted/50 cursor-pointer"
+        ? "bg-background hover:bg-muted cursor-pointer"
         : "bg-background";
     }
 
-    // Selected boxes - keep blue for selection feedback
+    // Selected boxes - primary fill for selection feedback
     if (selectedBoxes.includes(boxPosition)) {
-      return "bg-blue-500 text-white";
+      return "bg-primary text-primary-foreground";
     }
 
     // Check if this box belongs to the current user
@@ -171,15 +171,15 @@ export function FootballGrid({
     if (box.owner !== ZERO_ADDRESS && isRealUser(box.owner)) {
       if (isMyBox) {
         // Highlight current user's boxes with a subtle accent
-        return "bg-muted/30";
+        return "bg-accent/40";
       }
       // Neutral for other users' boxes
-      return "bg-background";
+      return "bg-muted/50";
     }
 
     // If owned by contest contract or zero address, it's claimable
     if (contest?.boxesCanBeClaimed) {
-      return "bg-background hover:bg-muted/50 cursor-pointer";
+      return "bg-background hover:bg-muted cursor-pointer";
     }
 
     return "bg-background";
@@ -296,13 +296,13 @@ export function FootballGrid({
           </p>
         )}
         <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="grid grid-cols-11 gap-0.5 sm:gap-1 w-full rounded-lg p-0.5 sm:p-1">
+          <div className="grid grid-cols-11 gap-px w-full rounded-2xl bg-border p-px overflow-hidden">
             {/* Header row with away team scores */}
-            <div className="aspect-square bg-muted p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0" />
+            <div className="aspect-square bg-muted p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm flex items-center justify-center min-w-[2.5rem] sm:min-w-0" />
             {contest.cols.map((col, i) => (
               <div
                 key={i}
-                className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
+                className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm font-mono tabular-nums flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
                   awayTeamColor
                     ? getTextColorClass(awayTeamColor)
                     : "bg-muted text-foreground"
@@ -324,7 +324,7 @@ export function FootballGrid({
               <div key={row} className="contents">
                 {/* Home team score header */}
                 <div
-                  className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm border border-border rounded flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
+                  className={`aspect-square p-1 sm:p-2 text-center font-semibold text-xs sm:text-sm font-mono tabular-nums flex items-center justify-center min-w-[2.5rem] sm:min-w-0 ${
                     homeTeamColor
                       ? getTextColorClass(homeTeamColor)
                       : "bg-muted text-foreground"
@@ -378,31 +378,27 @@ export function FootballGrid({
 
                   const isForSale = listings?.has(expectedTokenId) ?? false;
 
-                  const borderColor = isWinner
-                    ? "border-emerald-400 dark:border-emerald-500"
-                    : "border-border";
-
                   const ringStyle = isForSale
-                    ? "ring-2 ring-amber-400/80"
+                    ? "ring-2 ring-primary/60"
                     : isMyBox
-                      ? "ring-2 ring-sky-400/80"
+                      ? "ring-2 ring-primary/40"
                       : "";
 
                   return (
                     <div
                       key={col}
                       className={`
-                       relative aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center transition-colors rounded border ${borderColor} min-w-[2.5rem] sm:min-w-0
+                       relative aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center transition-colors min-w-[2.5rem] sm:min-w-0
                        ${
                          isWinner
-                           ? "bg-emerald-100 dark:bg-emerald-900/30"
+                           ? "bg-accent ring-2 ring-primary"
                            : getBoxColor(
                                boxPosition,
                                expectedTokenId,
                                box?.owner,
                              )
                        }
-                       ${isClaimedByUser && !isWinner && !isMyBox && !isForSale ? "cursor-pointer hover:bg-muted/70" : ""}
+                       ${isClaimedByUser && !isWinner && !isMyBox && !isForSale ? "cursor-pointer hover:bg-muted" : ""}
                        ${ringStyle}
                      `}
                       onClick={() => {
@@ -414,16 +410,16 @@ export function FootballGrid({
                       }}
                     >
                       {isForSale ? (
-                        <span className="absolute right-0.5 top-0.5 rounded-full bg-amber-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                        <span className="absolute right-0.5 top-0.5 rounded-full bg-primary px-1 text-[7px] font-semibold uppercase tracking-wide text-primary-foreground sm:text-[8px]">
                           Sale
                         </span>
                       ) : isMyBox ? (
-                        <span className="absolute right-0.5 top-0.5 rounded-full bg-sky-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                        <span className="absolute right-0.5 top-0.5 rounded-full bg-primary px-1 text-[7px] font-semibold uppercase tracking-wide text-primary-foreground sm:text-[8px]">
                           You
                         </span>
                       ) : null}
                       {!isClaimedByUser && (
-                        <div className="font-mono text-[10px] sm:text-xs">
+                        <div className="font-mono tabular-nums text-[10px] sm:text-xs text-muted-foreground">
                           {boxPosition}
                         </div>
                       )}
@@ -439,7 +435,7 @@ export function FootballGrid({
         </div>
 
         {selectedBoxes.length > 0 && contest.boxesCanBeClaimed && (
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-muted shadow-xl rounded-t-lg border-t">
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-background shadow-xl rounded-t-2xl border-t border-border">
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <div>

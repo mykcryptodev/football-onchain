@@ -37,20 +37,20 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
   const isOpen = contest.submissionDeadline > Date.now();
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="text-xl mb-2">
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg mb-1">
               {SEASON_TYPE_LABELS[contest.seasonType]} Week{" "}
               {contest.weekNumber}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {contest.year} Season • {contest.gameIds.length} Games
+              {contest.year} Season - {contest.gameIds.length} Games
             </p>
             <div className="flex items-center gap-2 mt-2">
               {avatarUrl ? (
-                <Avatar className="h-5 w-5">
+                <Avatar className="h-4 w-4">
                   <AvatarImage
                     alt={profile?.name || "User avatar"}
                     src={avatarUrl}
@@ -58,7 +58,7 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
                   <AvatarFallback className="bg-transparent p-0">
                     <Blobbie
                       address={contest.creator}
-                      className="size-5 rounded-full"
+                      className="size-4 rounded-full"
                     />
                   </AvatarFallback>
                 </Avatar>
@@ -68,12 +68,12 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
                     fallbackComponent={
                       <Blobbie
                         address={contest.creator}
-                        className="size-5 rounded-full"
+                        className="size-4 rounded-full"
                       />
                     }
                     style={{
-                      width: "20px",
-                      height: "20px",
+                      width: "16px",
+                      height: "16px",
                       borderRadius: "100%",
                     }}
                   />
@@ -83,7 +83,7 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
                 {profileLoading
                   ? "Loading..."
                   : profile?.name ||
-                    `${contest.creator.slice(0, 6)}…${contest.creator.slice(-4)}`}
+                    `${contest.creator.slice(0, 6)}...${contest.creator.slice(-4)}`}
               </span>
             </div>
           </div>

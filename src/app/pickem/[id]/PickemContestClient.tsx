@@ -451,8 +451,8 @@ export default function PickemContestClient({
   // Show loading skeleton until mounted to prevent hydration mismatch
   if (!mounted || !resolvedTheme) {
     return (
-      <div className="container mx-auto py-5 space-y-6">
-        <div className="flex items-center gap-4 px-2">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 space-y-6">
+        <div className="flex items-center gap-4">
           <Link href="/pickem">
             <Button size="sm" variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -482,8 +482,8 @@ export default function PickemContestClient({
 
   return (
     <>
-      <div className="container mx-auto py-5 space-y-6">
-        <div className="flex items-center gap-4 px-2">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 space-y-6">
+        <div className="flex items-center gap-4">
           <Link href="/pickem">
             <Button size="sm" variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -499,13 +499,13 @@ export default function PickemContestClient({
           </Badge>
         </div>
         {/* Header */}
-        <div className="flex items-center gap-4 px-2">
+        <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">
+            <h1 className="text-3xl font-semibold tracking-tight">
               {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
             </h1>
             <p className="text-muted-foreground">
-              {contest.year} Season • Contest #{contest.id}
+              {contest.year} Season - Contest #{contest.id}
             </p>
           </div>
         </div>

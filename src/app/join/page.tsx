@@ -288,9 +288,9 @@ function JoinContestContent() {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8">
+        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-red-500">
+            <h1 className="text-2xl font-semibold mb-4 text-destructive">
               Error Loading Contests
             </h1>
             <p className="text-muted-foreground">{error.message}</p>
@@ -302,11 +302,11 @@ function JoinContestContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Join a Contest</h1>
-          <p className="text-xl text-muted-foreground">
+          <h1 className="text-3xl font-semibold tracking-tight mb-2">Join a Contest</h1>
+          <p className="text-base text-muted-foreground">
             Browse and join available football squares contests
           </p>
         </div>
@@ -371,7 +371,7 @@ function JoinContestContent() {
             </div>
 
             {featuredContests.length > 0 && (
-              <section className="rounded-xl border border-primary/20 bg-primary/5 p-6">
+              <section className="rounded-2xl border border-border bg-muted/40 p-6">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">

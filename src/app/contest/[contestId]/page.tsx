@@ -183,7 +183,7 @@ export default function ContestPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8">
+        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -198,9 +198,9 @@ export default function ContestPage() {
   if (!contest) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8">
+        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Contest Not Found</h1>
+            <h1 className="text-2xl font-semibold mb-4">Contest Not Found</h1>
             <p className="text-muted-foreground">
               The contest you&apos;re looking for doesn&apos;t exist.
             </p>
@@ -212,7 +212,7 @@ export default function ContestPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-8">
         {/* Header */}
         <ContestHeader contest={contest} />
 

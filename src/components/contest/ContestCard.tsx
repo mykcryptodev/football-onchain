@@ -39,11 +39,11 @@ export function ContestCard({ contest }: ContestCardProps) {
   const isOpen = contest.boxesCanBeClaimed && !isFull;
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <CardTitle className="text-xl mb-2">{contest.title}</CardTitle>
+        <div className="flex justify-between items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg mb-1 truncate">{contest.title}</CardTitle>
             {contest.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {contest.description}
@@ -51,7 +51,7 @@ export function ContestCard({ contest }: ContestCardProps) {
             )}
             <div className="flex items-center gap-2 mt-2">
               {avatarUrl ? (
-                <Avatar className="h-5 w-5">
+                <Avatar className="h-4 w-4">
                   <AvatarImage
                     alt={profile?.name || "User avatar"}
                     src={avatarUrl}
@@ -59,7 +59,7 @@ export function ContestCard({ contest }: ContestCardProps) {
                   <AvatarFallback className="bg-transparent p-0">
                     <Blobbie
                       address={contest.creator}
-                      className="size-5 rounded-full"
+                      className="size-4 rounded-full"
                     />
                   </AvatarFallback>
                 </Avatar>
@@ -69,12 +69,12 @@ export function ContestCard({ contest }: ContestCardProps) {
                     fallbackComponent={
                       <Blobbie
                         address={contest.creator}
-                        className="size-5 rounded-full"
+                        className="size-4 rounded-full"
                       />
                     }
                     style={{
-                      width: "20px",
-                      height: "20px",
+                      width: "16px",
+                      height: "16px",
                       borderRadius: "100%",
                     }}
                   />
@@ -84,7 +84,7 @@ export function ContestCard({ contest }: ContestCardProps) {
                 {profileLoading
                   ? "Loading..."
                   : profile?.name ||
-                    `${contest.creator.slice(0, 6)}…${contest.creator.slice(-4)}`}
+                    `${contest.creator.slice(0, 6)}...${contest.creator.slice(-4)}`}
               </span>
             </div>
           </div>
@@ -99,23 +99,23 @@ export function ContestCard({ contest }: ContestCardProps) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Box Cost</p>
-              <p className="text-lg font-semibold">{boxCostFormatted}</p>
+              <p className="text-xs text-muted-foreground mb-1">Box Cost</p>
+              <p className="text-base font-semibold font-mono tabular-nums">{boxCostFormatted}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Spots Filled</p>
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-lg font-semibold">
+              <p className="text-xs text-muted-foreground mb-1">Spots Filled</p>
+              <div className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-base font-semibold font-mono tabular-nums">
                   {contest.boxesClaimed}/{totalBoxes}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="w-full bg-secondary rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-1.5">
             <div
-              className="bg-primary rounded-full h-2 transition-all"
+              className="bg-primary rounded-full h-1.5 transition-all"
               style={{
                 width: `${(contest.boxesClaimed / totalBoxes) * 100}%`,
               }}

@@ -473,7 +473,7 @@ export default function PickemContestList() {
   }
 
   const renderContestCard = (contest: PickemContest) => (
-    <Card key={contest.id} className="hover:shadow-lg transition-shadow">
+    <Card key={contest.id}>
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
@@ -481,7 +481,7 @@ export default function PickemContestList() {
               {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {contest.year} Season • {contest.gameIds.length} Games
+              {contest.year} Season - {contest.gameIds.length} Games
             </p>
           </div>
           <Badge

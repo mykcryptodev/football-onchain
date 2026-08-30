@@ -1,4 +1,4 @@
-import { Grid3x3, Trophy } from "lucide-react";
+import { Grid3x3, Shield, Trophy, Zap } from "lucide-react";
 import Link from "next/link";
 
 import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSection";
@@ -16,46 +16,48 @@ import {
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center py-16">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Football Onchain
+      <main className="mx-auto max-w-6xl px-4 sm:px-6">
+        {/* Hero */}
+        <div className="py-16 md:py-24">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-foreground mb-4 max-w-2xl">
+            Football contests, onchain.
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-            Play Superbowl Squares or Pick&apos;em with your friends for any
-            NFL game — all onchain.
+          <p className="text-lg text-muted-foreground mb-10 max-w-xl">
+            Play Squares or Pick&apos;em with friends for any NFL game. Fair
+            payouts powered by smart contracts.
           </p>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
-            <Card className="flex flex-col order-2 md:order-1">
+
+          {/* Game cards */}
+          <div className="grid md:grid-cols-2 gap-4 max-w-3xl">
+            <Card className="flex flex-col">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <Grid3x3 className="h-6 w-6" />
-                  Superbowl Squares
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Grid3x3 className="h-5 w-5 text-primary" />
+                  Squares
                 </CardTitle>
                 <CardDescription>
                   Grab squares on a 10x10 grid and win when the score matches
                   your numbers at the end of any quarter.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-auto flex gap-3 flex-col sm:flex-row">
+              <CardContent className="mt-auto flex gap-2 flex-col sm:flex-row">
                 <Link className="flex-1" href="/contest/create">
                   <Button className="w-full" size="lg">
-                    Create Contest
+                    Create
                   </Button>
                 </Link>
                 <Link className="flex-1" href="/join">
                   <Button className="w-full" size="lg" variant="outline">
-                    Join Contest
+                    Join
                   </Button>
                 </Link>
               </CardContent>
             </Card>
 
-            <Card className="flex flex-col order-1 md:order-2">
+            <Card className="flex flex-col">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <Trophy className="h-6 w-6" />
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Trophy className="h-5 w-5 text-primary" />
                   Pick&apos;em
                 </CardTitle>
                 <CardDescription>
@@ -63,15 +65,15 @@ export default function Home() {
                   for the biggest prize pool.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-auto flex gap-3 flex-col sm:flex-row">
+              <CardContent className="mt-auto flex gap-2 flex-col sm:flex-row">
                 <Link className="flex-1" href="/pickem?tab=create">
                   <Button className="w-full" size="lg">
-                    Create Contest
+                    Create
                   </Button>
                 </Link>
                 <Link className="flex-1" href="/pickem">
                   <Button className="w-full" size="lg" variant="outline">
-                    Browse Contests
+                    Browse
                   </Button>
                 </Link>
               </CardContent>
@@ -85,12 +87,13 @@ export default function Home() {
 
         <HomeContestHighlights />
 
-        {/* Features Section */}
-        <div className="grid md:grid-cols-3 gap-8 py-16">
+        {/* Features */}
+        <div className="grid md:grid-cols-3 gap-4 py-12">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🏈 Easy Setup
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Grid3x3 className="h-4 w-4 text-primary" />
+                Easy Setup
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -103,8 +106,9 @@ export default function Home() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🎯 Fair & Transparent
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="h-4 w-4 text-primary" />
+                Fair and Transparent
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -117,67 +121,42 @@ export default function Home() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                💰 Instant Payouts
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Zap className="h-4 w-4 text-primary" />
+                Instant Payouts
               </CardTitle>
             </CardHeader>
             <CardContent>
               <CardDescription>
-                Winners receive their prizes automatically through smart
-                contracts. No delays, no disputes.
+                Winners receive prizes automatically through smart contracts. No
+                delays, no disputes.
               </CardDescription>
             </CardContent>
           </Card>
         </div>
 
-        {/* How It Works Section */}
-        <div className="py-16">
-          <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary-foreground font-bold text-xl">
-                  1
-                </span>
+        {/* How It Works */}
+        <div className="py-12 border-t border-border">
+          <h2 className="text-2xl font-semibold tracking-tight mb-10">How it works</h2>
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              { n: "1", title: "Create Contest", body: "Set up your squares game with custom settings" },
+              { n: "2", title: "Invite Players", body: "Share your contest code and let participants join" },
+              { n: "3", title: "Watch and Win", body: "Follow the game and see if your squares hit" },
+              { n: "4", title: "Get Paid", body: "Automatic payouts to winners via smart contracts" },
+            ].map(({ n, title, body }) => (
+              <div key={n} className="flex flex-col gap-3">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shrink-0">
+                  <span className="text-primary-foreground font-semibold font-mono tabular-nums">
+                    {n}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm mb-1">{title}</h3>
+                  <p className="text-muted-foreground text-sm">{body}</p>
+                </div>
               </div>
-              <h3 className="font-semibold mb-2">Create Contest</h3>
-              <p className="text-muted-foreground text-sm">
-                Set up your football squares game with custom settings
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary-foreground font-bold text-xl">
-                  2
-                </span>
-              </div>
-              <h3 className="font-semibold mb-2">Invite Players</h3>
-              <p className="text-muted-foreground text-sm">
-                Share your contest code and let participants join
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary-foreground font-bold text-xl">
-                  3
-                </span>
-              </div>
-              <h3 className="font-semibold mb-2">Watch & Win</h3>
-              <p className="text-muted-foreground text-sm">
-                Follow the game and see if your squares hit the winning numbers
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-primary-foreground font-bold text-xl">
-                  4
-                </span>
-              </div>
-              <h3 className="font-semibold mb-2">Get Paid</h3>
-              <p className="text-muted-foreground text-sm">
-                Automatic payouts to winners via smart contracts
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </main>

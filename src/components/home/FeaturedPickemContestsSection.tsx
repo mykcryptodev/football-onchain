@@ -42,35 +42,33 @@ export function FeaturedPickemContestsSection() {
 
   const isSingleFeatured = featuredContests.length === 1;
   return (
-    <section className="py-12">
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 md:p-8">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold">Featured Pick&apos;em Contests</h2>
-          <p className="text-muted-foreground">
-            Top pick&apos;em contests curated for quick access.
-          </p>
-        </div>
-        {isLoading ? (
-          <FeaturedSkeleton />
-        ) : featuredContests.length > 0 ? (
-          <div
-            className={`grid gap-4 md:grid-cols-2 ${isSingleFeatured ? "md:grid-cols-1 justify-items-center" : ""}`}
-          >
-            {featuredContests.map(contest => (
-              <div
-                key={contest.id}
-                className={isSingleFeatured ? "w-full md:max-w-xl" : ""}
-              >
-                <PickemContestCard contest={contest} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Featured pick&apos;em contests will appear here once available.
-          </p>
-        )}
+    <section className="py-8 border-t border-border">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">Featured Pick&apos;em Contests</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Top pick&apos;em contests curated for quick access.
+        </p>
       </div>
+      {isLoading ? (
+        <FeaturedSkeleton />
+      ) : featuredContests.length > 0 ? (
+        <div
+          className={`grid gap-4 md:grid-cols-2 ${isSingleFeatured ? "md:grid-cols-1 justify-items-center" : ""}`}
+        >
+          {featuredContests.map(contest => (
+            <div
+              key={contest.id}
+              className={isSingleFeatured ? "w-full md:max-w-xl" : ""}
+            >
+              <PickemContestCard contest={contest} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Featured pick&apos;em contests will appear here once available.
+        </p>
+      )}
     </section>
   );
 }

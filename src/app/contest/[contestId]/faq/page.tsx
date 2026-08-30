@@ -20,17 +20,17 @@ export default function ContestFaqPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-10">
-        <div className="max-w-3xl mx-auto space-y-8">
+      <main className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
+        <div className="max-w-3xl space-y-8">
           <div className="space-y-3">
             <Link
               className="text-sm text-muted-foreground hover:text-foreground"
               href={`/contest/${contestId}`}
             >
-              ← Back to contest
+              Back to contest
             </Link>
-            <h1 className="text-3xl font-bold">Super Bowl Squares FAQ</h1>
-            <div className="rounded-lg border bg-card p-4">
+            <h1 className="text-3xl font-semibold tracking-tight">Squares FAQ</h1>
+            <div className="rounded-2xl border bg-card p-4">
               <p className="text-sm uppercase tracking-wide text-muted-foreground">
                 TL;DR
               </p>

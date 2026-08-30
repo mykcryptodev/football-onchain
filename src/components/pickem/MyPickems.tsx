@@ -299,9 +299,9 @@ export default function MyPickems() {
   };
 
   const getAccuracyColor = (percentage: number) => {
-    if (percentage >= 75) return "text-green-600 dark:text-green-400";
-    if (percentage >= 50) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
+    if (percentage >= 75) return "text-primary";
+    if (percentage >= 50) return "text-muted-foreground";
+    return "text-destructive";
   };
 
   if (!account) {
@@ -435,12 +435,12 @@ export default function MyPickems() {
 
       {/* Batch Claiming Section */}
       {unclaimedWinners.length > 0 && (
-        <Card className="border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
+        <Card className="border-primary/30 bg-accent/30">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <Trophy className="h-5 w-5 text-primary" />
                   Unclaimed Prizes Available
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
