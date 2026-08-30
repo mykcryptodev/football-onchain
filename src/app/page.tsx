@@ -78,6 +78,11 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="mx-auto max-w-[1400px] px-5 md:px-8">
+        <FeaturedPickemContestsSection />
+        <HomePickemHighlights />
+      </div>
+
       <section className="border-b bg-card/35">
         <div className="mx-auto grid max-w-[1400px] md:grid-cols-2">
           <article className="group border-b p-6 transition-colors hover:bg-card md:border-r md:border-b-0 md:p-10 lg:p-14">
@@ -140,8 +145,6 @@ export default function Home() {
 
       <div className="mx-auto max-w-[1400px] px-5 md:px-8">
         <FeaturedContestsSection />
-        <FeaturedPickemContestsSection />
-        <HomePickemHighlights />
         <HomeContestHighlights />
       </div>
 

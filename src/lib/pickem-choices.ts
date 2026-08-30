@@ -20,6 +20,24 @@ export interface PairedPickemChoice {
   status: PickemChoiceStatus;
 }
 
+export interface NflWeek {
+  year: number;
+  seasonType: number;
+  weekNumber: number;
+}
+
+export function isCurrentWeekPickem(
+  entry: { year: number; seasonType: number; weekNumber: number },
+  currentWeek: NflWeek | null | undefined,
+): boolean {
+  if (!currentWeek) return false;
+  return (
+    entry.year === currentWeek.year &&
+    entry.seasonType === currentWeek.seasonType &&
+    entry.weekNumber === currentWeek.weekNumber
+  );
+}
+
 /** 0 = away, 1 = home. Null when the game is not a completed non-tie. */
 export function getPickemWinner(game: PickemChoiceGame): 0 | 1 | null {
   if (

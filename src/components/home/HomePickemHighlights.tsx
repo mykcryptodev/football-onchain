@@ -6,9 +6,10 @@ import { useActiveAccount } from "thirdweb/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentNflWeek } from "@/hooks/useCurrentNflWeek";
 import { type UserPickemEntry, useUserPickems } from "@/hooks/useUserPickems";
 import { useWeekGames } from "@/hooks/useWeekGames";
-import { pairPicksWithGames } from "@/lib/pickem-choices";
+import { isCurrentWeekPickem, pairPicksWithGames } from "@/lib/pickem-choices";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
@@ -133,21 +134,30 @@ function UserPickemEntryCard({ entry }: { entry: UserPickemEntry }) {
 
 export function HomePickemHighlights() {
   const account = useActiveAccount();
-  const { entries, isLoading } = useUserPickems();
+  const { currentWeek, isLoading: isLoadingWeek } = useCurrentNflWeek();
+  const { entries, isLoading: isLoadingEntries } = useUserPickems();
+  const thisWeekEntries = entries.filter(entry =>
+    isCurrentWeekPickem(entry, currentWeek),
+  );
+  const isLoading = isLoadingWeek || isLoadingEntries;
+
+  if (account && !isLoading && thisWeekEntries.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-12">
       <div className="mb-4">
         <h2 className="text-3xl font-bold">Your Pick&apos;em Choices</h2>
         <p className="text-muted-foreground">
-          The winners you picked in contests you have entered.
+          This week&apos;s games and the winners you picked.
         </p>
       </div>
 
       {!account ? (
         <Card>
           <CardContent className="py-6 text-muted-foreground">
-            Connect your wallet to see your Pick&apos;em choices.
+            Connect your wallet to see your Pick&apos;em choices for this week.
           </CardContent>
         </Card>
       ) : isLoading ? (
@@ -156,20 +166,9 @@ export function HomePickemHighlights() {
             Loading your Pick&apos;em choices...
           </CardContent>
         </Card>
-      ) : entries.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-start gap-3 py-6">
-            <p className="text-muted-foreground">
-              You have not entered a Pick&apos;em contest yet.
-            </p>
-            <Button asChild size="sm">
-              <Link href="/pickem">Browse Pick&apos;em</Link>
-            </Button>
-          </CardContent>
-        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {entries.map(entry => (
+          {thisWeekEntries.map(entry => (
             <UserPickemEntryCard
               key={`${entry.contestId}-${entry.tokenId}`}
               entry={entry}

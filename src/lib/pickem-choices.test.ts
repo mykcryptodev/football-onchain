@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   getPickemWinner,
+  isCurrentWeekPickem,
   pairPicksWithGames,
   type PickemChoiceGame,
 } from "./pickem-choices";
@@ -99,5 +100,36 @@ describe("pairPicksWithGames", () => {
     );
 
     expect(choice.status).toBe("wrong");
+  });
+});
+
+describe("isCurrentWeekPickem", () => {
+  const currentWeek = { year: 2026, seasonType: 2, weekNumber: 1 };
+
+  test("returns false when current week is unknown", () => {
+    expect(
+      isCurrentWeekPickem({ year: 2026, seasonType: 2, weekNumber: 1 }, null),
+    ).toBe(false);
+  });
+
+  test("matches only the current NFL week", () => {
+    expect(
+      isCurrentWeekPickem(
+        { year: 2026, seasonType: 2, weekNumber: 1 },
+        currentWeek,
+      ),
+    ).toBe(true);
+    expect(
+      isCurrentWeekPickem(
+        { year: 2026, seasonType: 2, weekNumber: 2 },
+        currentWeek,
+      ),
+    ).toBe(false);
+    expect(
+      isCurrentWeekPickem(
+        { year: 2025, seasonType: 2, weekNumber: 1 },
+        currentWeek,
+      ),
+    ).toBe(false);
   });
 });
