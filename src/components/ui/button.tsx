@@ -67,6 +67,7 @@ function Button({
 
   return (
     <Comp
+      data-haptic-handled
       className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
       onClick={handleClick}
