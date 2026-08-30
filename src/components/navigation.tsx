@@ -81,7 +81,7 @@ export function Navigation() {
               showThirdwebBranding: false,
             }}
             detailsButton={{
-              className: "!h-10 !rounded-xl !border !border-border !bg-card",
+              className: "!h-10 !border-0 !bg-transparent !p-0 !shadow-none",
               displayBalanceToken: {
                 [chain.id]: tokenAddress || usdc[chain.id],
               },
