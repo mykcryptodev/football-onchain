@@ -29,31 +29,41 @@ export function Navigation() {
   ];
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center space-x-8">
-          <Link className="flex items-center space-x-2" href="/">
-            <Image alt={appName} height={32} src="/icon.png" width={32} />
-            <span className="font-bold text-xl">{appName}</span>
+    <nav className="sticky top-0 z-40 border-b bg-background/82 backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
+      <div className="mx-auto flex h-[4.5rem] max-w-[1400px] items-center justify-between px-4 md:px-8">
+        <div className="flex min-w-0 items-center gap-8 lg:gap-12">
+          <Link className="group flex min-w-0 items-center gap-2.5" href="/">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl border bg-card shadow-sm transition-transform group-hover:-rotate-3">
+              <Image alt={appName} height={26} src="/icon.png" width={26} />
+            </span>
+            <span className="truncate text-base font-extrabold tracking-[-0.035em] sm:text-lg">
+              {appName}
+            </span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden items-center gap-1 md:flex">
             <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              href="/contest/create"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+              href="/pickem"
             >
-              Create Contest
+              Pick&apos;em
             </Link>
             <Link
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
               href="/join"
             >
-              Join Contest
+              Squares
+            </Link>
+            <Link
+              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+              href="/contest/create"
+            >
+              Create
             </Link>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 gap-2">
+        <div className="flex items-center gap-2">
           <ConnectButton
             chain={chain}
             client={client}
@@ -64,14 +74,14 @@ export function Navigation() {
             }}
             connectButton={{
               label: "Login",
-              className: "!size-9",
+              className: "!h-10 !rounded-xl !px-4 !font-semibold",
             }}
             connectModal={{
               title: `Login to ${appName}`,
               showThirdwebBranding: false,
             }}
             detailsButton={{
-              className: "!border-none",
+              className: "!h-10 !rounded-xl !border !border-border !bg-card",
               displayBalanceToken: {
                 [chain.id]: tokenAddress || usdc[chain.id],
               },

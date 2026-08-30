@@ -49,12 +49,14 @@ export function FeaturedContestsSection() {
   const isSingleFeatured = featuredContests.length === 1;
 
   return (
-    <section className="py-12">
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 md:p-8">
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold">Featured Contests</h2>
-          <p className="text-muted-foreground">
-            Top contests curated for quick access.
+    <section className="py-14 md:py-20">
+      <div className="rounded-[2rem] border bg-card/55 p-5 shadow-[0_24px_70px_-55px_rgba(15,45,28,.7)] md:p-9">
+        <div className="mb-8 max-w-xl">
+          <h2 className="text-3xl font-black tracking-[-0.04em] md:text-4xl">
+            Featured Squares
+          </h2>
+          <p className="mt-2 leading-7 text-muted-foreground">
+            Open boards worth a look before kickoff.
           </p>
         </div>
         {isLoading ? (
