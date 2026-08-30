@@ -13,6 +13,7 @@ import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSecti
 import { FeaturedPickemContestsSection } from "@/components/home/FeaturedPickemContestsSection";
 import { FeaturedPickemHero } from "@/components/home/FeaturedPickemHero";
 import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
+import { HomePickemHighlights } from "@/components/home/HomePickemHighlights";
 import { Button } from "@/components/ui/button";
 
 const steps = [
@@ -140,6 +141,7 @@ export default function Home() {
       <div className="mx-auto max-w-[1400px] px-5 md:px-8">
         <FeaturedContestsSection />
         <FeaturedPickemContestsSection />
+        <HomePickemHighlights />
         <HomeContestHighlights />
       </div>
 

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PickemContestListItem } from "@/hooks/usePickemContests";
+import { useUserPickems } from "@/hooks/useUserPickems";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { resolveAvatarUrl } from "@/lib/utils";
 import { client } from "@/providers/Thirdweb";
@@ -33,8 +34,10 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
   const { profile, isLoading: profileLoading } = useUserProfile(
     contest.creator,
   );
+  const { contestIds } = useUserPickems();
   const avatarUrl = resolveAvatarUrl(profile?.avatar);
   const isOpen = contest.submissionDeadline > Date.now();
+  const hasEntry = contestIds.has(contest.id);
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -42,8 +45,7 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="text-xl mb-2">
-              {SEASON_TYPE_LABELS[contest.seasonType]} Week{" "}
-              {contest.weekNumber}
+              {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {contest.year} Season • {contest.gameIds.length} Games
@@ -105,7 +107,11 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
 
         <Link className="block" href={`/pickem/${contest.id}`}>
           <Button className="w-full" size="lg" variant="default">
-            {isOpen ? "Make Your Picks" : "View Contest"}
+            {hasEntry
+              ? "View Your Picks"
+              : isOpen
+                ? "Make Your Picks"
+                : "View Contest"}
           </Button>
         </Link>
       </CardContent>
