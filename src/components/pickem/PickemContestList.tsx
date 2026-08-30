@@ -225,7 +225,7 @@ export default function PickemContestList() {
       });
 
       toast.success(
-        "Week results fetch requested. This may take a few minutes.",
+        "Requested this week's NFL scores. This can take a few minutes.",
       );
 
       // Refresh the week results status after 10 seconds
@@ -263,7 +263,7 @@ export default function PickemContestList() {
 
     try {
       await updateContestResults(contestId);
-      toast.success("Game results finalized! Now you can calculate scores.");
+      toast.success("Contest results updated. You can calculate winners next.");
       await fetchContests();
     } catch (error) {
       const e = error as Error;
@@ -527,8 +527,8 @@ export default function PickemContestList() {
                 onClick={() => handleFetchWeekResults(contest)}
               >
                 {fetchingResults[contest.id]
-                  ? "Syncing..."
-                  : "Sync NFL Scores Onchain"}
+                  ? "Recording scores..."
+                  : "Step 1: Record NFL scores on-chain"}
               </Button>
             )}
             {/* Only show Finalize Games button if oracle has finalized the week's results */}
@@ -541,8 +541,8 @@ export default function PickemContestList() {
                 onClick={() => handleFinalizeGames(contest.id)}
               >
                 {finalizingGames[contest.id]
-                  ? "Syncing..."
-                  : "Sync Pick Em Results with NFL Scores"}
+                  ? "Applying scores..."
+                  : "Step 2: Apply scores to this contest"}
               </Button>
             )}
           </>
