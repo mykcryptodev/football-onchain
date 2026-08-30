@@ -34,6 +34,7 @@ export interface EspnCompetitor {
 export interface EspnSummary {
   header: {
     competitions: {
+      date?: string;
       competitors: EspnCompetitor[];
       status: { type: { completed?: boolean }; period?: number };
     }[];
@@ -79,6 +80,29 @@ export const fetchWeekScoreboard = (
   fetchJson<EspnScoreboard>(
     `${ESPN_SCOREBOARD}?year=${year}&seasontype=${seasonType}&week=${weekNumber}`,
   );
+
+export interface CurrentWeekInfo {
+  year: bigint;
+  seasonType: number;
+  weekNumber: number;
+}
+
+/**
+ * Ask ESPN which NFL week is current. Fetches the default scoreboard (no
+ * params) which ESPN automatically sets to the current active week.
+ * Returns null when the response is missing the required fields.
+ */
+export const fetchCurrentWeekInfo = async (): Promise<CurrentWeekInfo | null> => {
+  const data = await fetchJson<{
+    season?: { year?: number; type?: number };
+    week?: { number?: number };
+  }>(ESPN_SCOREBOARD);
+  const year = data?.season?.year;
+  const seasonType = data?.season?.type;
+  const weekNumber = data?.week?.number;
+  if (!year || !seasonType || !weekNumber) return null;
+  return { year: BigInt(year), seasonType, weekNumber };
+};
 
 // ---------- game scores (reportType 0) ----------
 
@@ -187,34 +211,142 @@ export const buildWeekGamesPayload = (
   return encodeAbiParameters(WEEK_GAMES_PARAMS, [2, weekId, events.length, packed]);
 };
 
+/**
+ * Extract sorted game IDs from a scoreboard response -- the same ordering
+ * used by buildWeekGamesPayload so comparison is apples-to-apples.
+ */
+export const extractSortedGameIds = (data: EspnScoreboard): bigint[] =>
+  (data?.events || [])
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((e) => BigInt(e.id));
+
+/**
+ * Returns true when the ESPN slate differs from what is currently stored
+ * onchain, meaning a weekGames report should be submitted.
+ *
+ * Comparison is order-insensitive: two slates with the same game IDs in
+ * different order are considered equal (they encode to the same packed words
+ * because both sides sort by id before packing).
+ *
+ * Pass onchainIds=[] to indicate no slate has been written yet (always dirty).
+ */
+export const weekGamesMismatched = (
+  espnIds: bigint[],
+  onchainIds: bigint[],
+): boolean => {
+  if (onchainIds.length === 0) return true;
+  if (espnIds.length !== onchainIds.length) return true;
+  const espnSet = new Set(espnIds.map(String));
+  return onchainIds.some((id) => !espnSet.has(id.toString()));
+};
+
 // ---------- week results (reportType 3) ----------
 
+/** A game resolved to the fields week results depend on, from either source. */
+interface ResolvedGame {
+  id: string;
+  date: string;
+  completed: boolean;
+  homeScore: number;
+  awayScore: number;
+}
+
+export type WeekResultsBuild =
+  | { ok: true; payload: `0x${string}` }
+  | { ok: false; reason: string };
+
+const resolveFromEvent = (v: EspnScoreboardEvent): ResolvedGame | null => {
+  const competitors = v.competitions?.[0]?.competitors || [];
+  const home = competitors.find((t) => t.homeAway === "home");
+  const away = competitors.find((t) => t.homeAway === "away");
+  if (!home || !away) return null;
+  return {
+    id: v.id,
+    date: v.date,
+    completed: !!v.status?.type?.completed,
+    homeScore: Number(home.score),
+    awayScore: Number(away.score),
+  };
+};
+
+const resolveFromSummary = (
+  gameId: string,
+  g: EspnSummary,
+): ResolvedGame | null => {
+  const comp = g?.header?.competitions?.[0];
+  const competitors = comp?.competitors || [];
+  const home = competitors.find((t) => t.homeAway === "home");
+  const away = competitors.find((t) => t.homeAway === "away");
+  if (!comp?.date || !home || !away) return null;
+  return {
+    id: gameId,
+    date: comp.date,
+    completed: !!comp.status?.type?.completed,
+    homeScore: Number(home.score),
+    awayScore: Number(away.score),
+  };
+};
+
+/**
+ * Build the week results payload against the game list already stored onchain.
+ *
+ * Pickem's finalizeGames pairs winner bit `i` with its contest's game id `i`,
+ * so bit order here must be the oracle's stored order — never a fresh sort of
+ * whatever ESPN currently lists for the week. Games missing from the week's
+ * scoreboard (postponed or rescheduled out of the week) are resolved
+ * individually by game id, which is stable across a reschedule.
+ *
+ * Returns { ok: false } rather than throwing so one bad week cannot abort a
+ * sync run covering other weeks. The caller writes nothing in that case.
+ */
 export const buildWeekResultsPayload = async (
   weekId: bigint,
+  onchainGameIds: bigint[],
   scoreboardData: EspnScoreboard,
   fetchSummary: (gameId: string) => Promise<EspnSummary>,
-): Promise<`0x${string}`> => {
-  const events = (scoreboardData?.events || []).sort((a, b) =>
-    a.id.localeCompare(b.id),
-  );
+): Promise<WeekResultsBuild> => {
+  if (onchainGameIds.length === 0)
+    return { ok: false, reason: "no-onchain-games" };
+  if (onchainGameIds.length > 255)
+    return { ok: false, reason: "game-count-overflows-uint8" };
+  // getWeekGames sizes its array from gamesCount and leaves any shortfall as
+  // zeros; a zero id means the stored list is short and cannot be trusted.
+  if (onchainGameIds.some((id) => id === 0n))
+    return { ok: false, reason: "zero-game-id-onchain" };
+
+  const byId = new Map<string, EspnScoreboardEvent>();
+  for (const v of scoreboardData?.events || []) byId.set(v.id, v);
+
+  const games: ResolvedGame[] = [];
+  for (const id of onchainGameIds) {
+    const key = id.toString();
+    const ev = byId.get(key);
+    let game = ev ? resolveFromEvent(ev) : null;
+    if (!game) {
+      try {
+        game = resolveFromSummary(key, await fetchSummary(key));
+      } catch {
+        game = null;
+      }
+    }
+    if (!game) return { ok: false, reason: `unresolved-game:${key}` };
+    games.push(game);
+  }
+
   let packedResults = 0n;
   let completed = 0;
   let latestGame: string | null = null;
   let latestDate = 0;
-  for (let i = 0; i < events.length; i++) {
-    const v = events[i];
-    const competitors = v.competitions[0].competitors;
-    const home = competitors.find((t) => t.homeAway === "home");
-    const away = competitors.find((t) => t.homeAway === "away");
-    if (v.status.type.completed && home && away) {
-      if (Number(home.score) > Number(away.score))
-        packedResults |= 1n << BigInt(i);
+  for (let i = 0; i < games.length; i++) {
+    const g = games[i];
+    if (g.completed) {
+      if (g.homeScore > g.awayScore) packedResults |= 1n << BigInt(i);
       completed++;
     }
-    const d = new Date(v.date).getTime();
-    if (d > latestDate) {
+    const d = new Date(g.date).getTime();
+    if (Number.isFinite(d) && d > latestDate) {
       latestDate = d;
-      latestGame = v.id;
+      latestGame = g.id;
     }
   }
 
@@ -227,16 +359,19 @@ export const buildWeekResultsPayload = async (
     for (const c of comp) totalPoints += BigInt(parseInt(c.score || "0"));
   }
 
-  const allCompleted = completed === events.length ? 1n : 0n;
-  return encodeAbiParameters(WEEK_RESULTS_PARAMS, [
-    3,
-    weekId,
-    allCompleted,
-    events.length,
-    packedResults,
-    totalPoints,
-    tiebreakerGameId,
-  ]);
+  const allCompleted = completed === games.length ? 1n : 0n;
+  return {
+    ok: true,
+    payload: encodeAbiParameters(WEEK_RESULTS_PARAMS, [
+      3,
+      weekId,
+      allCompleted,
+      games.length,
+      packedResults,
+      totalPoints,
+      tiebreakerGameId,
+    ]),
+  };
 };
 
 export const calculateWeekId = (

@@ -235,6 +235,40 @@ export const CRE_ORACLE_ABI = [
   },
   {
     "type": "function",
+    "name": "getWeekGames",
+    "inputs": [
+      {
+        "name": "year",
+        "type": "uint256",
+        "internalType": "uint256",
+      },
+      {
+        "name": "seasonType",
+        "type": "uint8",
+        "internalType": "uint8",
+      },
+      {
+        "name": "weekNumber",
+        "type": "uint8",
+        "internalType": "uint8",
+      },
+    ],
+    "outputs": [
+      {
+        "name": "gameIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]",
+      },
+      {
+        "name": "submissionDeadline",
+        "type": "uint256",
+        "internalType": "uint256",
+      },
+    ],
+    "stateMutability": "view",
+  },
+  {
+    "type": "function",
     "name": "weekGames",
     "inputs": [
       {
