@@ -13,7 +13,8 @@
     "format": "eslint src/ --ext .js,.jsx,.ts,.tsx --fix && prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\" && eslint src/ --ext .js,.jsx,.ts,.tsx",
     "check": "npm run format:check",
-    "fix": "npm run format"
+    "fix": "npm run format",
+    "test": "bun test src/lib/oracle/sync.test.ts"
   },
   "dependencies": {
     "@ecp.eth/sdk": "^0.0.37",

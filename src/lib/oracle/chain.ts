@@ -17,6 +17,7 @@ import { base } from "viem/chains";
 import { chain as appChain, gameScoreOracle } from "@/constants";
 
 import { CRE_ORACLE_ABI } from "./abi";
+import { weekIdToParams } from "./espn";
 
 export const oracleAddress = gameScoreOracle[
   appChain.id as keyof typeof gameScoreOracle
@@ -98,13 +99,33 @@ export async function readScoreChangesAvailable(
 }
 
 export async function readWeekGamesFinalized(weekId: bigint): Promise<boolean> {
+  // Solidity's auto-getter omits the struct's dynamic array member, so
+  // weekGames() returns 5 values, not 6: (seasonType, weekNumber, year,
+  // gamesCount, isFinalized). packedGameIds is not in the tuple.
   const r = (await publicClient.readContract({
     address: oracleAddress,
     abi: CRE_ORACLE_ABI,
     functionName: "weekGames",
     args: [weekId],
-  })) as unknown as [number, number, bigint, bigint[], number, boolean];
-  return r[5];
+  })) as unknown as [number, number, bigint, number, boolean];
+  return r[4];
+}
+
+/**
+ * The finalized game id list for a week, in the exact order the oracle stored
+ * it. This is the order Pickem indexes packedResults against, so week results
+ * must be built against this list rather than a fresh ESPN ordering.
+ * Returns [] when weekGames has not been written for the week yet.
+ */
+export async function readWeekGameIds(weekId: bigint): Promise<bigint[]> {
+  const { year, seasonType, weekNumber } = weekIdToParams(weekId);
+  const [gameIds] = (await publicClient.readContract({
+    address: oracleAddress,
+    abi: CRE_ORACLE_ABI,
+    functionName: "getWeekGames",
+    args: [year, seasonType, weekNumber],
+  })) as unknown as [readonly bigint[], bigint];
+  return [...gameIds];
 }
 
 export async function readWeekResultsFinalized(

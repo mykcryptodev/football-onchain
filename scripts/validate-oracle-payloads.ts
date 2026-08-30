@@ -99,9 +99,23 @@ check("wg contains contest-82 game", wgPacked.some((w) => {
 }), true);
 
 // ---- week results ----
-const wrPayload = await buildWeekResultsPayload(weekId, scoreboard, (id) =>
-  fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${id}`),
+// Use the same game order from the week games payload as our "onchain" list
+const onchainGameIds = wgPacked.flatMap((w) =>
+  [170n, 85n, 0n]
+    .map((shift) => (w >> shift) & ((1n << 85n) - 1n))
+    .filter((id) => id > 0n)
 );
+const wrResult = await buildWeekResultsPayload(
+  weekId,
+  onchainGameIds,
+  scoreboard,
+  (id) => fetchJson<EspnSummary>(`${ESPN_SUMMARY}?event=${id}`),
+);
+if (!wrResult.ok) {
+  console.error(`week results build failed: ${wrResult.reason}`);
+  process.exit(1);
+}
+const wrPayload = wrResult.payload;
 const [rt3, wrWeekId, allCompleted, wrCount, packedResults, tbPoints, tbGame] =
   decodeAbiParameters(WEEK_RESULTS_PARAMS, wrPayload);
 check("wr reportType", rt3, 3);
