@@ -1,7 +1,6 @@
 export type PickResult =
   | "correct"
   | "wrong"
-  | "tie"
   | "live-winning"
   | "live-losing"
   | "pending";
@@ -82,7 +81,7 @@ export function getPickResult(game: ScoredGame, pick: number): PickResult {
   );
 
   if (complete) {
-    if (winner === null) return "tie";
+    if (winner === null) return "wrong";
     return pick === winner ? "correct" : "wrong";
   }
 

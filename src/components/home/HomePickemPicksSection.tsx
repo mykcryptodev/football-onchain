@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  Check,
-  CircleDot,
-  Equal,
-  Minus,
-  Trophy,
-  X,
-} from "lucide-react";
+import { ArrowRight, Check, CircleDot, Minus, Trophy, X } from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -32,8 +24,6 @@ function resultStyles(result: CurrentWeekGamePick["result"]) {
       return "border-green-500/30 bg-green-500/10";
     case "wrong":
       return "border-red-500/30 bg-red-500/10";
-    case "tie":
-      return "border-border bg-muted/40";
     case "live-winning":
       return "border-green-500/25 bg-green-500/8";
     case "live-losing":
@@ -50,9 +40,6 @@ function ResultIcon({ result }: { result: CurrentWeekGamePick["result"] }) {
   if (result === "wrong") {
     return <X className="size-4 text-red-600 dark:text-red-400" />;
   }
-  if (result === "tie") {
-    return <Equal className="size-4 text-muted-foreground" />;
-  }
   if (result === "live-winning" || result === "live-losing") {
     return <CircleDot className="size-4 text-primary" />;
   }
@@ -65,8 +52,6 @@ function resultLabel(result: CurrentWeekGamePick["result"]) {
       return "Correct";
     case "wrong":
       return "Wrong";
-    case "tie":
-      return "Tie";
     case "live-winning":
       return "Winning";
     case "live-losing":
@@ -81,7 +66,6 @@ function gameStatusLabel(game: CurrentWeekGamePick) {
   if (
     game.result === "correct" ||
     game.result === "wrong" ||
-    game.result === "tie" ||
     status.includes("final") ||
     game.completed
   ) {
@@ -132,7 +116,6 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
     hasScore &&
     (game.result === "correct" ||
       game.result === "wrong" ||
-      game.result === "tie" ||
       game.result === "live-winning" ||
       game.result === "live-losing");
 

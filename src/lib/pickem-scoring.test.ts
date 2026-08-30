@@ -65,7 +65,7 @@ describe("pickem scoring", () => {
     ).toBe("live-losing");
   });
 
-  test("marks a finished tie instead of pending", () => {
+  test("marks a finished tie as an incorrect pick", () => {
     expect(
       getPickResult(
         {
@@ -77,7 +77,7 @@ describe("pickem scoring", () => {
         },
         1,
       ),
-    ).toBe("tie");
+    ).toBe("wrong");
   });
 
   test("leaves unstarted games pending", () => {
