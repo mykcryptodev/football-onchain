@@ -16,9 +16,12 @@ export const queryKeys = {
     ["weekGames", year, seasonType, week] as const,
   nflGames: (seasonType: string, week: string) =>
     ["nflGames", seasonType, week] as const,
+  currentNflWeek: () => ["currentNflWeek"] as const,
 
   // Pick'em
   pickemContest: (contestId: number) => ["pickemContest", contestId] as const,
   pickemContests: () => ["pickemContests", chain.id] as const,
+  userPickems: (address: string) =>
+    ["userPickems", chain.id, address.toLowerCase()] as const,
   adminContests: () => ["adminContests"] as const,
 } as const;
