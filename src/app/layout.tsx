@@ -26,10 +26,26 @@ const segment = localFont({
   display: "swap",
   fallback: ["system-ui", "sans-serif"],
   src: [
-    { path: "../../public/fonts/Segment/Segment-Medium.otf", weight: "400", style: "normal" },
-    { path: "../../public/fonts/Segment/Segment-Medium.otf", weight: "500", style: "normal" },
-    { path: "../../public/fonts/Segment/Segment-Bold.otf", weight: "600", style: "normal" },
-    { path: "../../public/fonts/Segment/Segment-Bold.otf", weight: "700", style: "normal" },
+    {
+      path: "../../public/fonts/Segment/Segment-Medium.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/Segment/Segment-Medium.otf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/Segment/Segment-Bold.otf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/Segment/Segment-Bold.otf",
+      weight: "700",
+      style: "normal",
+    },
   ],
 });
 
@@ -90,9 +106,7 @@ export default function RootLayout({
 }>) {
   return (
     <html suppressHydrationWarning lang="en">
-      <body
-        className={`${segment.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${segment.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider
           disableTransitionOnChange
           enableSystem

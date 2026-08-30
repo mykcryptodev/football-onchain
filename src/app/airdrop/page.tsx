@@ -1,16 +1,15 @@
 import { AirdropForm } from "@/components/airdrop/AirdropForm";
+import { PageHeader } from "@/components/page-header";
 
 export default function AirdropPage() {
   return (
-    <div className="container mx-auto py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Airdrop Tokens</h1>
-          <p className="text-muted-foreground mt-2">
-            Send ERC-20 tokens or ERC-721 NFTs to multiple addresses in a single
-            transaction.
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-10">
+      <div className="mx-auto max-w-2xl">
+        <PageHeader
+          description="Send ERC-20 tokens or ERC-721 NFTs to multiple addresses in a single transaction."
+          eyebrow="Tools"
+          title="Airdrop tokens"
+        />
         <AirdropForm />
       </div>
     </div>

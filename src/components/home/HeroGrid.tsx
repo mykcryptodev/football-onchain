@@ -48,4 +48,3 @@ export function HeroGrid({ className }: { className?: string }) {
     </div>
   );
 }
-

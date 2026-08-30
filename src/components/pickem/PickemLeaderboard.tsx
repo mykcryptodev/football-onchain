@@ -138,7 +138,7 @@ export default function PickemLeaderboard({
       case 1:
         return <Trophy className="h-5 w-5 text-yellow-500" />;
       case 2:
-        return <Medal className="h-5 w-5 text-gray-400" />;
+        return <Medal className="text-muted-foreground h-5 w-5" />;
       case 3:
         return <Award className="h-5 w-5 text-orange-600" />;
       default:
@@ -152,7 +152,7 @@ export default function PickemLeaderboard({
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) return <Badge className="bg-yellow-500">1st Place</Badge>;
-    if (rank === 2) return <Badge className="bg-gray-400">2nd Place</Badge>;
+    if (rank === 2) return <Badge variant="secondary">2nd Place</Badge>;
     if (rank === 3) return <Badge className="bg-orange-600">3rd Place</Badge>;
     return null;
   };

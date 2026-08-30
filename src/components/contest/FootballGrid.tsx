@@ -379,23 +379,25 @@ export function FootballGrid({
                   const isForSale = listings?.has(expectedTokenId) ?? false;
 
                   const borderColor = isWinner
-                    ? "border-emerald-400 dark:border-emerald-500"
+                    ? "border-success"
                     : "border-border";
 
+                  // Sale takes the brand accent (it wants attention); "yours"
+                  // stays neutral so the board never looks like two accents.
                   const ringStyle = isForSale
-                    ? "ring-2 ring-amber-400/80"
+                    ? "ring-2 ring-brand/70"
                     : isMyBox
-                      ? "ring-2 ring-sky-400/80"
+                      ? "ring-2 ring-foreground/25"
                       : "";
 
                   return (
                     <div
                       key={col}
                       className={`
-                       relative aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center transition-colors rounded border ${borderColor} min-w-[2.5rem] sm:min-w-0
+                       press relative aspect-square p-0.5 sm:p-1 text-[10px] sm:text-xs text-center flex flex-col justify-center items-center rounded border ${borderColor} min-w-[2.5rem] sm:min-w-0
                        ${
                          isWinner
-                           ? "bg-emerald-100 dark:bg-emerald-900/30"
+                           ? "bg-success/15 shadow-[inset_0_0_0_1px_var(--success)]"
                            : getBoxColor(
                                boxPosition,
                                expectedTokenId,
@@ -414,11 +416,11 @@ export function FootballGrid({
                       }}
                     >
                       {isForSale ? (
-                        <span className="absolute right-0.5 top-0.5 rounded-full bg-amber-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                        <span className="bg-brand text-brand-foreground absolute right-0.5 top-0.5 rounded-full px-1 text-[7px] font-semibold uppercase tracking-wide shadow-sm sm:text-[8px]">
                           Sale
                         </span>
                       ) : isMyBox ? (
-                        <span className="absolute right-0.5 top-0.5 rounded-full bg-sky-500 px-1 text-[7px] font-semibold uppercase tracking-wide text-white shadow-sm sm:text-[8px]">
+                        <span className="bg-foreground text-background absolute right-0.5 top-0.5 rounded-full px-1 text-[7px] font-semibold uppercase tracking-wide shadow-sm sm:text-[8px]">
                           You
                         </span>
                       ) : null}

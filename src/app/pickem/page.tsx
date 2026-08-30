@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { PageHeader } from "@/components/page-header";
 import CreatePickemForm from "@/components/pickem/CreatePickemForm";
 import MyPickems from "@/components/pickem/MyPickems";
 import PickemContestList from "@/components/pickem/PickemContestList";
@@ -22,14 +23,12 @@ function PickemPageContent() {
   );
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">NFL Pick&apos;em</h1>
-        <p className="text-muted-foreground text-lg">
-          Predict winners for all games in an NFL week. Most correct picks wins
-          the prize pool!
-        </p>
-      </div>
+    <div className="container mx-auto max-w-7xl px-4 py-10">
+      <PageHeader
+        description="Call every game on the slate. The most correct picks takes the pot."
+        eyebrow="Weekly Pool"
+        title={<>NFL Pick&apos;em</>}
+      />
 
       <Tabs
         className="space-y-4"

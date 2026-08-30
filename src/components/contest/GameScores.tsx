@@ -343,8 +343,8 @@ export function GameScores({
                                     <AccountAvatar className="size-4 rounded-full" />
                                   </AccountProvider>
                                 ) : (
-                                  <div className="size-4 rounded-full bg-gray-300 flex items-center justify-center">
-                                    <span className="text-xs text-gray-600">
+                                  <div className="bg-muted flex size-4 items-center justify-center rounded-full">
+                                    <span className="text-muted-foreground text-xs">
                                       ?
                                     </span>
                                   </div>

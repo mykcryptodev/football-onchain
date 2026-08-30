@@ -1,4 +1,11 @@
-import { ArrowUpRight, Banknote, Blocks, Grid3x3, Timer, Trophy } from "lucide-react";
+import {
+  ArrowUpRight,
+  Banknote,
+  Blocks,
+  Grid3x3,
+  Timer,
+  Trophy,
+} from "lucide-react";
 import Link from "next/link";
 
 import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSection";
@@ -33,10 +40,26 @@ const features = [
 ];
 
 const steps = [
-  { n: "01", title: "Open a contest", body: "Choose the game and the entry fee." },
-  { n: "02", title: "Fill the board", body: "Share the link and let players claim squares." },
-  { n: "03", title: "Numbers drop", body: "Rows and columns are drawn onchain at kickoff." },
-  { n: "04", title: "Winners get paid", body: "Each quarter settles to the matching square." },
+  {
+    n: "01",
+    title: "Open a contest",
+    body: "Choose the game and the entry fee.",
+  },
+  {
+    n: "02",
+    title: "Fill the board",
+    body: "Share the link and let players claim squares.",
+  },
+  {
+    n: "03",
+    title: "Numbers drop",
+    body: "Rows and columns are drawn onchain at kickoff.",
+  },
+  {
+    n: "04",
+    title: "Winners get paid",
+    body: "Each quarter settles to the matching square.",
+  },
 ];
 
 export default function Home() {

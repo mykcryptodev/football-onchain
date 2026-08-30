@@ -1,17 +1,15 @@
 import { CreateContestForm } from "@/components/contest/CreateContestForm";
+import { PageHeader } from "@/components/page-header";
 
 export default function CreateContestPage() {
   return (
-    <div className="container mx-auto py-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Create New Contest
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Set up a new football squares contest for your next game.
-          </p>
-        </div>
+    <div className="container mx-auto px-4 py-10">
+      <div className="mx-auto max-w-2xl">
+        <PageHeader
+          description="Pick a game, set the box price, and share the link. Numbers get drawn once the board fills."
+          eyebrow="Superbowl Squares"
+          title="Create a contest"
+        />
         <CreateContestForm />
       </div>
     </div>

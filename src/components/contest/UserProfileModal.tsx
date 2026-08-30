@@ -552,7 +552,7 @@ export function UserProfileModal({
                   </div>
                 </div>
                 <Badge
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-sm px-3 py-1"
+                  className="bg-success text-success-foreground hover:bg-success/90 px-3 py-1 text-sm"
                   variant="default"
                 >
                   {boxWins.quarters.length + boxWins.scoringPlays.length} Win

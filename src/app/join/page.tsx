@@ -11,6 +11,7 @@ import { useActiveAccount } from "thirdweb/react";
 
 import { ContestCard } from "@/components/contest/ContestCard";
 import type { GameScore } from "@/components/contest/types";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -107,8 +108,7 @@ function JoinContestContent() {
       ? tabParam
       : "open";
   const gameFilterParam = searchParams.get("gameId") ?? "all";
-  const selectedGameId =
-    gameFilterParam === "all" ? "all" : gameFilterParam;
+  const selectedGameId = gameFilterParam === "all" ? "all" : gameFilterParam;
 
   const boxesAddress = boxes[chain.id];
   const { data: ownedContestIds = [], isLoading: isLoadingOwnedContests } =
@@ -204,10 +204,7 @@ function JoinContestContent() {
       .map(gameId => {
         const details = gameDetailsMap.get(gameId);
         const dateLabel = formatGameDate(details?.date);
-        const matchupLabel = getMatchupLabel(
-          gameScoresMap.get(gameId),
-          gameId,
-        );
+        const matchupLabel = getMatchupLabel(gameScoresMap.get(gameId), gameId);
         const dateValue = details?.date
           ? new Date(details.date).getTime()
           : null;
@@ -242,9 +239,7 @@ function JoinContestContent() {
 
   const openContests = useMemo(
     () =>
-      filteredContests.filter(
-        c => c.boxesCanBeClaimed && c.boxesClaimed < 100,
-      ),
+      filteredContests.filter(c => c.boxesCanBeClaimed && c.boxesClaimed < 100),
     [filteredContests],
   );
   const closedContests = useMemo(
@@ -259,8 +254,7 @@ function JoinContestContent() {
     [ownedContestIds],
   );
   const yoursContests = useMemo(
-    () =>
-      filteredContests.filter(contest => ownedContestIdSet.has(contest.id)),
+    () => filteredContests.filter(contest => ownedContestIdSet.has(contest.id)),
     [filteredContests, ownedContestIdSet],
   );
 
@@ -290,7 +284,7 @@ function JoinContestContent() {
       <div className="min-h-screen bg-background">
         <main className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-red-500">
+            <h1 className="text-destructive mb-4 text-2xl font-bold">
               Error Loading Contests
             </h1>
             <p className="text-muted-foreground">{error.message}</p>
@@ -303,13 +297,11 @@ function JoinContestContent() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Join a Contest</h1>
-          <p className="text-xl text-muted-foreground">
-            Browse and join available football squares contests
-          </p>
-        </div>
+        <PageHeader
+          description="Browse open boards, grab your squares, and follow the game as the numbers land."
+          eyebrow="Superbowl Squares"
+          title="Join a contest"
+        />
 
         {/* Loading State */}
         {isLoading && <LoadingSkeleton />}

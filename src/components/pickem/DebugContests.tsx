@@ -96,7 +96,7 @@ export default function DebugContests() {
         {debugInfo && (
           <div className="mt-4">
             <h3 className="font-semibold mb-2">Debug Results:</h3>
-            <pre className="bg-gray-100 p-4 rounded text-sm overflow-auto max-h-96">
+            <pre className="bg-muted max-h-96 overflow-auto rounded p-4 text-sm">
               {JSON.stringify(debugInfo, null, 2)}
             </pre>
           </div>

@@ -82,7 +82,7 @@ export function GameDataFetcher({ gameId }: GameDataFetcherProps) {
           <label className="block text-sm font-medium mb-2">Game ID:</label>
           <input
             readOnly
-            className="border rounded px-3 py-2 bg-gray-100"
+            className="bg-muted rounded border px-3 py-2"
             type="number"
             value={gameId}
           />
@@ -91,7 +91,7 @@ export function GameDataFetcher({ gameId }: GameDataFetcherProps) {
         {/* Action Buttons */}
         <div className="space-x-2">
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+            className="bg-primary text-primary-foreground rounded px-4 py-2 disabled:opacity-50"
             disabled={isFetchingData || isFetchingScoreChanges}
             onClick={handleFetchData}
           >
@@ -110,7 +110,7 @@ export function GameDataFetcher({ gameId }: GameDataFetcherProps) {
         )}
 
         {/* Usage Instructions */}
-        <div className="text-sm text-gray-600">
+        <div className="text-muted-foreground text-sm">
           <h4 className="font-medium mb-2">Usage Instructions:</h4>
           <ul className="list-disc list-inside space-y-1">
             <li>

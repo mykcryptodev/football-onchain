@@ -244,12 +244,10 @@ export default function PickemContestClient({
   const handleShareToX = async () => {
     const shareUrl =
       typeof window !== "undefined" ? window.location.href : undefined;
-    const intentUrl = `https://twitter.com/intent/tweet?${new URLSearchParams(
-      {
-        text: shareText,
-        ...(shareUrl ? { url: shareUrl } : {}),
-      },
-    ).toString()}`;
+    const intentUrl = `https://twitter.com/intent/tweet?${new URLSearchParams({
+      text: shareText,
+      ...(shareUrl ? { url: shareUrl } : {}),
+    }).toString()}`;
 
     try {
       setShareLoading(true);
@@ -890,14 +888,14 @@ export default function PickemContestClient({
             <Textarea
               className="min-h-24 resize-none text-sm"
               value={shareText}
-              onChange={(event) => setShareText(event.target.value)}
+              onChange={event => setShareText(event.target.value)}
             />
           </div>
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
             <div className="flex w-full gap-2">
               <Button
-                className="flex-1 bg-black text-white hover:bg-black/90"
+                className="bg-foreground text-background hover:bg-foreground/90 flex-1"
                 disabled={shareLoading}
                 type="button"
                 onClick={handleShareToX}
