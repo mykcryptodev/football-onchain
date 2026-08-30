@@ -10,6 +10,7 @@ import {
   getPickResult,
   type PickResult,
   rankEntries,
+  selectCurrentWeekContests,
 } from "@/lib/pickem-scoring";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -117,24 +118,16 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
         )
       ).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
-      const currentWeekContests = contests.filter(({ contest }) => {
-        return (
-          Number(contest.year) === currentWeek.seasonYear &&
-          Number(contest.seasonType) === currentWeek.seasonType &&
-          Number(contest.weekNumber) === currentWeek.week
-        );
-      });
-
-      const matchingContests =
-        currentWeekContests.length > 0
-          ? currentWeekContests
-          : contests.filter(({ contest }) => {
-              return (
-                Number(contest.year) === currentWeek.seasonYear &&
-                Number(contest.seasonType) === currentWeek.seasonType &&
-                Number(contest.weekNumber) === currentWeek.week - 1
-              );
-            });
+      const matchingContests = selectCurrentWeekContests(
+        contests.map(({ contestId, contest }) => ({
+          contestId,
+          contest,
+          year: Number(contest.year),
+          seasonType: Number(contest.seasonType),
+          weekNumber: Number(contest.weekNumber),
+        })),
+        currentWeek,
+      );
 
       const weekGamesCache = new Map<string, Promise<WeekGameApi[]>>();
       const loadWeekGames = (

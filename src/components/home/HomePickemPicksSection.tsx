@@ -15,13 +15,8 @@ import {
   useMyCurrentWeekPicks,
 } from "@/hooks/useMyCurrentWeekPicks";
 import { formatKickoffTime } from "@/lib/date";
+import { SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
 import { cn } from "@/lib/utils";
-
-const SEASON_TYPE_LABELS: Record<number, string> = {
-  1: "Preseason",
-  2: "Regular Season",
-  3: "Postseason",
-};
 
 function resultStyles(result: CurrentWeekGamePick["result"]) {
   switch (result) {
@@ -241,7 +236,15 @@ export function HomePickemPicksSection() {
     useMyCurrentWeekPicks();
   const featuredContestId = featuredPickemContestIds[0];
   const displayWeek = entries[0]?.weekNumber ?? currentWeek?.week;
+  const seasonType = entries[0]?.seasonType ?? currentWeek?.seasonType;
+  const seasonLabel = seasonType
+    ? (SEASON_TYPE_LABELS[seasonType] ?? "Season")
+    : null;
   const weekLabel = displayWeek ? `Week ${displayWeek}` : "this week";
+  const heading =
+    displayWeek && seasonLabel
+      ? `Your ${seasonLabel} ${weekLabel} Pick'em`
+      : "Your Pick'em";
 
   return (
     <section className="border-b">
@@ -252,7 +255,7 @@ export function HomePickemPicksSection() {
               Your board
             </p>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] md:text-4xl">
-              {displayWeek ? `Your ${weekLabel} Pick'em` : "Your Pick'em"}
+              {heading}
             </h2>
             <p className="mt-2 leading-7 text-muted-foreground">
               Every game you picked, live results, and where you sit in the
@@ -275,8 +278,9 @@ export function HomePickemPicksSection() {
                   Connect to see your picks
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Log in to track {weekLabel} games, scores, and your place in
-                  the contest.
+                  Log in to track{" "}
+                  {seasonLabel ? `${seasonLabel} ${weekLabel}` : weekLabel}{" "}
+                  games, scores, and your place in the contest.
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -303,7 +307,8 @@ export function HomePickemPicksSection() {
             <CardContent className="flex flex-col gap-5 py-8 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-lg font-semibold">
-                  No {weekLabel} picks yet
+                  No {seasonLabel ? `${seasonLabel} ${weekLabel}` : weekLabel}{" "}
+                  picks yet
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Enter a pool to see each game, your record, and live place on

@@ -7,6 +7,7 @@ import {
   isGameComplete,
   isGameInProgress,
   rankEntries,
+  selectCurrentWeekContests,
 } from "./pickem-scoring";
 
 describe("pickem scoring", () => {
@@ -137,5 +138,114 @@ describe("pickem scoring", () => {
     expect(formatPlace(12)).toBe("12th");
     expect(formatPlace(13)).toBe("13th");
     expect(formatPlace(21)).toBe("21st");
+  });
+});
+
+describe("current week matching", () => {
+  const preseasonWeek1 = {
+    year: 2026,
+    seasonType: 1,
+    weekNumber: 1,
+    id: "pre-1",
+  };
+  const regularWeek1 = {
+    year: 2026,
+    seasonType: 2,
+    weekNumber: 1,
+    id: "reg-1",
+  };
+  const postseasonWeek1 = {
+    year: 2026,
+    seasonType: 3,
+    weekNumber: 1,
+    id: "post-1",
+  };
+  const regularWeek2 = {
+    year: 2026,
+    seasonType: 2,
+    weekNumber: 2,
+    id: "reg-2",
+  };
+  const preseasonWeek4 = {
+    year: 2026,
+    seasonType: 1,
+    weekNumber: 4,
+    id: "pre-4",
+  };
+  const regularWeek18 = {
+    year: 2026,
+    seasonType: 2,
+    weekNumber: 18,
+    id: "reg-18",
+  };
+
+  test("matches preseason, regular season, and postseason independently", () => {
+    const contests = [preseasonWeek1, regularWeek1, postseasonWeek1];
+
+    expect(
+      selectCurrentWeekContests(contests, {
+        seasonYear: 2026,
+        seasonType: 1,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["pre-1"]);
+    expect(
+      selectCurrentWeekContests(contests, {
+        seasonYear: 2026,
+        seasonType: 2,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["reg-1"]);
+    expect(
+      selectCurrentWeekContests(contests, {
+        seasonYear: 2026,
+        seasonType: 3,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["post-1"]);
+  });
+
+  test("falls back to the previous week in the same season type", () => {
+    expect(
+      selectCurrentWeekContests([regularWeek1, regularWeek2], {
+        seasonYear: 2026,
+        seasonType: 2,
+        week: 2,
+      }).map(contest => contest.id),
+    ).toEqual(["reg-2"]);
+
+    expect(
+      selectCurrentWeekContests([regularWeek1], {
+        seasonYear: 2026,
+        seasonType: 2,
+        week: 2,
+      }).map(contest => contest.id),
+    ).toEqual(["reg-1"]);
+  });
+
+  test("falls back across season boundaries", () => {
+    expect(
+      selectCurrentWeekContests([preseasonWeek4, regularWeek1], {
+        seasonYear: 2026,
+        seasonType: 2,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["reg-1"]);
+
+    expect(
+      selectCurrentWeekContests([preseasonWeek4], {
+        seasonYear: 2026,
+        seasonType: 2,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["pre-4"]);
+
+    expect(
+      selectCurrentWeekContests([regularWeek18], {
+        seasonYear: 2026,
+        seasonType: 3,
+        week: 1,
+      }).map(contest => contest.id),
+    ).toEqual(["reg-18"]);
   });
 });

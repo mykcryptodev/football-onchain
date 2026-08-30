@@ -183,3 +183,69 @@ export function formatPlace(rank: number): string {
       return `${rank}th`;
   }
 }
+
+export const SEASON_TYPE_LABELS: Record<number, string> = {
+  1: "Preseason",
+  2: "Regular Season",
+  3: "Postseason",
+};
+
+export interface WeekIdentity {
+  year: number;
+  seasonType: number;
+  weekNumber: number;
+}
+
+export interface CurrentNflWeekRef {
+  seasonYear: number;
+  seasonType: number;
+  week: number;
+}
+
+function sameCalendarYear(
+  contest: WeekIdentity,
+  current: CurrentNflWeekRef,
+): boolean {
+  return contest.year === current.seasonYear;
+}
+
+export function selectCurrentWeekContests<T extends WeekIdentity>(
+  contests: T[],
+  current: CurrentNflWeekRef,
+): T[] {
+  const sameYear = contests.filter(contest =>
+    sameCalendarYear(contest, current),
+  );
+
+  const exact = sameYear.filter(
+    contest =>
+      contest.seasonType === current.seasonType &&
+      contest.weekNumber === current.week,
+  );
+  if (exact.length > 0) return exact;
+
+  const previousSameType = sameYear.filter(
+    contest =>
+      contest.seasonType === current.seasonType &&
+      contest.weekNumber === current.week - 1,
+  );
+  if (previousSameType.length > 0) return previousSameType;
+
+  // ESPN can roll from preseason -> regular or regular -> postseason
+  // while last week's games are still relevant.
+  if (current.week === 1 && current.seasonType > 1) {
+    const previousType = current.seasonType - 1;
+    const previousTypeContests = sameYear.filter(
+      contest => contest.seasonType === previousType,
+    );
+    if (previousTypeContests.length === 0) return [];
+    const latestWeek = Math.max(
+      ...previousTypeContests.map(contest => contest.weekNumber),
+    );
+    return previousTypeContests.filter(
+      contest => contest.weekNumber === latestWeek,
+    );
+  }
+
+  return [];
+}
