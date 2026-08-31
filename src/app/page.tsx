@@ -13,6 +13,7 @@ import { FeaturedContestsSection } from "@/components/home/FeaturedContestsSecti
 import { FeaturedPickemContestsSection } from "@/components/home/FeaturedPickemContestsSection";
 import { FeaturedPickemHero } from "@/components/home/FeaturedPickemHero";
 import { HomeContestHighlights } from "@/components/home/HomeContestHighlights";
+import { HomePickemPicksSection } from "@/components/home/HomePickemPicksSection";
 import { Button } from "@/components/ui/button";
 
 const steps = [
@@ -76,6 +77,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <HomePickemPicksSection />
 
       <section className="border-b bg-card/35">
         <div className="mx-auto grid max-w-[1400px] md:grid-cols-2">

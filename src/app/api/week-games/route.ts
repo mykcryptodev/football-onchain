@@ -14,6 +14,7 @@ interface GameInfo {
   homeScore?: number;
   awayScore?: number;
   status?: string;
+  completed?: boolean;
   odds?: {
     details?: string;
     overUnder?: number;
@@ -271,6 +272,7 @@ export async function GET(request: NextRequest) {
         homeScore: homeTeam.score ? parseInt(homeTeam.score) : undefined,
         awayScore: awayTeam.score ? parseInt(awayTeam.score) : undefined,
         status: competition.status.type.name,
+        completed: competition.status.type.completed,
         odds: oddsData,
       };
     });
