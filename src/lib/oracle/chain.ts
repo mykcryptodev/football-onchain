@@ -15,6 +15,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { base } from "viem/chains";
 
 import { chain as appChain, gameScoreOracle } from "@/constants";
+import { redis } from "@/lib/redis";
 
 import { CRE_ORACLE_ABI } from "./abi";
 import { weekIdToParams } from "./espn";
@@ -69,9 +70,7 @@ export interface OnchainGameScore {
   totalScoreChanges: number;
 }
 
-export async function readGameScore(
-  gameId: bigint,
-): Promise<OnchainGameScore> {
+export async function readGameScore(gameId: bigint): Promise<OnchainGameScore> {
   const r = (await publicClient.readContract({
     address: oracleAddress,
     abi: CRE_ORACLE_ABI,
@@ -157,17 +156,72 @@ async function assertGasPriceUnderCap(): Promise<void> {
   }
 }
 
-export async function writeReport(report: Hex): Promise<Hex> {
+const WRITE_LOCK_KEY = `oracle:write-lock:${base.id}:${oracleAddress.toLowerCase()}`;
+const WRITE_LOCK_TTL_SECONDS = 120;
+const RELEASE_LOCK_SCRIPT = `
+  if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+  end
+  return 0
+`;
+
+function isNonceTooLow(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /nonce too low|nonce provided.*lower than.*current nonce/i.test(
+    message,
+  );
+}
+
+async function submitReport(report: Hex): Promise<Hex> {
   await assertGasPriceUnderCap();
   const { account, client } = getWriterClient();
+  const nonce = await publicClient.getTransactionCount({
+    address: account.address,
+    blockTag: "pending",
+  });
   const { request } = await publicClient.simulateContract({
     address: oracleAddress,
     abi: CRE_ORACLE_ABI,
     functionName: "onReport",
     args: ["0x", report],
     account,
+    nonce,
   });
   const hash = await client.writeContract(request);
   await publicClient.waitForTransactionReceipt({ hash });
   return hash;
+}
+
+export async function writeReport(report: Hex): Promise<Hex> {
+  if (!redis) {
+    throw new Error(
+      "Redis is required for oracle writes so concurrent serverless invocations cannot reuse a nonce",
+    );
+  }
+
+  const lockToken = crypto.randomUUID();
+  const acquired = await redis.set(WRITE_LOCK_KEY, lockToken, {
+    nx: true,
+    ex: WRITE_LOCK_TTL_SECONDS,
+  });
+  if (acquired !== "OK") {
+    throw new Error(
+      "another oracle write is already in progress — retry later",
+    );
+  }
+
+  try {
+    try {
+      return await submitReport(report);
+    } catch (error) {
+      if (!isNonceTooLow(error)) throw error;
+      return await submitReport(report);
+    }
+  } finally {
+    try {
+      await redis.eval(RELEASE_LOCK_SCRIPT, [WRITE_LOCK_KEY], [lockToken]);
+    } catch (error) {
+      console.error("Failed to release oracle write lock", error);
+    }
+  }
 }
