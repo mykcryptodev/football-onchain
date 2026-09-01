@@ -6,6 +6,16 @@ import type { TokensResponse } from "@/app/api/tokens/route";
 import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
+import {
+  buildPickemContestUrl,
+  buildPickemOgImageUrl,
+  buildPickemShareDescription,
+  buildPickemShareTitle,
+  buildPickemShareUrl,
+  isEnteredShare,
+  PICKEM_ENTERED_PARAM,
+  PICKEM_OG_SIZES,
+} from "@/lib/pickem-share";
 import { client } from "@/providers/Thirdweb";
 
 import PickemContestClient from "./PickemContestClient";
@@ -41,13 +51,113 @@ function getSeasonTypeName(seasonType: number): string {
   }
 }
 
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+/**
+ * Builds the share card metadata. `entered` only swaps the copy and the image
+ * variant — it carries no wallet or identity data, and the page renders the
+ * same either way.
+ */
+function buildShareMetadata({
+  contestId,
+  entered,
+  title,
+  description,
+}: {
+  contestId: number;
+  entered: boolean;
+  title: string;
+  description: string;
+}): Metadata {
+  const baseUrl = getBaseUrl();
+  const contestUrl = buildPickemContestUrl(baseUrl, contestId);
+  const shareUrl = entered
+    ? buildPickemShareUrl(baseUrl, contestId)
+    : contestUrl;
+
+  const ogImageUrl = buildPickemOgImageUrl({
+    baseUrl,
+    contestId,
+    entered,
+    ratio: "og",
+  });
+  // Farcaster mini app embeds require a 3:2 image, so they get their own size.
+  const miniappImageUrl = buildPickemOgImageUrl({
+    baseUrl,
+    contestId,
+    entered,
+    ratio: "miniapp",
+  });
+
+  const miniappEmbed = {
+    version: "1",
+    imageUrl: miniappImageUrl,
+    button: {
+      title: entered ? "🏈 Beat My Picks" : "🏈 Make Your Picks",
+      action: {
+        type: "launch_miniapp",
+        // Deliberately the clean contest URL: a viewer opening the embed did
+        // not enter, so they should not re-share an "I'm in" card.
+        url: contestUrl,
+        name: "Football Boxes",
+      },
+    },
+  };
+
+  // For backward compatibility
+  const frameEmbed = {
+    ...miniappEmbed,
+    button: {
+      ...miniappEmbed.button,
+      action: {
+        ...miniappEmbed.button.action,
+        type: "launch_frame",
+      },
+    },
+  };
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [
+        {
+          url: ogImageUrl,
+          ...PICKEM_OG_SIZES.og,
+          alt: title,
+        },
+      ],
+      type: "website",
+      url: shareUrl,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+    other: {
+      "fc:miniapp": JSON.stringify(miniappEmbed),
+      "fc:frame": JSON.stringify(frameEmbed),
+    },
+  };
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: SearchParams;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const contestId = parseInt(id);
+  const entered = isEnteredShare(resolvedSearchParams[PICKEM_ENTERED_PARAM]);
 
   if (isNaN(contestId)) {
     return {
@@ -75,77 +185,34 @@ export async function generateMetadata({
       };
     }
 
-    const baseUrl = getBaseUrl();
-    const ogImageUrl = `${baseUrl}/api/og/pickem/${contestId}`;
-    const contestUrl = `${baseUrl}/pickem/${contestId}`;
-
     const seasonTypeName = getSeasonTypeName(contestData.seasonType);
-    const totalEntries = Number(contestData.totalEntries);
-    const weekNumber = contestData.weekNumber;
-    const year = Number(contestData.year);
 
-    const title = `${seasonTypeName} Week ${weekNumber} ${year} - Pick'em Contest #${contestId}`;
-    const description = `Join this Pick'em contest! ${totalEntries} ${totalEntries === 1 ? "entry" : "entries"} so far. Blockchain-powered fair play with instant payouts.`;
-
-    // Farcaster mini app embed metadata
-    const miniappEmbed = {
-      version: "1",
-      imageUrl: ogImageUrl,
-      button: {
-        title: "🏈 Make Your Picks",
-        action: {
-          type: "launch_miniapp",
-          url: contestUrl,
-          name: "Football Boxes",
-        },
-      },
-    };
-
-    // For backward compatibility
-    const frameEmbed = {
-      ...miniappEmbed,
-      button: {
-        ...miniappEmbed.button,
-        action: {
-          ...miniappEmbed.button.action,
-          type: "launch_frame",
-        },
-      },
-    };
-
-    return {
-      title,
-      description,
-      openGraph: {
-        title,
-        description,
-        images: [
-          {
-            url: ogImageUrl,
-            width: 1200,
-            height: 800,
-            alt: title,
-          },
-        ],
-        type: "website",
-        url: contestUrl,
-      },
-      twitter: {
-        card: "summary_large_image",
-        title,
-        description,
-        images: [ogImageUrl],
-      },
-      other: {
-        "fc:miniapp": JSON.stringify(miniappEmbed),
-        "fc:frame": JSON.stringify(frameEmbed),
-      },
-    };
+    return buildShareMetadata({
+      contestId,
+      entered,
+      title: buildPickemShareTitle({
+        entered,
+        seasonTypeName,
+        weekNumber: contestData.weekNumber,
+        year: Number(contestData.year),
+        contestId,
+      }),
+      description: buildPickemShareDescription({
+        entered,
+        totalEntries: Number(contestData.totalEntries),
+      }),
+    });
   } catch (error) {
     console.error("Error generating metadata:", error);
-    return {
-      title: "Pick'em Contest",
-    };
+    // Still emit a complete card: the OG endpoint renders its own placeholders,
+    // so a failed contract read degrades to a generic image, not a missing one.
+    return buildShareMetadata({
+      contestId,
+      entered,
+      title: entered ? "I'm in — Pick'em Contest" : "Pick'em Contest",
+      description:
+        "Onchain NFL Pick'em. Transparent entries, verifiable results, instant payouts.",
+    });
   }
 }
 

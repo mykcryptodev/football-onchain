@@ -14,7 +14,7 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,md}\" && eslint src/ --ext .js,.jsx,.ts,.tsx",
     "check": "npm run format:check",
     "fix": "npm run format",
-    "test": "bun test src/lib/oracle/sync.test.ts"
+    "test": "bun test"
   },
   "dependencies": {
     "@ecp.eth/sdk": "^0.0.37",
