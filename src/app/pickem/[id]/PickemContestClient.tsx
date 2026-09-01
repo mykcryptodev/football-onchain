@@ -46,6 +46,7 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
 import { formatKickoffTime } from "@/lib/date";
+import { buildPickemShareUrl } from "@/lib/pickem-share";
 import { toCaip19 } from "@/lib/utils";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
@@ -234,6 +235,17 @@ export default function PickemContestClient({
     }
   }, [shareModalOpen, shareMessage]);
 
+  // Built from the contest id rather than window.location so the link is free
+  // of whatever params the user arrived with, and carries the entered flag that
+  // switches the share card to the "I'm in" variant.
+  const shareUrl = useMemo(
+    () =>
+      typeof window !== "undefined"
+        ? buildPickemShareUrl(window.location.origin, contest.id)
+        : undefined,
+    [contest.id],
+  );
+
   const handleShareModalChange = (open: boolean) => {
     setShareModalOpen(open);
     if (!open) {
@@ -242,14 +254,10 @@ export default function PickemContestClient({
   };
 
   const handleShareToX = async () => {
-    const shareUrl =
-      typeof window !== "undefined" ? window.location.href : undefined;
-    const intentUrl = `https://twitter.com/intent/tweet?${new URLSearchParams(
-      {
-        text: shareText,
-        ...(shareUrl ? { url: shareUrl } : {}),
-      },
-    ).toString()}`;
+    const intentUrl = `https://twitter.com/intent/tweet?${new URLSearchParams({
+      text: shareText,
+      ...(shareUrl ? { url: shareUrl } : {}),
+    }).toString()}`;
 
     try {
       setShareLoading(true);
@@ -268,9 +276,6 @@ export default function PickemContestClient({
   };
 
   const handleShareToFarcaster = async () => {
-    const shareUrl =
-      typeof window !== "undefined" ? window.location.href : undefined;
-
     try {
       setShareLoading(true);
 
@@ -890,7 +895,7 @@ export default function PickemContestClient({
             <Textarea
               className="min-h-24 resize-none text-sm"
               value={shareText}
-              onChange={(event) => setShareText(event.target.value)}
+              onChange={event => setShareText(event.target.value)}
             />
           </div>
 
