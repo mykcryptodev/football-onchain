@@ -23,7 +23,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
+import { useMultipleWeekResultsFinalized } from "@/hooks/useWeekResultsFinalized";
 
+import { canFinalizeContest } from "./canFinalizeContest";
 import PickemLeaderboard from "./PickemLeaderboard";
 
 interface Contest {
@@ -75,6 +77,23 @@ export default function MyPickems() {
   // Add state for finalizing
   const [finalizing, setFinalizing] = useState<Record<number, boolean>>({});
   const [batchClaiming, setBatchClaiming] = useState(false);
+
+  const { statusMap: weekResultsFinalized } = useMultipleWeekResultsFinalized(
+    nfts
+      .filter(nft => !nft.contest?.gamesFinalized)
+      .filter(
+        (nft, index, pending) =>
+          pending.findIndex(other => other.contestId === nft.contestId) ===
+          index,
+      )
+      .map(nft => ({
+        contestId: nft.contestId,
+        year: nft.year,
+        seasonType: nft.seasonType,
+        weekNumber: nft.weekNumber,
+        enabled: true,
+      })),
+  );
 
   useEffect(() => {
     if (account?.address) {
@@ -233,6 +252,11 @@ export default function MyPickems() {
 
   // Add function
   const handleFinalizeContest = async (contestId: number) => {
+    if (!weekResultsFinalized[contestId]) {
+      toast.error("Week results are not finalized yet");
+      return;
+    }
+
     setFinalizing(prev => ({ ...prev, [contestId]: true }));
 
     try {
@@ -540,8 +564,11 @@ export default function MyPickems() {
 
                 {/* Actions */}
                 <div className="space-y-2">
-                  {/* Show finalize button only if games not finalized */}
-                  {!nft.contest?.gamesFinalized && (
+                  {/* Only show finalize if oracle week results are finalized */}
+                  {canFinalizeContest(
+                    nft.contest?.gamesFinalized,
+                    weekResultsFinalized[nft.contestId],
+                  ) && (
                     <Button
                       className="w-full"
                       disabled={finalizing[nft.contestId] || !account}
@@ -660,18 +687,22 @@ export default function MyPickems() {
 
                   {/* Actions */}
                   <div className="space-y-2">
-                    {/* Show finalize button */}
-                    <Button
-                      className="w-full"
-                      disabled={finalizing[nft.contestId] || !account}
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleFinalizeContest(nft.contestId)}
-                    >
-                      {finalizing[nft.contestId]
-                        ? "Finalizing..."
-                        : "Finalize Contest & Calculate Winners"}
-                    </Button>
+                    {canFinalizeContest(
+                      nft.contest?.gamesFinalized,
+                      weekResultsFinalized[nft.contestId],
+                    ) && (
+                      <Button
+                        className="w-full"
+                        disabled={finalizing[nft.contestId] || !account}
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleFinalizeContest(nft.contestId)}
+                      >
+                        {finalizing[nft.contestId]
+                          ? "Finalizing..."
+                          : "Finalize Contest & Calculate Winners"}
+                      </Button>
+                    )}
 
                     {/* Always show leaderboard button */}
                     <Button
