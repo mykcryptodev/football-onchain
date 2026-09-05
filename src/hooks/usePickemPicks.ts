@@ -25,19 +25,27 @@ export function usePickemPicks(gameIds: string[]): UsePickemPicksReturn {
   };
 
   const pickAtRandom = () => {
-    const randomPicks: Record<string, number> = {};
-    gameIds.forEach(id => {
-      randomPicks[id] = Math.random() < 0.5 ? 0 : 1;
-    });
-    setPicks(randomPicks);
-    setTiebreakerPoints((Math.floor(Math.random() * 51) + 20).toString());
+    setPicks(previous =>
+      Object.fromEntries(
+        gameIds.map(id => [
+          id,
+          previous[id] === 0 || previous[id] === 1
+            ? previous[id]
+            : Math.random() < 0.5
+              ? 0
+              : 1,
+        ]),
+      ),
+    );
+    setTiebreakerPoints(
+      previous => previous || (Math.floor(Math.random() * 51) + 20).toString(),
+    );
   };
 
-  const getPickedCount = () => {
-    return Object.values(picks).filter(p => p !== -1).length;
-  };
-
-  const allPicksMade = Object.values(picks).every(p => p !== -1);
+  const getPickedCount = () =>
+    gameIds.filter(id => picks[id] === 0 || picks[id] === 1).length;
+  const allPicksMade =
+    gameIds.length > 0 && getPickedCount() === gameIds.length;
 
   return {
     picks,
@@ -49,4 +57,3 @@ export function usePickemPicks(gameIds: string[]): UsePickemPicksReturn {
     allPicksMade,
   };
 }
-

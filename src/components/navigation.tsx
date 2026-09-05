@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
+import { Suspense } from "react";
 import { ConnectButton, darkTheme, lightTheme } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
 
@@ -11,6 +13,53 @@ import { useDisplayToken } from "@/providers/DisplayTokenProvider";
 import { client } from "@/providers/Thirdweb";
 
 import { ModeToggle } from "./mode-toggle";
+
+function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isMyPicks =
+    pathname === "/pickem" && searchParams.get("tab") === "my-pickems";
+  const links = [
+    {
+      href: "/pickem",
+      label: "Pick’em",
+      active: pathname.startsWith("/pickem") && !isMyPicks,
+    },
+    { href: "/pickem?tab=my-pickems", label: "My picks", active: isMyPicks },
+    {
+      href: "/join",
+      label: "Squares",
+      active:
+        pathname === "/join" ||
+        pathname.startsWith("/contest/") ||
+        pathname.startsWith("/contests/"),
+    },
+  ];
+  return (
+    <div
+      className={
+        mobile
+          ? "grid grid-cols-3 border-t px-4 md:hidden"
+          : "hidden items-center gap-1 md:flex"
+      }
+    >
+      {links.map(link => (
+        <Link
+          key={link.href}
+          aria-current={link.active ? "page" : undefined}
+          href={link.href}
+          className={
+            mobile
+              ? "border-b-2 border-transparent py-3 text-center text-sm font-semibold text-muted-foreground hover:bg-secondary aria-[current=page]:border-primary aria-[current=page]:bg-secondary aria-[current=page]:text-primary"
+              : "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground aria-[current=page]:bg-secondary aria-[current=page]:text-primary"
+          }
+        >
+          {link.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 export function Navigation() {
   const { resolvedTheme } = useTheme();
@@ -41,26 +90,9 @@ export function Navigation() {
             </span>
           </Link>
 
-          <div className="hidden items-center gap-1 md:flex">
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/pickem"
-            >
-              Pick&apos;em
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/join"
-            >
-              Squares
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/contest/create"
-            >
-              Create
-            </Link>
-          </div>
+          <Suspense fallback={null}>
+            <NavigationLinks />
+          </Suspense>
         </div>
 
         <div className="flex items-center gap-2">
@@ -99,6 +131,9 @@ export function Navigation() {
           <ModeToggle />
         </div>
       </div>
+      <Suspense fallback={null}>
+        <NavigationLinks mobile />
+      </Suspense>
     </nav>
   );
 }

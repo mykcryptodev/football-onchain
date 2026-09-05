@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   chain,
   chainlinkGasLimit,
@@ -69,6 +68,13 @@ export default function PickemContestList() {
     getUserPicks,
   } = usePickemContract();
   const [contests, setContests] = useState<PickemContest[]>([]);
+  const [filter, setFilter] = useState("open");
+  const [loadError, setLoadError] = useState(false);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [fetchingResults, setFetchingResults] = useState<
     Record<number, boolean>
@@ -101,6 +107,8 @@ export default function PickemContestList() {
   }, []);
 
   const fetchContests = async () => {
+    setLoading(true);
+    setLoadError(false);
     try {
       const nextId = await getNextContestId();
       const fetchedContests: PickemContest[] = [];
@@ -200,6 +208,7 @@ export default function PickemContestList() {
 
       setContests(contestsWithUsd);
     } catch (error) {
+      setLoadError(true);
       console.error("Error fetching contests:", error);
     } finally {
       setLoading(false);
@@ -460,6 +469,16 @@ export default function PickemContestList() {
     );
   }
 
+  if (loadError)
+    return (
+      <div className="rounded-xl border p-6 text-center" role="alert">
+        <p>We couldn’t load contests.</p>
+        <Button className="mt-3" onClick={fetchContests}>
+          Try again
+        </Button>
+      </div>
+    );
+
   if (contests.length === 0) {
     return (
       <div className="text-center py-12">
@@ -485,9 +504,7 @@ export default function PickemContestList() {
             </p>
           </div>
           <Badge
-            variant={
-              contest.submissionDeadline > Date.now() ? "default" : "secondary"
-            }
+            variant={contest.submissionDeadline > now ? "default" : "secondary"}
           >
             <Clock className="h-3 w-3 mr-1" />
             {getTimeRemaining(contest.submissionDeadline)}
@@ -508,76 +525,85 @@ export default function PickemContestList() {
 
         <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
           <Button className="w-full" size="sm" variant="default">
-            {contest.submissionDeadline > Date.now()
+            {contest.submissionDeadline > now
               ? "Make Your Picks"
               : "View All Picks"}
           </Button>
         </Link>
 
-        {/* Show these buttons when games are not yet finalized */}
-        {!contest.gamesFinalized && (
-          <>
-            {/* Only show Fetch Week Results button if results are not already finalized in oracle */}
-            {!weekResultsFinalized[contest.id] && (
-              <Button
-                className="w-full mb-2"
-                disabled={fetchingResults[contest.id] || !account}
-                size="sm"
-                variant="outline"
-                onClick={() => handleFetchWeekResults(contest)}
-              >
-                {fetchingResults[contest.id]
-                  ? "Recording scores..."
-                  : "Record scores onchain"}
-              </Button>
-            )}
-            {/* Only show Finalize Games button if oracle has finalized the week's results */}
-            {weekResultsFinalized[contest.id] && (
-              <Button
-                className="w-full mb-2"
-                disabled={finalizingGames[contest.id] || !account}
-                size="sm"
-                variant="outline"
-                onClick={() => handleFinalizeGames(contest.id)}
-              >
-                {finalizingGames[contest.id]
-                  ? "Syncing scores..."
-                  : "Sync onchain scores"}
-              </Button>
-            )}
-          </>
-        )}
+        {!contest.payoutComplete && (
+          <details className="mt-3 border-t pt-3">
+            <summary className="cursor-pointer text-sm text-muted-foreground">
+              Contest settlement
+            </summary>
+            <div className="mt-3">
+              {/* Show these buttons when games are not yet finalized */}
+              {!contest.gamesFinalized && (
+                <>
+                  {/* Only show Fetch Week Results button if results are not already finalized in oracle */}
+                  {!weekResultsFinalized[contest.id] && (
+                    <Button
+                      className="w-full mb-2"
+                      disabled={fetchingResults[contest.id] || !account}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFetchWeekResults(contest)}
+                    >
+                      {fetchingResults[contest.id]
+                        ? "Recording scores..."
+                        : "Record scores onchain"}
+                    </Button>
+                  )}
+                  {/* Only show Finalize Games button if oracle has finalized the week's results */}
+                  {weekResultsFinalized[contest.id] && (
+                    <Button
+                      className="w-full mb-2"
+                      disabled={finalizingGames[contest.id] || !account}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFinalizeGames(contest.id)}
+                    >
+                      {finalizingGames[contest.id]
+                        ? "Syncing scores..."
+                        : "Sync onchain scores"}
+                    </Button>
+                  )}
+                </>
+              )}
 
-        {contest.gamesFinalized && !contest.payoutComplete && (
-          <div className="flex gap-2 items-center w-full">
-            <Button
-              className="w-full mb-2"
-              disabled={calculatingScores[contest.id] || !account}
-              size="sm"
-              variant="outline"
-              onClick={() => handleCalculateScores(contest.id)}
-            >
-              {calculatingScores[contest.id]
-                ? "Calculating..."
-                : `Calculate Winner${contest.payoutType === 0 ? "" : "s"}`}
-            </Button>
-          </div>
-        )}
+              {contest.gamesFinalized && !contest.payoutComplete && (
+                <div className="flex gap-2 items-center w-full">
+                  <Button
+                    className="w-full mb-2"
+                    disabled={calculatingScores[contest.id] || !account}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleCalculateScores(contest.id)}
+                  >
+                    {calculatingScores[contest.id]
+                      ? "Calculating..."
+                      : `Calculate Winner${contest.payoutType === 0 ? "" : "s"}`}
+                  </Button>
+                </div>
+              )}
 
-        {contest.gamesFinalized && !contest.payoutComplete && (
-          <div className="flex gap-2 items-center w-full">
-            <Button
-              className="flex-1"
-              disabled={claimingPrizes[contest.id] || !account}
-              size="sm"
-              variant="outline"
-              onClick={() => handleClaimAllPrizes(contest.id)}
-            >
-              {claimingPrizes[contest.id]
-                ? "Distributing..."
-                : "Distribute All Prizes"}
-            </Button>
-          </div>
+              {contest.gamesFinalized && !contest.payoutComplete && (
+                <div className="flex gap-2 items-center w-full">
+                  <Button
+                    className="flex-1"
+                    disabled={claimingPrizes[contest.id] || !account}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleClaimAllPrizes(contest.id)}
+                  >
+                    {claimingPrizes[contest.id]
+                      ? "Distributing..."
+                      : "Distribute All Prizes"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </details>
         )}
 
         {contest.gamesFinalized && contest.payoutComplete && (
@@ -598,63 +624,67 @@ export default function PickemContestList() {
 
     // Contest with 0 entries and closed submissions is also completed
     // (nothing left to happen - no entries to score, no prizes to distribute)
-    if (
-      contest.totalEntries === 0 &&
-      contest.submissionDeadline <= Date.now()
-    ) {
+    if (contest.totalEntries === 0 && contest.submissionDeadline <= now) {
       return true;
     }
 
     return false;
   };
 
+  const visibleContests = contests.filter(contest =>
+    filter === "open"
+      ? contest.submissionDeadline > now && !isContestCompleted(contest)
+      : filter === "live"
+        ? contest.submissionDeadline <= now && !isContestCompleted(contest)
+        : isContestCompleted(contest),
+  );
+
   return (
-    <Tabs className="space-y-4" defaultValue="active">
-      <TabsList>
-        <TabsTrigger value="active">Active</TabsTrigger>
-        <TabsTrigger value="completed">Completed</TabsTrigger>
-        <TabsTrigger value="all">All</TabsTrigger>
-      </TabsList>
-
-      <TabsContent className="space-y-4" value="active">
-        {contests.filter(contest => !isContestCompleted(contest)).length ===
-        0 ? (
-          <div className="text-center py-12">
-            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Active Contests</h3>
-            <p className="text-muted-foreground">
-              All contests have completed payouts
-            </p>
-          </div>
-        ) : (
-          contests
-            .filter(contest => !isContestCompleted(contest))
-            .map(contest => renderContestCard(contest))
-        )}
-      </TabsContent>
-
-      <TabsContent className="space-y-4" value="completed">
-        {contests.filter(contest => isContestCompleted(contest)).length ===
-        0 ? (
-          <div className="text-center py-12">
-            <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              No Completed Contests
-            </h3>
-            <p className="text-muted-foreground">
-              No contests have completed payouts yet
-            </p>
-          </div>
-        ) : (
-          contests
-            .filter(contest => isContestCompleted(contest))
-            .map(contest => renderContestCard(contest))
-        )}
-      </TabsContent>
-
-      <TabsContent className="space-y-4" value="all">
-        {contests.map(contest => renderContestCard(contest))}
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {visibleContests.length}{" "}
+          {visibleContests.length === 1 ? "contest" : "contests"}
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          Show
+          <select
+            className="rounded-lg border bg-background px-3 py-2"
+            value={filter}
+            onChange={event => setFilter(event.target.value)}
+          >
+            <option value="open">Open to enter</option>
+            <option value="live">In progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </label>
+      </div>
+      {visibleContests.length ? (
+        <div className="grid items-start gap-4 md:grid-cols-2">
+          {visibleContests.map(renderContestCard)}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed py-12 text-center">
+          <Trophy className="mx-auto mb-4 size-8 text-muted-foreground" />
+          <h3 className="font-semibold">
+            {filter === "open"
+              ? "No contests open to enter"
+              : filter === "live"
+                ? "No contests in progress"
+                : "No completed contests yet"}
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {filter === "open"
+              ? "Start a pool for your friends or check back before kickoff."
+              : "Choose another status to explore more contests."}
+          </p>
+          {filter === "open" && (
+            <Button asChild className="mt-4" variant="outline">
+              <Link href="/pickem?tab=create">Create a contest</Link>
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
