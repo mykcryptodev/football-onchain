@@ -179,29 +179,6 @@ export default function PickemContestClient({
     currencyAddress: contest.currency,
   });
 
-  // Pre-select winners for finished games
-  useEffect(() => {
-    if (games.length === 0) return;
-
-    games.forEach(game => {
-      // Check if game is finished
-      if (
-        game.status === "STATUS_FINAL" &&
-        game.homeScore !== undefined &&
-        game.awayScore !== undefined
-      ) {
-        // Determine winner (1 = home, 0 = away)
-        const winner = game.homeScore > game.awayScore ? 1 : 0;
-
-        // Only update if not already set
-        if (picks[game.gameId] === -1) {
-          setPick(game.gameId, winner);
-        }
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [games]);
-
   const shareMessage = useMemo(() => {
     const seasonLabel = SEASON_TYPE_LABELS[contest.seasonType];
     return `I just submitted my picks for Week ${contest.weekNumber} of the ${seasonLabel} on ${appName}! Think you can beat me?`;
@@ -551,7 +528,7 @@ export default function PickemContestClient({
                         return (
                           <label
                             key={side}
-                            className={`relative flex min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
+                            className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
                           >
                             <input
                               checked={picks[game.gameId] === side}
@@ -564,16 +541,19 @@ export default function PickemContestClient({
                                 setPick(game.gameId, side);
                               }}
                             />
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 {logo && (
                                   <img
                                     alt=""
-                                    className="size-7 object-contain"
+                                    className="size-7 shrink-0 object-contain"
                                     src={logo}
                                   />
                                 )}
-                                <span className="text-sm font-semibold break-words">
+                                <span
+                                  className="min-w-0 truncate text-sm font-semibold"
+                                  title={team}
+                                >
                                   {team}
                                 </span>
                               </div>
@@ -756,27 +736,6 @@ export default function PickemContestClient({
           )}
         </div>
 
-        {!isSubmissionClosed && (
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-              <span aria-live="polite" className="text-sm font-medium">
-                {getPickedCount()} / {contest.gameIds.length} picked
-              </span>
-              <Button asChild>
-                <a
-                  href={
-                    allPicksMade
-                      ? "#review-picks"
-                      : `#game-${contest.gameIds.find(id => picks[id] !== 0 && picks[id] !== 1)}`
-                  }
-                >
-                  {allPicksMade ? "Review & enter" : "Next unpicked game"}
-                </a>
-              </Button>
-            </div>
-          </div>
-        )}
-
         {isSubmissionClosed && (
           <Alert>
             <Clock className="size-4" />
@@ -803,6 +762,27 @@ export default function PickemContestClient({
           />
         </details>
       </div>
+
+      {!isSubmissionClosed && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <span aria-live="polite" className="text-sm font-medium">
+              {getPickedCount()} / {contest.gameIds.length} picked
+            </span>
+            <Button asChild>
+              <a
+                href={
+                  allPicksMade
+                    ? "#review-picks"
+                    : `#game-${contest.gameIds.find(id => picks[id] !== 0 && picks[id] !== 1)}`
+                }
+              >
+                {allPicksMade ? "Review & enter" : "Next unpicked game"}
+              </a>
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={shareModalOpen} onOpenChange={handleShareModalChange}>
         <DialogContent>
