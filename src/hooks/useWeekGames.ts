@@ -50,7 +50,11 @@ interface UseWeekGamesReturn {
 
 export function useWeekGames(params: UseWeekGamesParams): UseWeekGamesReturn {
   const query = useQuery({
-    queryKey: queryKeys.weekGames(params.year, params.seasonType, params.weekNumber),
+    queryKey: queryKeys.weekGames(
+      params.year,
+      params.seasonType,
+      params.weekNumber,
+    ),
     queryFn: async () => {
       const response = await fetch(
         `/api/week-games?year=${params.year}&seasonType=${params.seasonType}&week=${params.weekNumber}`,
@@ -58,14 +62,15 @@ export function useWeekGames(params: UseWeekGamesParams): UseWeekGamesReturn {
       if (!response.ok) throw new Error("Failed to fetch games");
       const allGames = await response.json();
 
-      // Filter to contest games if gameIds provided
-      if (params.gameIds) {
-        return allGames
-          .filter((g: GameInfo) => params.gameIds!.includes(g.gameId))
-          .sort((a: GameInfo, b: GameInfo) => a.gameId.localeCompare(b.gameId));
-      }
-      return allGames;
+      return allGames as GameInfo[];
     },
+    // Cache the whole week; each contest selects its own matchups.
+    select: allGames =>
+      params.gameIds
+        ? allGames
+            .filter(game => params.gameIds!.includes(game.gameId))
+            .sort((a, b) => a.gameId.localeCompare(b.gameId))
+        : allGames,
     staleTime: 5 * 60 * 1000, // Games data fresh for 5 minutes
   });
 
@@ -75,4 +80,3 @@ export function useWeekGames(params: UseWeekGamesParams): UseWeekGamesReturn {
     error: query.error as Error | null,
   };
 }
-

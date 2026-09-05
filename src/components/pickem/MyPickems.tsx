@@ -9,9 +9,10 @@ import {
   Trophy,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useActiveAccount } from "thirdweb/react";
+import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { formatEther } from "viem";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,8 +22,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { chain } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
+import { client } from "@/providers/Thirdweb";
 
 import PickemLeaderboard from "./PickemLeaderboard";
 
@@ -308,10 +311,19 @@ export default function MyPickems() {
     return (
       <div className="text-center py-12">
         <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">Connect Your Wallet</h3>
+        <h3 className="text-lg font-semibold mb-2">
+          Your picks, all in one place
+        </h3>
         <p className="text-muted-foreground">
-          Connect your wallet to view your Pick&apos;em NFTs
+          Log in to see your entries, results, and prizes.
         </p>
+        <div className="mt-4">
+          <ConnectButton
+            chain={chain}
+            client={client}
+            connectButton={{ label: "Log in to view my picks" }}
+          />
+        </div>
       </div>
     );
   }
@@ -338,10 +350,13 @@ export default function MyPickems() {
     return (
       <div className="text-center py-12">
         <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Pick&apos;em NFTs Yet</h3>
+        <h3 className="text-lg font-semibold mb-2">No picks yet</h3>
         <p className="text-muted-foreground">
           Join a contest and make your picks to get started!
         </p>
+        <Button asChild className="mt-4">
+          <Link href="/pickem">Find a contest</Link>
+        </Button>
       </div>
     );
   }

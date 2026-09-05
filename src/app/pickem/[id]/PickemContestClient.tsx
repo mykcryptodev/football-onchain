@@ -1,7 +1,7 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
-import { AlertCircle, ArrowLeft, Clock, Shuffle } from "lucide-react";
+import { ArrowLeft, Clock, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
   BuyWidget,
+  ConnectButton,
   darkTheme,
   lightTheme,
   useActiveAccount,
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { appName, chain, usdc } from "@/constants";
@@ -46,6 +47,7 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
 import { formatKickoffTime } from "@/lib/date";
+import { isValidTiebreaker } from "@/lib/pickem-entry";
 import { buildPickemShareUrl } from "@/lib/pickem-share";
 import { toCaip19 } from "@/lib/utils";
 import { useDisplayToken } from "@/providers/DisplayTokenProvider";
@@ -67,39 +69,6 @@ interface ContestData {
   gameIds: string[];
   tiebreakerGameId: string;
   entryFeeUsd?: number;
-}
-
-interface GameInfo {
-  gameId: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeRecord: string;
-  awayRecord: string;
-  kickoff: string;
-  homeLogo?: string;
-  awayLogo?: string;
-  homeAbbreviation?: string;
-  awayAbbreviation?: string;
-  homeScore?: number;
-  awayScore?: number;
-  status?: string;
-  odds?: {
-    details?: string;
-    overUnder?: number;
-    spread?: number;
-    homeTeamOdds?: {
-      favorite: boolean;
-      underdog: boolean;
-      moneyLine?: number;
-      spreadOdds?: number;
-    };
-    awayTeamOdds?: {
-      favorite: boolean;
-      underdog: boolean;
-      moneyLine?: number;
-      spreadOdds?: number;
-    };
-  };
 }
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
@@ -145,6 +114,11 @@ export default function PickemContestClient({
   const { resolvedTheme } = useTheme();
   const { isInMiniApp } = useFarcasterContext();
 
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const [mounted, setMounted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -152,7 +126,11 @@ export default function PickemContestClient({
   const [shareText, setShareText] = useState("");
 
   // Use the new hooks for games and picks management
-  const { games } = useWeekGames({
+  const {
+    games,
+    isLoading: gamesLoading,
+    error: gamesError,
+  } = useWeekGames({
     year: contest.year,
     seasonType: contest.seasonType,
     weekNumber: contest.weekNumber,
@@ -249,7 +227,7 @@ export default function PickemContestClient({
   const handleShareModalChange = (open: boolean) => {
     setShareModalOpen(open);
     if (!open) {
-      router.push("/pickem");
+      router.push("/pickem?tab=my-pickems");
     }
   };
 
@@ -314,7 +292,11 @@ export default function PickemContestClient({
   };
 
   const handleSubmit = async () => {
-    if (!contest || !account) return;
+    if (!contest || !account || submitting) return;
+    if (contest.submissionDeadline <= Date.now()) {
+      toast.error("This contest is now closed.");
+      return;
+    }
 
     // Validate all picks are made
     if (!allPicksMade) {
@@ -322,7 +304,7 @@ export default function PickemContestClient({
       return;
     }
 
-    if (!tiebreakerPoints || Number(tiebreakerPoints) < 0) {
+    if (!isValidTiebreaker(tiebreakerPoints)) {
       toast.error("Please enter a valid tiebreaker score");
       return;
     }
@@ -374,29 +356,8 @@ export default function PickemContestClient({
     return `${minutes}m remaining`;
   };
 
-  const formatMoneyLine = (moneyLine: number | undefined) => {
-    if (!moneyLine) return "";
-    return moneyLine > 0 ? `+${moneyLine}` : `${moneyLine}`;
-  };
-
-  const isGameFinished = (game: GameInfo) => {
-    return (
-      game.status === "STATUS_FINAL" &&
-      game.homeScore !== undefined &&
-      game.awayScore !== undefined
-    );
-  };
-
-  const getWinner = (game: GameInfo): "home" | "away" | null => {
-    if (!isGameFinished(game)) return null;
-    if (game.homeScore! > game.awayScore!) return "home";
-    if (game.awayScore! > game.homeScore!) return "away";
-    return null; // tie (unlikely in NFL)
-  };
-
-  // Use mounted state to prevent hydration mismatch with Date.now()
-  const isSubmissionClosed =
-    mounted && contest.submissionDeadline <= Date.now();
+  const isSubmissionClosed = mounted && contest.submissionDeadline <= now;
+  const readyToSubmit = allPicksMade && isValidTiebreaker(tiebreakerPoints);
 
   const EntryFeeUsd: FC<{ className?: string }> = ({ className }) => {
     return contest.entryFeeUsd ? (
@@ -412,12 +373,7 @@ export default function PickemContestClient({
     );
   };
 
-  const lastGame = useMemo(() => {
-    // get the game with the latest start time
-    return [...games].sort(
-      (a, b) => new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime(),
-    )[0];
-  }, [games]);
+  const lastGame = games.find(game => game.gameId === contest.tiebreakerGameId);
 
   const { data: currencyDecimals } = useReadContract({
     contract: getContract({
@@ -456,12 +412,12 @@ export default function PickemContestClient({
   // Show loading skeleton until mounted to prevent hydration mismatch
   if (!mounted || !resolvedTheme) {
     return (
-      <div className="container mx-auto py-5 space-y-6">
+      <div className="container mx-auto max-w-6xl px-4 py-6 pb-28 space-y-6">
         <div className="flex items-center gap-4 px-2">
           <Link href="/pickem">
             <Button size="sm" variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              All contests
             </Button>
           </Link>
           <Badge className="ml-auto" variant="secondary">
@@ -487,12 +443,12 @@ export default function PickemContestClient({
 
   return (
     <>
-      <div className="container mx-auto py-5 space-y-6">
+      <div className="container mx-auto max-w-6xl px-4 py-6 pb-28 space-y-6">
         <div className="flex items-center gap-4 px-2">
           <Link href="/pickem">
             <Button size="sm" variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              All contests
             </Button>
           </Link>
           <Badge
@@ -527,224 +483,148 @@ export default function PickemContestClient({
         />
 
         {/* Games and Picks */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
           {/* Games List */}
           {!isSubmissionClosed && (
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
-                  <CardTitle>Games ({games.length})</CardTitle>
+                  <CardTitle>1. Pick the winners</CardTitle>
                   <Badge variant={allPicksMade ? "default" : "secondary"}>
-                    {allPicksMade ? "Ready to Submit" : "Incomplete"}
+                    {getPickedCount()} / {contest.gameIds.length}
                   </Badge>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Picks Made: {getPickedCount()} / {games.length}
-                  </span>
-                  <Button
-                    disabled={submitting || isSubmissionClosed}
-                    size="sm"
-                    variant="outline"
-                    onClick={pickAtRandom}
-                  >
-                    <Shuffle className="h-4 w-4 mr-2" />
-                    Pick Em Randomly
-                  </Button>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Tap one team in every matchup.
+                </p>
+                <Progress
+                  aria-label="Picks completed"
+                  value={
+                    contest.gameIds.length
+                      ? (getPickedCount() / contest.gameIds.length) * 100
+                      : 0
+                  }
+                />
+                <Button
+                  className="self-start"
+                  disabled={submitting || gamesLoading || !!gamesError}
+                  size="sm"
+                  variant="ghost"
+                  onClick={pickAtRandom}
+                >
+                  <Shuffle className="mr-2 size-4" />
+                  Fill remaining picks randomly
+                </Button>
               </CardHeader>
-              <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-                {games.map((game, index) => {
-                  const gameFinished = isGameFinished(game);
-                  const winner = getWinner(game);
-
-                  return (
-                    <div key={game.gameId} className="p-4 border rounded-lg">
-                      <div className="flex justify-between items-center text-sm text-muted-foreground mb-3">
-                        <span>Game {index + 1}</span>
-                        <span>
-                          {mounted
-                            ? formatKickoffTime(game.kickoff)
-                            : "Loading..."}
-                        </span>
-                      </div>
-
-                      <RadioGroup
-                        value={picks[game.gameId]?.toString()}
-                        onValueChange={(value: string) =>
-                          setPick(game.gameId, parseInt(value))
-                        }
-                      >
-                        <div className="grid grid-cols-2 gap-3">
-                          <div
-                            className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                              picks[game.gameId] === 0
-                                ? "border-primary bg-primary/10"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              selectionChanged();
-                              setPick(game.gameId, 0);
-                            }}
+              <CardContent className="space-y-4">
+                {gamesLoading && (
+                  <>
+                    <Skeleton className="h-28 w-full" />
+                    <Skeleton className="h-28 w-full" />
+                  </>
+                )}
+                {(gamesError ||
+                  (!gamesLoading &&
+                    games.length !== contest.gameIds.length)) && (
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      Some matchups couldn’t be loaded. Refresh the page to try
+                      again.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {games.map((game, index) => (
+                  <fieldset
+                    key={game.gameId}
+                    className="scroll-mt-40 rounded-xl border p-3 sm:p-4"
+                    disabled={submitting}
+                    id={`game-${game.gameId}`}
+                  >
+                    <legend className="px-2 text-xs text-muted-foreground">
+                      Game {index + 1} · {formatKickoffTime(game.kickoff)}
+                    </legend>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([0, 1] as const).map(side => {
+                        const home = side === 1;
+                        const team = home ? game.homeTeam : game.awayTeam;
+                        const logo = home ? game.homeLogo : game.awayLogo;
+                        return (
+                          <label
+                            key={side}
+                            className={`relative flex min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
                           >
-                            <RadioGroupItem
-                              className="mt-1"
-                              id={`${game.gameId}-away`}
-                              value="0"
+                            <input
+                              checked={picks[game.gameId] === side}
+                              className="size-4 shrink-0 accent-primary"
+                              name={`winner-${game.gameId}`}
+                              type="radio"
+                              value={side}
+                              onChange={() => {
+                                selectionChanged();
+                                setPick(game.gameId, side);
+                              }}
                             />
-                            <Label
-                              className="flex-1 cursor-pointer"
-                              htmlFor={`${game.gameId}-away`}
-                            >
-                              <div className="flex flex-col gap-1 w-full">
-                                <div className="flex items-center gap-2 justify-between w-full">
-                                  <div className="flex items-center gap-2 justify-between w-fit">
-                                    <img
-                                      alt={`${game.awayTeam} logo`}
-                                      className="h-6 w-6 flex-shrink-0"
-                                      src={game.awayLogo}
-                                    />
-                                    <div
-                                      className={`font-medium sm:hidden block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                    >
-                                      {game.awayAbbreviation}
-                                    </div>
-                                    <div
-                                      className={`font-medium hidden sm:block ${winner === "away" ? "text-primary font-bold" : ""}`}
-                                    >
-                                      {game.awayTeam}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-muted-foreground text-nowrap">
-                                    {game.awayRecord}
-                                  </div>
-                                </div>
-                                {gameFinished && winner === "away" && (
-                                  <div className="flex items-center gap-2 text-xs justify-end">
-                                    <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
-                                      W
-                                    </Badge>
-                                  </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                {logo && (
+                                  <img
+                                    alt=""
+                                    className="size-7 object-contain"
+                                    src={logo}
+                                  />
                                 )}
-                                {!gameFinished &&
-                                  game.odds?.awayTeamOdds &&
-                                  game.odds.awayTeamOdds.moneyLine && (
-                                    <div className="flex items-center gap-2 text-xs justify-end">
-                                      <Badge
-                                        className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
-                                          game.odds.awayTeamOdds.favorite
-                                            ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                            : "bg-red-100 hover:bg-red-200 text-red-700"
-                                        }`}
-                                      >
-                                        {formatMoneyLine(
-                                          game.odds.awayTeamOdds.moneyLine,
-                                        )}
-                                      </Badge>
-                                    </div>
-                                  )}
+                                <span className="text-sm font-semibold break-words">
+                                  {team}
+                                </span>
                               </div>
-                            </Label>
-                          </div>
-
-                          <div
-                            className={`flex items-start space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-accent/50 ${
-                              picks[game.gameId] === 1
-                                ? "border-primary bg-primary/10"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              selectionChanged();
-                              setPick(game.gameId, 1);
-                            }}
-                          >
-                            <RadioGroupItem
-                              className="mt-1"
-                              id={`${game.gameId}-home`}
-                              value="1"
-                            />
-                            <Label
-                              className="flex-1 cursor-pointer"
-                              htmlFor={`${game.gameId}-home`}
-                            >
-                              <div className="flex flex-col gap-1 w-full">
-                                <div className="flex items-center gap-2 justify-between w-full">
-                                  <div className="flex items-center gap-2 justify-between w-fit">
-                                    <img
-                                      alt={`${game.homeTeam} logo`}
-                                      className="h-6 w-6 flex-shrink-0"
-                                      src={game.homeLogo}
-                                    />
-                                    <div
-                                      className={`font-medium sm:hidden block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                    >
-                                      {game.homeAbbreviation}
-                                    </div>
-                                    <div
-                                      className={`font-medium hidden sm:block ${winner === "home" ? "text-primary font-bold" : ""}`}
-                                    >
-                                      {game.homeTeam}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm text-muted-foreground text-nowrap">
-                                    {game.homeRecord}
-                                  </div>
-                                </div>
-                                {gameFinished && winner === "home" && (
-                                  <div className="flex items-center gap-2 text-xs justify-end">
-                                    <Badge className="opacity-50 text-[10px] bg-green-100 text-green-700 px-1.5 py-0 h-4">
-                                      Won {game.homeScore} - {game.awayScore}
-                                    </Badge>
-                                  </div>
-                                )}
-                                {!gameFinished &&
-                                  game.odds?.homeTeamOdds &&
-                                  game.odds.homeTeamOdds.moneyLine && (
-                                    <div className="flex items-end gap-2 text-xs justify-end">
-                                      <Badge
-                                        className={`opacity-50 text-[10px] px-1.5 py-0 h-4 ${
-                                          game.odds.homeTeamOdds.favorite
-                                            ? "bg-green-100 hover:bg-green-200 text-green-700"
-                                            : "bg-red-100 hover:bg-red-200 text-red-700"
-                                        }`}
-                                      >
-                                        {formatMoneyLine(
-                                          game.odds.homeTeamOdds.moneyLine,
-                                        )}
-                                      </Badge>
-                                    </div>
-                                  )}
-                              </div>
-                            </Label>
-                          </div>
-                        </div>
-                      </RadioGroup>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {home ? "Home" : "Away"} ·{" "}
+                                {home ? game.homeRecord : game.awayRecord}
+                              </p>
+                              <p className="mt-1 text-xs font-medium">
+                                {picks[game.gameId] === side
+                                  ? "Your pick"
+                                  : "Select team"}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </fieldset>
+                ))}
               </CardContent>
             </Card>
           )}
 
           {/* Submission Panel */}
           {!isSubmissionClosed && (
-            <Card>
+            <Card
+              className="scroll-mt-40 lg:sticky lg:top-24"
+              id="review-picks"
+            >
               <CardHeader>
-                <CardTitle>Submit Your Picks</CardTitle>
+                <CardTitle>2. Review &amp; enter</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Tiebreaker */}
                 <div className="space-y-2">
                   <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
                   <Input
+                    aria-describedby="tiebreaker-help"
+                    disabled={submitting}
                     id="tiebreaker"
                     min="0"
                     placeholder="e.g., 45"
+                    step="1"
                     type="number"
                     value={tiebreakerPoints}
                     onChange={e => setTiebreakerPoints(e.target.value)}
                   />
-                  <p className="text-sm text-muted-foreground">
+                  <p
+                    className="text-sm text-muted-foreground"
+                    id="tiebreaker-help"
+                  >
                     Guess the total points scored in the{" "}
                     {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
                     game
@@ -756,6 +636,11 @@ export default function PickemContestClient({
                     )}
                   </p>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {getPickedCount()} of {contest.gameIds.length} winners
+                  selected. You can change any pick before submitting. Each
+                  submission is a new paid entry.
+                </p>
                 {/* Entry Fee Display */}
                 <div className="p-4 bg-muted rounded-lg">
                   <div className="flex justify-between items-center">
@@ -767,12 +652,27 @@ export default function PickemContestClient({
                       Your Balance:
                     </span>
                     <span className="text-muted-foreground text-xs font-bold">
-                      {Number(walletBalance?.displayValue).toLocaleString()}
+                      {walletBalance
+                        ? Number(walletBalance.displayValue).toLocaleString()
+                        : "—"}
                     </span>
                   </div>
                 </div>
                 {/* Submit Button */}
-                {hasSufficientBalance ? (
+                {!account ? (
+                  <ConnectButton
+                    chain={chain}
+                    client={client}
+                    connectButton={{
+                      label: "Log in to submit picks",
+                      className: "!w-full",
+                    }}
+                  />
+                ) : isLoadingWalletBalance ? (
+                  <Button disabled className="w-full">
+                    Checking balance…
+                  </Button>
+                ) : hasSufficientBalance ? (
                   <Button
                     className="w-full"
                     size="lg"
@@ -780,7 +680,10 @@ export default function PickemContestClient({
                       !account ||
                       submitting ||
                       isSubmissionClosed ||
-                      !allPicksMade
+                      !readyToSubmit ||
+                      gamesLoading ||
+                      !!gamesError ||
+                      games.length !== contest.gameIds.length
                     }
                     onClick={handleSubmit}
                   >
@@ -790,7 +693,9 @@ export default function PickemContestClient({
                         ? "Submissions Closed"
                         : !allPicksMade
                           ? "Complete All Picks"
-                          : "Submit Picks"}
+                          : !isValidTiebreaker(tiebreakerPoints)
+                            ? "Add a tiebreaker score"
+                            : `Submit picks · ${formattedEntryFee}`}
                   </Button>
                 ) : (
                   <div className="flex flex-col items-center">
@@ -846,45 +751,63 @@ export default function PickemContestClient({
                     )}
                   </div>
                 )}
-
-                {!account && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Please connect your wallet to submit picks.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {isSubmissionClosed && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      The submission deadline has passed. You can no longer
-                      submit picks for this contest.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </CardContent>
             </Card>
           )}
         </div>
 
-        {/* All Participants' Picks */}
-        <ContestPicksView
-          contestId={contest.id}
-          gameIds={contest.gameIds}
-          gamesFinalized={contest.gamesFinalized}
-          seasonType={contest.seasonType}
-          tiebreakerGameId={contest.tiebreakerGameId}
-          weekNumber={contest.weekNumber}
-          year={contest.year}
-        />
+        {!isSubmissionClosed && (
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+              <span aria-live="polite" className="text-sm font-medium">
+                {getPickedCount()} / {contest.gameIds.length} picked
+              </span>
+              <Button asChild>
+                <a
+                  href={
+                    allPicksMade
+                      ? "#review-picks"
+                      : `#game-${contest.gameIds.find(id => picks[id] !== 0 && picks[id] !== 1)}`
+                  }
+                >
+                  {allPicksMade ? "Review & enter" : "Next unpicked game"}
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isSubmissionClosed && (
+          <Alert>
+            <Clock className="size-4" />
+            <AlertDescription>
+              Entries are closed. Follow the picks and results below.
+            </AlertDescription>
+          </Alert>
+        )}
+        <details
+          className="rounded-xl border bg-card p-4"
+          open={isSubmissionClosed}
+        >
+          <summary className="cursor-pointer font-semibold">
+            Leaderboard &amp; submitted picks
+          </summary>
+          <ContestPicksView
+            contestId={contest.id}
+            gameIds={contest.gameIds}
+            gamesFinalized={contest.gamesFinalized}
+            seasonType={contest.seasonType}
+            tiebreakerGameId={contest.tiebreakerGameId}
+            weekNumber={contest.weekNumber}
+            year={contest.year}
+          />
+        </details>
       </div>
 
       <Dialog open={shareModalOpen} onOpenChange={handleShareModalChange}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Share your picks</DialogTitle>
+            <DialogTitle>You’re in! Your picks are submitted.</DialogTitle>
             <DialogDescription>
               Let your friends know you&apos;re in. Challenge them to join the
               contest and see who comes out on top.
@@ -926,7 +849,7 @@ export default function PickemContestClient({
               variant="outline"
               onClick={() => handleShareModalChange(false)}
             >
-              Skip for now
+              View my picks
             </Button>
           </DialogFooter>
         </DialogContent>

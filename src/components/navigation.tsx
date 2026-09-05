@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ConnectButton, darkTheme, lightTheme } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
@@ -13,6 +14,12 @@ import { client } from "@/providers/Thirdweb";
 import { ModeToggle } from "./mode-toggle";
 
 export function Navigation() {
+  const pathname = usePathname();
+  const links = [
+    { href: "/pickem", label: "Pick’em" },
+    { href: "/pickem?tab=my-pickems", label: "My picks" },
+    { href: "/join", label: "Squares" },
+  ];
   const { resolvedTheme } = useTheme();
   const { tokenAddress } = useDisplayToken();
 
@@ -42,24 +49,20 @@ export function Navigation() {
           </Link>
 
           <div className="hidden items-center gap-1 md:flex">
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/pickem"
-            >
-              Pick&apos;em
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/join"
-            >
-              Squares
-            </Link>
-            <Link
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
-              href="/contest/create"
-            >
-              Create
-            </Link>
+            {links.map(link => (
+              <Link
+                key={link.href}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground aria-[current=page]:bg-secondary aria-[current=page]:text-foreground"
+                href={link.href}
+                aria-current={
+                  link.href === "/pickem" && pathname.startsWith("/pickem")
+                    ? "page"
+                    : undefined
+                }
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
 
@@ -98,6 +101,17 @@ export function Navigation() {
           />
           <ModeToggle />
         </div>
+      </div>
+      <div className="grid grid-cols-3 border-t px-4 md:hidden">
+        {links.map(link => (
+          <Link
+            key={link.href}
+            className="py-3 text-center text-sm font-semibold hover:bg-secondary"
+            href={link.href}
+          >
+            {link.label}
+          </Link>
+        ))}
       </div>
     </nav>
   );
