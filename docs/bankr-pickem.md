@@ -34,6 +34,8 @@ All routes live under `/api/bankr/contests`. GET reads live data. POST only vali
 
 Amounts and chain IDs use exact contract data; bigint JSON fields are decimal strings. Templates retain contract `gameIds` order, even if kickoffs move. The tiebreaker must be supplied explicitly. The parse response's random picks must be preserved across approvals/retries. Entry preparation requires the original `expectedEntryCount`; it rejects a changed count rather than silently buying a second entry.
 
+`/{id}` and `/` both include `entriesCloseAt`, an ISO string computed server-side from the contract's `submissionDeadline`. Seen in the wild: a reply stated an entries-close date 4 days after the real deadline — the model most likely read a kickoff off `games[]` (contract `gameIds` order, not chronological) instead of the actual deadline field. `entriesCloseAt` exists specifically so there's one unambiguous, pre-formatted value to relay instead of asking the model to compute or pick one out of raw contract/game data.
+
 `/pickem/{id}/picks` is the copyable blank template. `/pickem/{id}/entries/{tokenId}` displays one confirmed entry, including current NFT owner, without requiring a wallet connection. Its metadata points to `/api/og/pickem/{id}/picks?tokenId=…`, reusing the homepage hero's palette, field lines and ring. The image shows the entry number and completed-game score, not an invented live rank.
 
 ## Settlement behavior and deployment dependencies
@@ -56,6 +58,8 @@ The tests use mocked RPC reads/simulation and verify parsing, preserving random 
 
 After deployment, check that the skill URL returns rendered Markdown (no `{{APP_URL}}` token), fetch a real contest and a confirmed entry, check the image response, and install into a Bankr account. Paid entry and deferred Agent Command execution still require an end-to-end Bankr smoke test with an authorized wallet; no live funds were spent during implementation.
 
+Seen in the wild: a 16-game contest correctly decided to fall back to a link-out reply, but the reply shipped with the "pick at " sentence present and no URL after it. `NEXT_PUBLIC_APP_URL=https://bankrball.com` was confirmed set correctly on the deployment (so `links.picks` from `GET /contests/{id}` was a real, well-formed URL) — this ruled out a config problem and pointed at the model dropping the literal link value while paraphrasing the "link `links.picks`" instruction. See the "reply length and share links" section of `skills/pickem/SKILL.md` for the fix: an exact reply template with the URL inline, plus a "check the URL is actually in your draft before sending" self-check.
+
 ## Bankr format and channel findings
 
 - Bankr explicitly supports direct Markdown URLs on non-GitHub hosts: https://docs.bankr.bot/skills/in-bankr/from-github/
@@ -63,6 +67,6 @@ After deployment, check that the skill URL returns rendered Markdown (no `{{APP_
 - Bankr documents recurring Agent Command automations: https://docs.bankr.bot/agent/automations/
 - No Bankr-specific long-X-reply guarantee was found in its published documentation, including the full documentation index: https://docs.bankr.bot/llms-full.txt
 
-Therefore X replies use a conservative 280-character budget and link to the full template/entry. The web terminal can show the full copyable card. This is a compatibility choice, not a claim that Bankr cannot post longer replies.
+That absence of a documented guarantee was originally read as "assume 280 and link out." Confirmed otherwise: Bankr's X replies are not actually capped at 280 characters, so the skill now sends the full template directly on X too, same as the web terminal, and only links out on an actual rejected/truncated send rather than a precomputed length threshold.
 
 Settlement responses in `pay`, `wait` and `complete` include a `payout` breakdown with current winning NFT owners, exact base-unit amounts, treasury fee, claimed flags, unpaid total and any unallocated tiers/rounding dust. This mirrors contract arithmetic without reallocating unused prize tiers. Completion requires every winner’s claim flag; historical recipients must come from receipt events because NFTs can transfer after payout.

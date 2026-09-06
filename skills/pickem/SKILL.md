@@ -16,7 +16,7 @@ Only operate on the contest explicitly selected in this conversation. A public m
 ## Find and join
 
 1. `GET /contests` lists open pools, featured first then most entries within each page. Follow `nextCursor` using `?cursor=N` before concluding none exist. Respect a supplied contest URL/ID; otherwise recommend a featured or populated pool and let the user choose. Don't replace a selected contest silently.
-2. `GET /contests/{id}` returns live fee/currency, deadline, immutable ordered games, a copyable `template`, tiebreaker matchup, and links. Show cost, deadline, field size and payout structure. If `open=false`, do not enter.
+2. `GET /contests/{id}` returns live fee/currency, deadline, immutable ordered games, a copyable `template`, tiebreaker matchup, and links. Show cost, `entriesCloseAt`, field size and payout structure. Report `entriesCloseAt` verbatim (it's already the correct ISO instant) — never compute your own date from `contest.submissionDeadline` (raw unix seconds) or from any game's `kickoff`. `games` is in the contract's `gameIds` order, not chronological order, so the first or last entry in that array is not reliably the first game of the week; treating its kickoff as the deadline understates or overstates it by days. Same rule for `GET /contests`, which returns `entriesCloseAt` per contest. If `open=false`, do not enter.
 3. Reply with the blank template exactly as returned, plus a separate question for the tiebreaker (combined points in the designated latest game). Do not prefill teams. The template order is the contract's `gameIds` order, NOT kickoff order or a new ESPN slate. Preserve this contest and numbering in the conversation.
 
 Example template:
@@ -50,7 +50,16 @@ Fill in the rest randomly
 
 ## Reply length and share links
 
-No verified Bankr-specific guarantee exists here for long X replies. Default to a short reply of at most 280 characters on X, including mentions and link budget. Use the full template in the web terminal or any surface known to allow it. If the slate will not fit, link `links.picks` (a page with a copyable blank template) and say "Reply with numbered winners, e.g. 1. NE. You can ask me to fill the rest randomly." Never truncate games. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}". Its OG image uses the homepage's forest-green field design. The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
+Bankr's X replies are not confirmed to be capped at the standard 280-character limit — do not default to a short link-out reply just because the full numbered template is longer than that. Send the full blank template directly, on X included, the same way you would in the web terminal. Only fall back to a link if a send actually comes back rejected or visibly truncated by the platform, or the user asks for something shorter.
+
+When you do link out (a genuinely rejected/truncated send, not a precomputed length guess), the reply MUST contain the literal URL from `links.picks` — never a description of it, never a placeholder, never a blank line where it belongs. Use this exact shape, substituting the real values:
+
+```
+Contest #{id} ({N} games) won't fit here — pick at {links.picks}
+Reply with numbered winners, e.g. "1. NE". Say "fill the rest randomly" for any you skip.
+```
+
+Before sending, re-read your own draft: if the line that should carry `links.picks` has no `https://` URL in it, you dropped the link — fix it, don't send it anyway. A reply that promises a link and then omits it is worse than no reply. Never truncate games instead of linking out. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}" — same rule applies, the URL must actually be present. Its OG image uses the homepage's forest-green field design. The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
 
 ## My picks and who's winning
 

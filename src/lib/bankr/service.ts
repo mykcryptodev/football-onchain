@@ -135,6 +135,11 @@ export async function details(id: bigint) {
     currency,
     entryFee: formatUnits(c.entryFee, currency.decimals),
     open: !c.gamesFinalized && block.timestamp < c.submissionDeadline,
+    // The one authoritative "entries close" instant — report this verbatim.
+    // Never derive it from a game's `kickoff`: `games` is in the contract's
+    // gameIds order, not chronological order, so "the first/last game in the
+    // array" is not "the first game of the week" and will give a wrong date.
+    entriesCloseAt: new Date(Number(c.submissionDeadline) * 1000).toISOString(),
     games,
     template: pickTemplate(games),
     tiebreaker: {
@@ -587,6 +592,7 @@ export async function browse(cursor: number) {
       ...c,
       featured: featuredPickemContestIds.includes(Number(c.id)),
       url: contestUrl(c.id),
+      entriesCloseAt: new Date(Number(c.submissionDeadline) * 1000).toISOString(),
     }));
   rows.sort(
     (a, b) =>
