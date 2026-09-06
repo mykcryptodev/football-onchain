@@ -5,7 +5,14 @@ import { decodeFunctionData, erc20Abi, zeroAddress } from "viem";
 
 import { abi } from "@/constants/abis/pickem";
 
-import { address, entryPage, prepareEntry, rpc, settlement } from "./service";
+import {
+  address,
+  entryPage,
+  payoutPreview,
+  prepareEntry,
+  rpc,
+  settlement,
+} from "./service";
 
 const account = "0x1111111111111111111111111111111111111111";
 const currency = "0x2222222222222222222222222222222222222222";
@@ -23,6 +30,9 @@ const c = {
   totalEntries: 1n,
   payoutComplete: false,
   payoutDeadline: 50n,
+  totalPrizePool: 1000001n,
+  tiebreakerGameId: 2n,
+  payoutStructure: { payoutType: 0, payoutPercentages: [1000n] },
 };
 afterEach(() => mock.restoreAll());
 function setup(overrides: Record<string, unknown> = {}) {
@@ -37,6 +47,12 @@ function setup(overrides: Record<string, unknown> = {}) {
     pickemNFT: currency,
     getUserPrediction: [3n, account, 1n, 44n, 0, false, false],
     getUserPicks: [1, 0],
+    getContestLeaderboard: [
+      { tokenId: 10n, score: 2, tiebreakerPoints: 44n, submissionTime: 1n },
+    ],
+    TREASURY_FEE: 20n,
+    PERCENT_DENOMINATOR: 1000n,
+    treasury: currency,
     ownerOf: account,
     ...overrides,
   };
@@ -170,4 +186,57 @@ test("my picks follow NFT ownership, including empty filtered pages with a conti
   const owned = await entryPage(3n, 50, currency);
   assert.equal(owned.entries.length, 1);
   assert.equal(owned.nextCursor, null);
+});
+
+test("payout preview uses current owner and exact integer fees without reallocating empty tiers", async () => {
+  const contestWithTiers = {
+    ...c,
+    payoutStructure: { payoutType: 1, payoutPercentages: [600n, 300n, 100n] },
+  };
+  setup({
+    getContest: contestWithTiers,
+    ownerOf: currency,
+    getUserPrediction: [3n, account, 1n, 44n, 2, true, false],
+  });
+  const preview = await payoutPreview(
+    await rpc.readContract({
+      address,
+      abi,
+      functionName: "getContest",
+      args: [3n],
+    }),
+  );
+  assert.equal(preview.treasuryFee, 20000n);
+  assert.equal(preview.winners[0].currentOwner, currency);
+  assert.equal(preview.winners[0].amount, 588000n);
+  assert.equal(preview.remainingWinnerPayout, 588000n);
+  assert.equal(preview.unallocatedPrizePool, 392001n);
+  assert.equal(preview.allWinnersClaimed, false);
+});
+test("completed payout verifies winner claims and never reports current owner as historical recipient", async () => {
+  setup({
+    getContest: {
+      ...c,
+      gamesFinalized: true,
+      payoutComplete: true,
+      submissionDeadline: 90n,
+    },
+    getUserPrediction: [3n, account, 1n, 44n, 2, true, true],
+  });
+  const result = await settlement(3n, account);
+  assert.equal(result.step, "complete");
+  assert.equal(result.payout?.remainingWinnerPayout, 0n);
+  assert.equal(result.payout?.allWinnersClaimed, true);
+  assert.ok(!("transaction" in result));
+  mock.restoreAll();
+  setup({
+    getContest: {
+      ...c,
+      gamesFinalized: true,
+      payoutComplete: true,
+      submissionDeadline: 90n,
+    },
+    getUserPrediction: [3n, account, 1n, 44n, 2, true, false],
+  });
+  await assert.rejects(settlement(3n, account), /claim state disagree/);
 });

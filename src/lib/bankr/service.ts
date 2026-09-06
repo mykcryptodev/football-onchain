@@ -362,6 +362,63 @@ export async function prepareEntry(id: bigint, body: Record<string, unknown>) {
     next: "Wait for successful receipt. Read PredictionSubmitted tokenId and verify entry; do not resubmit on a timeout.",
   };
 }
+/** Mirrors claimAllPrizes integer arithmetic, including underfilled payout tiers. */
+export async function payoutPreview(c: Contest) {
+  const [board, fee, denominator, treasury] = await Promise.all([
+    rpc.readContract({
+      address,
+      abi,
+      functionName: "getContestLeaderboard",
+      args: [c.id],
+    }),
+    rpc.readContract({ address, abi, functionName: "TREASURY_FEE" }),
+    rpc.readContract({ address, abi, functionName: "PERCENT_DENOMINATOR" }),
+    rpc.readContract({ address, abi, functionName: "treasury" }),
+  ]);
+  if (!board.length)
+    throw new Error("No scored winners available; cannot verify payout.");
+  const predictions = await entries(
+    c,
+    board.map(row => row.tokenId),
+  );
+  if (predictions.some(row => !row.scoreCalculated))
+    throw new Error("Winner scores are incomplete; retry settlement.");
+  const treasuryFee = (c.totalPrizePool * fee) / denominator;
+  const afterFee = c.totalPrizePool - treasuryFee;
+  const winners = predictions.map((row, index) => ({
+    tokenId: row.tokenId,
+    place: index + 1,
+    currentOwner: row.owner,
+    amount:
+      (afterFee * (c.payoutStructure.payoutPercentages[index] ?? BigInt(0))) /
+      denominator,
+    claimed: row.claimed,
+    url: row.url,
+  }));
+  if (c.payoutComplete && winners.some(row => !row.claimed))
+    throw new Error(
+      "Payout completion and winner claim state disagree; cannot verify payment.",
+    );
+  return {
+    currency: c.currency,
+    amountUnits: "Base units of currency; zero address means ETH (wei).",
+    totalPrizePool: c.totalPrizePool,
+    treasury,
+    treasuryFee,
+    winners,
+    remainingWinnerPayout: winners.reduce(
+      (sum, row) => sum + (row.claimed ? BigInt(0) : row.amount),
+      BigInt(0),
+    ),
+    // The contract does not redistribute missing tiers or rounding dust.
+    unallocatedPrizePool:
+      afterFee - winners.reduce((sum, row) => sum + row.amount, BigInt(0)),
+    allWinnersClaimed: winners.every(row => row.claimed),
+    recipientNote:
+      "Current NFT owners; recipients can change if an NFT transfers before execution. Use transaction logs for historical recipients.",
+  };
+}
+
 export async function settlement(id: bigint, account?: Address) {
   const c = await contest(id);
   const oracle = await rpc.readContract({
@@ -427,6 +484,9 @@ export async function settlement(id: bigint, account?: Address) {
     oracle,
     unscoredCount: unscored.length,
     payoutDeadline: c.payoutDeadline,
+    payout: ["pay", "wait", "complete"].includes(step)
+      ? await payoutPreview(c)
+      : undefined,
     url: contestUrl(id),
   };
   if (

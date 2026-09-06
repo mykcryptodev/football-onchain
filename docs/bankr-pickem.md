@@ -64,3 +64,5 @@ After deployment, check that the skill URL returns rendered Markdown (no `{{APP_
 - No Bankr-specific long-X-reply guarantee was found in its published documentation, including the full documentation index: https://docs.bankr.bot/llms-full.txt
 
 Therefore X replies use a conservative 280-character budget and link to the full template/entry. The web terminal can show the full copyable card. This is a compatibility choice, not a claim that Bankr cannot post longer replies.
+
+Settlement responses in `pay`, `wait` and `complete` include a `payout` breakdown with current winning NFT owners, exact base-unit amounts, treasury fee, claimed flags, unpaid total and any unallocated tiers/rounding dust. This mirrors contract arithmetic without reallocating unused prize tiers. Completion requires every winner’s claim flag; historical recipients must come from receipt events because NFTs can transfer after payout.
