@@ -183,12 +183,12 @@ export async function details(id: bigint) {
     // array" is not "the first game of the week" and will give a wrong date.
     entriesCloseAt: new Date(Number(c.submissionDeadline) * 1000).toISOString(),
     games,
-    template: pickTemplate(games),
+    template: pickTemplate(games, tiebreaker),
     tiebreaker: {
       gameId: tiebreaker.gameId,
       matchup: `${tiebreaker.away} vs ${tiebreaker.home}`,
       instruction:
-        "Predict combined points for the latest game. If schedules change, the oracle determines the final tiebreaker game.",
+        "Included as the last line of `template` — parse it from the same reply via POST /parse, never as a separate question. If schedules change, the oracle determines the final tiebreaker game.",
     },
     links: {
       contest: contestUrl(id),

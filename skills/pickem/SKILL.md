@@ -17,31 +17,36 @@ Only operate on the contest explicitly selected in this conversation. A public m
 
 1. `GET /contests` lists open pools, featured first then most entries within each page. Follow `nextCursor` using `?cursor=N` before concluding none exist. Respect a supplied contest URL/ID; otherwise recommend a featured or populated pool and let the user choose. Don't replace a selected contest silently.
 2. `GET /contests/{id}` returns live fee/currency, deadline, immutable ordered games, a copyable `template`, tiebreaker matchup, and links. Show cost, `entriesCloseAt`, field size and payout structure. Report `entriesCloseAt` verbatim (it's already the correct ISO instant) — never compute your own date from `contest.submissionDeadline` (raw unix seconds) or from any game's `kickoff`. `games` is in the contract's `gameIds` order, not chronological order, so the first or last entry in that array is not reliably the first game of the week; treating its kickoff as the deadline understates or overstates it by days. Same rule for `GET /contests`, which returns `entriesCloseAt` per contest. If `open=false`, do not enter.
-3. Reply with the blank template exactly as returned, plus a separate question for the tiebreaker (combined points in the designated latest game). Do not prefill teams. The template order is the contract's `gameIds` order, NOT kickoff order or a new ESPN slate. Preserve this contest and numbering in the conversation.
+3. Reply with the blank `template` **exactly as returned, as one copy-pasteable block** — it already ends with a `Tiebreaker (combined points, {away} vs {home}): ` line, so there is no separate tiebreaker question to ask. Tell the user to copy the whole block, fill in a winner after each colon and the tiebreaker number on the last line, and send it back as one reply. Do not prefill teams. The game-line order is the contract's `gameIds` order, NOT kickoff order or a new ESPN slate. Preserve this contest and numbering in the conversation.
 
-Example template:
+Example template (as returned by `GET /contests/{id}`, `template` field):
 ```
 1. CLE vs NE:
 2. SEA vs NYG:
+Tiebreaker (combined points, SEA vs NYG):
 ```
-Accept either:
+Accept any of these back, filled in:
 ```
 1. CLE vs NE: NE
 2. SEA vs NYG: NYG
+Tiebreaker (combined points, SEA vs NYG): 45
 ```
 or:
 ```
 1. NE
 2. NYG
+Tiebreaker: 45
 ```
 or:
 ```
 1. NE
 2. NYG
 Fill in the rest randomly
+Tiebreaker: 45
 ```
+The tiebreaker line is recognized by its leading word, so a retyped or reworded version of it (dropping the parenthetical, changing spacing) still parses — it does not have to match character-for-character, unlike a game line's matchup text.
 
-4. Send the numbered lines to `POST /contests/{id}/parse` as `{"text":"1. NE\n2. NYG"}`. For partial replies across turns, combine previously explicit selections with new selections by number before parsing. An explicit correction replaces that prior selection; conflicting duplicates in one reply need clarification. For full team names, resolve only an unambiguous team in that numbered matchup and normalize to its returned abbreviation. Reject ambiguous cities and wrong opponents. Keep the tiebreaker separate from the numbered lines. The parser preserves explicit picks and randomizes only empty positions when instructed. Never randomize omissions without the user's instruction. Ask for `missing` picks and tiebreaker together. On errors, ask for the specific correction rather than guessing.
+4. Send the ENTIRE reply — game lines and the tiebreaker line together — to `POST /contests/{id}/parse` as `{"text":"1. NE\n2. NYG\nTiebreaker: 45"}` in one call. It returns `picks`, `randomized`, `missing` (game numbers still blank) and `tiebreakerPoints` (the parsed number, or `null` if that line was blank or absent) — never parse the tiebreaker yourself or track it as a separate value across turns. For partial replies across turns, combine previously explicit selections (picks and tiebreaker) with new ones before parsing again. An explicit correction replaces that prior selection; conflicting duplicates in one reply need clarification. For full team names, resolve only an unambiguous team in that numbered matchup and normalize to its returned abbreviation. Reject ambiguous cities and wrong opponents. The parser preserves explicit picks and randomizes only empty game positions when instructed — "fill randomly" never applies to the tiebreaker; a blank tiebreaker is always asked for, never guessed or defaulted. Ask for `missing` picks and a `null` `tiebreakerPoints` together, in the same follow-up. On errors, ask for the specific correction rather than guessing.
 5. Preserve the resulting `picks` array (0=away, 1=home), including randomized choices, for the whole entry attempt. Do NOT rerun randomization when approving or retrying. Show the completed picks, marked randomized positions, tiebreaker and exact fee. Obtain authorization for that paid entry if it was not already given. Viewing a template or asking about a fee alone does not authorize payment. Picks are immutable after submission; a second submission is another paid entry.
 6. Get the wallet from Bankr's authenticated account. `GET /contests/{id}/entry-count?wallet={address}` provides `expectedEntryCount`. Keep this original count throughout the attempt. If entries already exist, identify them and confirm the user wants an additional paid entry unless explicitly requested. Current NFT ownership for "my picks" is separate from original submission count.
 7. `POST /contests/{id}/entry` with `{"wallet":"0x...","picks":[1,0],"tiebreakerPoints":44,"expectedEntryCount":0}`. Only submit a transaction to the configured Pickem contract (`enter`) or the selected contest's currency contract (`approve`/`reset-approval`); chainId must be 8453. Approval spender must be Pickem, amount the exact entry fee (or zero for reset), no unlimited approval. Native value must equal the fee for ETH entries and zero otherwise.
@@ -56,7 +61,7 @@ When you do link out (a genuinely rejected/truncated send, not a precomputed len
 
 ```
 Contest #{id} ({N} games) won't fit here — pick at {links.picks}
-Reply with numbered winners, e.g. "1. NE". Say "fill the rest randomly" for any you skip.
+Reply with numbered winners plus the tiebreaker, e.g. "1. NE". Say "fill the rest randomly" for any you skip.
 ```
 
 Before sending, re-read your own draft: if the line that should carry `links.picks` has no `https://` URL in it, you dropped the link — fix it, don't send it anyway. A reply that promises a link and then omits it is worse than no reply. Never truncate games instead of linking out. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}" — same rule applies, the URL must actually be present, and don't attach or describe an image yourself: posting the bare `{entryUrl}` is enough for X to unfurl its own OG card showing every pick (team called, green/red once decided). The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
