@@ -8,11 +8,21 @@ export interface Matchup {
   completed: boolean;
 }
 
-export function pickTemplate(games: Matchup[]): string {
-  return games.map((g, i) => `${i + 1}. ${g.away} vs ${g.home}: `).join("\n");
+/** The tiebreaker line is appended to the same copy-paste block so a single
+ * reply carries both picks and tiebreaker — never a separate question. */
+export function pickTemplate(games: Matchup[], tiebreaker: Matchup): string {
+  const gameLines = games.map((g, i) => `${i + 1}. ${g.away} vs ${g.home}: `);
+  return [
+    ...gameLines,
+    `Tiebreaker (combined points, ${tiebreaker.away} vs ${tiebreaker.home}): `,
+  ].join("\n");
 }
 
-/** Numbering always refers to the immutable contest gameIds order. */
+const TIEBREAKER_LINE = /^tiebreaker\b/i;
+
+/** Numbering always refers to the immutable contest gameIds order. The
+ * tiebreaker line (see `pickTemplate`) is parsed out of the same text —
+ * it is never a separate message the caller has to track across turns. */
 export function parsePicks(
   text: string,
   games: Matchup[],
@@ -21,15 +31,27 @@ export function parsePicks(
   const picks: (0 | 1 | null)[] = games.map(() => null);
   const seen = new Set<number>();
   let fillRandom = false;
+  let tiebreakerPoints: number | null = null;
   for (const line of text
     .trim()
     .split(/\r?\n/)
     .filter(l => l.trim())) {
-    if (/^fill (?:in )?the rest randomly[.!]?$/i.test(line.trim())) {
+    const trimmed = line.trim();
+    if (/^fill (?:in )?the rest randomly[.!]?$/i.test(trimmed)) {
       fillRandom = true;
       continue;
     }
-    const match = line.trim().match(/^(\d+)[.)]\s*(.*)$/);
+    if (TIEBREAKER_LINE.test(trimmed)) {
+      const digits = trimmed.match(/(\d+)\s*$/);
+      if (digits) {
+        const value = Number(digits[1]);
+        if (!Number.isSafeInteger(value) || value < 0)
+          throw new Error("Tiebreaker must be a nonnegative whole number.");
+        tiebreakerPoints = value;
+      }
+      continue;
+    }
+    const match = trimmed.match(/^(\d+)[.)]\s*(.*)$/);
     if (!match)
       throw new Error(
         `Use numbered picks, e.g. 1. NE. Unrecognized line: ${line}`,
@@ -69,6 +91,10 @@ export function parsePicks(
     picks,
     randomized,
     missing: picks.flatMap((p, i) => (p === null ? [i + 1] : [])),
+    // null means the tiebreaker line was blank (or absent) — never guess a
+    // value here; the caller must ask for it explicitly, same as a missing
+    // game pick.
+    tiebreakerPoints,
   };
 }
 

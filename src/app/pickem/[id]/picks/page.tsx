@@ -31,14 +31,16 @@ export default async function PicksTemplatePage({ params }: Props) {
         </p>
       </header>
       <p>
-        Copy this card into Bankr and add your winners. “1. NE” works too. Leave
-        choices blank and add “Fill in the rest randomly” if you want Bankr to
-        choose those games.
+        Copy this whole card into Bankr and fill it in: a winner after each
+        colon, plus the tiebreaker number on the last line. “1. NE” works too.
+        Leave a game blank and add “Fill in the rest randomly” if you want
+        Bankr to choose it — that never applies to the tiebreaker, so always
+        fill that one in yourself.
       </p>
       <CopyPicksTemplate text={data.template} />
       <p>
-        Tiebreaker: predict the combined points for {data.tiebreaker.matchup}.
-        Send that number separately with your picks.
+        The last line is the tiebreaker: predict the combined points for{" "}
+        {data.tiebreaker.matchup}.
       </p>
       <p className="text-sm text-muted-foreground">
         {data.open

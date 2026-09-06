@@ -31,10 +31,11 @@ const games: Matchup[] = [
     completed: false,
   },
 ];
-test("blank template preserves contract order", () =>
+const tiebreaker = games[2];
+test("blank template preserves contract order and ends with the tiebreaker line", () =>
   assert.equal(
-    pickTemplate(games),
-    "1. CLE vs NE: \n2. SEA vs NYG: \n3. BUF vs NYJ: ",
+    pickTemplate(games, tiebreaker),
+    "1. CLE vs NE: \n2. SEA vs NYG: \n3. BUF vs NYJ: \nTiebreaker (combined points, BUF vs NYJ): ",
   ));
 test("full matchup and abbreviated responses produce the same picks", () => {
   assert.deepEqual(
@@ -55,6 +56,35 @@ test("omissions stay blank and random fill preserves explicit choices", () => {
   );
   assert.deepEqual(result.picks, [1, 0, 0]);
   assert.deepEqual(result.randomized, [2, 3]);
+});
+test("the tiebreaker line is parsed out of the same reply, never a separate message", () => {
+  const filled = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ\nTiebreaker (combined points, BUF vs NYJ): 45",
+    games,
+  );
+  assert.equal(filled.tiebreakerPoints, 45);
+  assert.deepEqual(filled.missing, []);
+
+  // A copied-but-still-blank tiebreaker line is "not answered yet," not an
+  // error — same treatment as a blank game pick.
+  const blank = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ\nTiebreaker (combined points, BUF vs NYJ): ",
+    games,
+  );
+  assert.equal(blank.tiebreakerPoints, null);
+
+  // Absent entirely (e.g. a hand-typed reply that skipped it) is the same
+  // as blank, not an error.
+  assert.equal(parsePicks("1. NE\n2. SEA\n3. NYJ", games).tiebreakerPoints, null);
+
+  // Retyped without the parenthetical still matches by the leading word.
+  assert.equal(
+    parsePicks(
+      "1. NE\n2. SEA\n3. NYJ\nTiebreaker: 51",
+      games,
+    ).tiebreakerPoints,
+    51,
+  );
 });
 test("rejects wrong matchups, duplicate numbers and invalid choices without silently randomizing", () => {
   for (const text of [
