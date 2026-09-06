@@ -1,9 +1,9 @@
 ---
 name: pickem
-description: Join existing Squares NFL Pick'em contests on Base, make and view picks, see contest leaders, and settle all prizes with one request. Use for pick em, pick'em, NFL picks, contest leaderboard, or contest payout requests. Contest creation is outside this skill.
+description: Join existing BankrBall NFL Pick'em contests on Base, make and view picks, see contest leaders, and settle all prizes with one request. Use for pick em, pick'em, NFL picks, contest leaderboard, or contest payout requests. Contest creation is outside this skill.
 ---
 
-# Squares Pick'em
+# BankrBall Pick'em
 
 App: {{APP_URL}}
 API: {{APP_URL}}/api/bankr

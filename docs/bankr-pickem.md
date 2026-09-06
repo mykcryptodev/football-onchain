@@ -3,7 +3,7 @@
 Install after the app is deployed:
 
 ```text
-Install the skill at https://superbowlsquares.app/skills/pickem/SKILL.md
+Install the skill at https://bankrball.com/skills/pickem/SKILL.md
 ```
 
 The route renders `skills/pickem/SKILL.md` with the deployment's configured app URL. `NEXT_PUBLIC_APP_URL` must be the public HTTPS app origin. Next's output tracing includes the source Markdown in serverless deployment bundles. No Bankr catalog submission or Bankr API key on the app is required.
