@@ -34,6 +34,11 @@ This project uses Upstash Redis for caching contest data to reduce blockchain re
 - Contest data: `contest:{chainId}:{contestId}`
   - Example: `contest:84532:0` (contest 0 on Base Sepolia)
   - Example: `contest:1:0` (contest 0 on Ethereum mainnet)
+- Pickem ESPN matchup data: `pickem:matchup:{gameId}` (`src/lib/bankr/service.ts`, `matchups()`)
+  - 20s TTL while the game is live/upcoming, 6h once ESPN marks it `completed`
+  - Backs the Bankr pickem skill's API and its OG images, where a fast
+    response matters for link-preview crawlers (e.g. X) that give up
+    silently on a slow fetch — see "Performance" in `docs/bankr-pickem.md`
 
 ## Cache Utilities
 
