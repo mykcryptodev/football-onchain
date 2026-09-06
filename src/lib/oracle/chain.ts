@@ -188,7 +188,18 @@ async function submitReport(report: Hex): Promise<Hex> {
     nonce,
   });
   const hash = await client.writeContract(request);
-  await publicClient.waitForTransactionReceipt({ hash });
+  // checkReplacement's replacement-detection path re-fetches the receipt by
+  // hash after a transient "not found" and can rethrow that raw
+  // TransactionReceiptNotFoundError instead of continuing to poll, which is
+  // what surfaces as an uncaught sync failure when the RPC's replica lags
+  // (thirdweb's Base endpoint is multi-node and not read-your-writes
+  // consistent). We control the nonce ourselves under a Redis lock and never
+  // speed up/cancel from a wallet, so replacement detection has nothing to
+  // detect here — disable it and let the normal poll/timeout loop retry.
+  await publicClient.waitForTransactionReceipt({
+    hash,
+    checkReplacement: false,
+  });
   return hash;
 }
 
