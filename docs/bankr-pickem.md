@@ -56,6 +56,8 @@ The tests use mocked RPC reads/simulation and verify parsing, preserving random 
 
 After deployment, check that the skill URL returns rendered Markdown (no `{{APP_URL}}` token), fetch a real contest and a confirmed entry, check the image response, and install into a Bankr account. Paid entry and deferred Agent Command execution still require an end-to-end Bankr smoke test with an authorized wallet; no live funds were spent during implementation.
 
+Also confirm `curl https://bankrball.com/api/bankr/contests/{id}` returns a `links.picks` value that starts with `https://bankrball.com` — it's built from `NEXT_PUBLIC_APP_URL` (via `getBaseUrl()`), so a misconfigured or missing env var on the deployment (falling back to a Vercel preview host or `localhost:3000`) silently produces a link Bankr may drop rather than post. Seen in the wild: a 16-game contest correctly fell back to a link-out reply, but the reply shipped with no URL in it — check this env var first, then see the "reply length and share links" fix in `skills/pickem/SKILL.md` for the prompt-side hardening.
+
 ## Bankr format and channel findings
 
 - Bankr explicitly supports direct Markdown URLs on non-GitHub hosts: https://docs.bankr.bot/skills/in-bankr/from-github/

@@ -50,7 +50,14 @@ Fill in the rest randomly
 
 ## Reply length and share links
 
-No verified Bankr-specific guarantee exists here for long X replies. Default to a short reply of at most 280 characters on X, including mentions and link budget. Use the full template in the web terminal or any surface known to allow it. If the slate will not fit, link `links.picks` (a page with a copyable blank template) and say "Reply with numbered winners, e.g. 1. NE. You can ask me to fill the rest randomly." Never truncate games. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}". Its OG image uses the homepage's forest-green field design. The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
+No verified Bankr-specific guarantee exists here for long X replies. Default to a short reply of at most 280 characters on X, including mentions and link budget. Use the full template in the web terminal or any surface known to allow it. If the slate will not fit, the reply MUST contain the literal URL from `links.picks` — never a description of it, never a placeholder, never a blank line where it belongs. Use this exact shape, substituting the real values:
+
+```
+Contest #{id} ({N} games) won't fit here — pick at {links.picks}
+Reply with numbered winners, e.g. "1. NE". Say "fill the rest randomly" for any you skip.
+```
+
+Before sending, re-read your own draft: if the line that should carry `links.picks` has no `https://` URL in it, you dropped the link — fix it, don't send it anyway. A reply that promises a link and then omits it is worse than no reply. Never truncate games instead of linking out. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}" — same rule applies, the URL must actually be present. Its OG image uses the homepage's forest-green field design. The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
 
 ## My picks and who's winning
 
