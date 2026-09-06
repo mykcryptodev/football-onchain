@@ -670,9 +670,9 @@ export default function PickemContestClient({
                               className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
                             >
                               <input
+                                aria-label={`Pick ${team}`}
                                 checked={picks[game.gameId] === side}
                                 className="size-4 shrink-0 accent-primary"
-                                aria-label={`Pick ${team}`}
                                 name={`winner-${game.gameId}`}
                                 type="radio"
                                 value={side}
