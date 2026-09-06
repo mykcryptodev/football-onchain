@@ -1,7 +1,7 @@
 "use client";
-import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
+import { AlertCircle, Clock, Loader2, Trophy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 import { TokenIcon, TokenProvider, useActiveAccount } from "thirdweb/react";
@@ -76,8 +76,32 @@ export default function CreatePickemForm() {
     usePickemContract();
   const [isCreating, setIsCreating] = useState(false);
   const [games, setGames] = useState<GameInfo[]>([]);
-  const [isFetchingGames, setIsFetchingGames] = useState(false);
+  // True once we've confirmed the oracle already has this week's games
+  // onchain - createContest() reverts otherwise, so this gates the button.
+  const [onchainGamesReady, setOnchainGamesReady] = useState(false);
+  const [isCheckingGames, setIsCheckingGames] = useState(false);
+  const [isRequestingOnchainGames, setIsRequestingOnchainGames] =
+    useState(false);
   const [showGames, setShowGames] = useState(false);
+
+  // Keep the latest contract call closures without making them effect
+  // dependencies (usePickemContract returns new function identities every
+  // render, which would otherwise re-trigger the auto-check effect forever).
+  const getWeekGameIdsRef = useRef(getWeekGameIds);
+  const requestWeekGamesRef = useRef(requestWeekGames);
+  useEffect(() => {
+    getWeekGameIdsRef.current = getWeekGameIds;
+    requestWeekGamesRef.current = requestWeekGames;
+  });
+
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearPoll = () => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+  };
+  useEffect(() => clearPoll, []);
   const [tokenPickerOpen, setTokenPickerOpen] = useState(false);
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
   const [usdEstimation, setUsdEstimation] = useState<string>("");
@@ -128,61 +152,138 @@ export default function CreatePickemForm() {
     setUsdEstimation(`≈ $${usdValue.toFixed(2)} USD`);
   }, [formData.entryFee, selectedToken]);
 
-  const fetchWeekGames = async () => {
+  // Fetch the (free, read-only) local preview of a week's matchups. Safe to
+  // call automatically since it costs no gas and needs no wallet approval.
+  const fetchLocalPreview = async () => {
+    const response = await fetch(
+      `/api/week-games?year=${formData.year}&seasonType=${formData.seasonType}&week=${formData.weekNumber}`,
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch games");
+    }
+    const fetchedGames: GameInfo[] = await response.json();
+    // Sort games by ID to match oracle's sorted order (ascending string sort)
+    const sortedGames = fetchedGames.sort((a, b) =>
+      a.gameId.localeCompare(b.gameId),
+    );
+    setGames(sortedGames);
+    setShowGames(sortedGames.length > 0);
+    return sortedGames;
+  };
+
+  // Automatically checks whether this week's games already exist onchain and
+  // previews the matchups - no wallet interaction required.
+  const checkOnchainAndPreview = async () => {
+    if (!formData.weekNumber) return;
+    setIsCheckingGames(true);
+    try {
+      const onchainData = await getWeekGameIdsRef.current({
+        year: parseInt(formData.year),
+        seasonType: parseInt(formData.seasonType),
+        weekNumber: parseInt(formData.weekNumber),
+      });
+      setOnchainGamesReady(onchainData.gameIds.length > 0);
+      await fetchLocalPreview();
+    } catch (error) {
+      console.error("Error checking week games:", error);
+    } finally {
+      setIsCheckingGames(false);
+    }
+  };
+
+  // Auto-run the free check whenever the selected week changes, so the user
+  // never has to tap a button just to see whether games need fetching.
+  useEffect(() => {
+    clearPoll();
+    setOnchainGamesReady(false);
+    setGames([]);
+    setShowGames(false);
+
+    const weekNum = parseInt(formData.weekNumber);
+    if (!formData.weekNumber || isNaN(weekNum) || weekNum < 1) return;
+
+    const timeout = setTimeout(() => {
+      checkOnchainAndPreview();
+    }, 350);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.year, formData.seasonType, formData.weekNumber]);
+
+  // Onchain games aren't fulfilled yet - this is the one step that costs gas
+  // and needs a wallet signature, so it's the only part that requires a tap.
+  const requestOnchainGames = async () => {
+    if (!account) {
+      toast.error("Please connect your wallet");
+      return;
+    }
     if (!formData.weekNumber) {
       toast.error("Please select a week number first");
       return;
     }
 
-    setIsFetchingGames(true);
+    const requestedWeek = {
+      year: formData.year,
+      seasonType: formData.seasonType,
+      weekNumber: formData.weekNumber,
+    };
+    const isStale = () =>
+      formData.year !== requestedWeek.year ||
+      formData.seasonType !== requestedWeek.seasonType ||
+      formData.weekNumber !== requestedWeek.weekNumber;
+
+    setIsRequestingOnchainGames(true);
     try {
-      // First, check onchain game IDs
-      const onchainData = await getWeekGameIds({
-        year: parseInt(formData.year),
-        seasonType: parseInt(formData.seasonType),
-        weekNumber: parseInt(formData.weekNumber),
+      await requestWeekGamesRef.current({
+        year: parseInt(requestedWeek.year),
+        seasonType: parseInt(requestedWeek.seasonType),
+        weekNumber: parseInt(requestedWeek.weekNumber),
+        subscriptionId: chainlinkSubscriptionId[chain.id],
+        gasLimit: Number(chainlinkGasLimit[chain.id]),
+        jobId: chainlinkJobId[chain.id],
       });
-
-      const needToRequest = onchainData.gameIds.length === 0;
-
-      if (needToRequest) {
-        // Request onchain fetch
-        await requestWeekGames({
-          year: parseInt(formData.year),
-          seasonType: parseInt(formData.seasonType),
-          weekNumber: parseInt(formData.weekNumber),
-          subscriptionId: chainlinkSubscriptionId[chain.id],
-          gasLimit: Number(chainlinkGasLimit[chain.id]),
-          jobId: chainlinkJobId[chain.id],
-        });
-        toast.info(
-          "Onchain fetch requested. This may take a few minutes to fulfill.",
-        );
-      }
-
-      // Now fetch local preview from API
-      const response = await fetch(
-        `/api/week-games?year=${formData.year}&seasonType=${formData.seasonType}&week=${formData.weekNumber}`,
+      toast.info(
+        "Onchain fetch requested. Waiting for the oracle to fulfill it - this can take a minute or two.",
       );
-      if (!response.ok) {
-        throw new Error("Failed to fetch games");
-      }
-      const fetchedGames: GameInfo[] = await response.json();
-      // Sort games by ID to match oracle's sorted order (ascending string sort)
-      const sortedGames = fetchedGames.sort((a, b) =>
-        a.gameId.localeCompare(b.gameId),
-      );
-      setGames(sortedGames);
-      setShowGames(true);
-      toast.success(
-        `Fetched ${sortedGames.length} games for the week${needToRequest ? " (onchain request sent)" : ""}`,
-      );
+
+      let attempts = 0;
+      const maxAttempts = 20; // ~2.5 minutes at 8s intervals
+      const poll = async () => {
+        attempts += 1;
+        try {
+          const onchainData = await getWeekGameIdsRef.current({
+            year: parseInt(requestedWeek.year),
+            seasonType: parseInt(requestedWeek.seasonType),
+            weekNumber: parseInt(requestedWeek.weekNumber),
+          });
+          if (isStale()) return;
+          if (onchainData.gameIds.length > 0) {
+            setOnchainGamesReady(true);
+            await fetchLocalPreview();
+            toast.success(
+              "Games are ready onchain - you can create the contest now.",
+            );
+            setIsRequestingOnchainGames(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error polling for onchain games:", error);
+        }
+
+        if (attempts >= maxAttempts) {
+          toast.error(
+            "Still waiting on the oracle. Try again in a minute, or wait a bit longer before creating the contest.",
+          );
+          setIsRequestingOnchainGames(false);
+          return;
+        }
+        pollTimeoutRef.current = setTimeout(poll, 8000);
+      };
+      pollTimeoutRef.current = setTimeout(poll, 8000);
     } catch (error) {
       const e = error as Error;
-      console.error("Error fetching games:", e);
-      toast.error("Failed to fetch week games: " + e.message);
-    } finally {
-      setIsFetchingGames(false);
+      console.error("Error requesting onchain games:", e);
+      toast.error("Failed to fetch onchain games: " + e.message);
+      setIsRequestingOnchainGames(false);
     }
   };
 
@@ -197,8 +298,8 @@ export default function CreatePickemForm() {
       return;
     }
 
-    if (games.length === 0) {
-      toast.error("Please preview the games for this week first");
+    if (!onchainGamesReady) {
+      toast.error("Please fetch this week's games onchain first");
       return;
     }
 
@@ -333,23 +434,33 @@ export default function CreatePickemForm() {
         </div>
       </div>
 
-      {/* Preview Games Button */}
-      <div>
-        <Button
-          disabled={isFetchingGames || !formData.weekNumber}
-          variant="outline"
-          onClick={fetchWeekGames}
-        >
-          {isFetchingGames ? "Fetching..." : "Fetch Onchain Games & Preview"}
-        </Button>
-      </div>
+      {/* Auto-checking status */}
+      {isCheckingGames && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Checking games for this week…
+        </div>
+      )}
 
       {/* Games Preview */}
       {showGames && games.length > 0 && (
         <div className="space-y-2">
-          <Label>
-            Games for Week {formData.weekNumber} ({games.length} games)
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label>
+              Games for Week {formData.weekNumber} ({games.length} games)
+            </Label>
+            {formData.weekNumber && !isCheckingGames && (
+              <span
+                className={
+                  onchainGamesReady
+                    ? "text-xs font-medium text-green-600"
+                    : "text-xs font-medium text-amber-600"
+                }
+              >
+                {onchainGamesReady ? "Onchain ✓" : "Not fetched onchain yet"}
+              </span>
+            )}
+          </div>
           <div className="max-h-48 overflow-y-auto space-y-2">
             {games.map(game => (
               <div
@@ -490,15 +601,57 @@ export default function CreatePickemForm() {
         </AlertDescription>
       </Alert>
 
-      {/* Create Button */}
-      <Button
-        className="w-full"
-        disabled={!account || isCreating || games.length === 0}
-        size="lg"
-        onClick={handleCreate}
-      >
-        {isCreating ? "Creating Contest..." : "Create Pick'em Contest"}
-      </Button>
+      {/* Onchain fetch prerequisite notice */}
+      {account &&
+        !!formData.weekNumber &&
+        !isCheckingGames &&
+        !onchainGamesReady && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              This week&apos;s games haven&apos;t been fetched onchain yet.
+              That&apos;s required before a contest can be created - tap the
+              button below to fetch them (this needs a wallet transaction).
+            </AlertDescription>
+          </Alert>
+        )}
+
+      {/* Create Button - doubles as the onchain-fetch prerequisite when needed */}
+      {onchainGamesReady ? (
+        <Button
+          className="w-full"
+          disabled={!account || isCreating}
+          size="lg"
+          onClick={handleCreate}
+        >
+          {isCreating ? "Creating Contest..." : "Create Pick'em Contest"}
+        </Button>
+      ) : (
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={
+            !account ||
+            !formData.weekNumber ||
+            isCheckingGames ||
+            isRequestingOnchainGames
+          }
+          onClick={requestOnchainGames}
+        >
+          {isRequestingOnchainGames ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Fetching Games Onchain…
+            </>
+          ) : isCheckingGames ? (
+            "Checking Games…"
+          ) : !formData.weekNumber ? (
+            "Select a Week to Continue"
+          ) : (
+            "Fetch Onchain Games to Continue (Required)"
+          )}
+        </Button>
+      )}
 
       {!account && (
         <Alert>
