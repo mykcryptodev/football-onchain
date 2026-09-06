@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useActiveAccount } from "thirdweb/react";
 
 import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
+import { useOwnedPickemEntries } from "@/hooks/useOwnedPickemEntries";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { calculateEntryPrize } from "@/lib/pickem-prize";
 import {
   formatPlace,
   getPickResult,
@@ -39,6 +41,11 @@ export interface CurrentWeekPickemEntry {
   year: number;
   totalEntries: number;
   gamesFinalized: boolean;
+  currency: string;
+  prizeWon: bigint;
+  claimed: boolean;
+  payoutComplete: boolean;
+  payoutDeadline: number;
   rank: number | null;
   placeLabel: string;
   correctPicks: number;
@@ -71,15 +78,24 @@ interface UseMyCurrentWeekPicksReturn {
   currentWeek: ReturnType<typeof useCurrentNFLWeek>["currentWeek"];
   entries: CurrentWeekPickemEntry[];
   error: Error | null;
+  refetch: () => void;
 }
 
-export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
+export function useMyCurrentWeekPicks(
+  scope: "current" | "all" | number = "current",
+): UseMyCurrentWeekPicksReturn {
   const account = useActiveAccount();
-  const { currentWeek, isLoading: isWeekLoading } = useCurrentNFLWeek();
   const {
-    getUserContests,
+    currentWeek,
+    isLoading: isWeekLoading,
+    error: weekError,
+  } = useCurrentNFLWeek();
+  const owned = useOwnedPickemEntries();
+  const {
+    getPayoutRules,
+    getContestWinners,
     getContest,
-    getUserTokens,
+
     getContestTokenIds,
     getUserPicks,
     getNFTPrediction,
@@ -90,46 +106,44 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
     : undefined;
 
   const query = useQuery({
-    queryKey: queryKeys.myCurrentWeekPicks(account?.address, weekKey),
-    enabled: Boolean(account?.address && currentWeek),
+    queryKey: [
+      ...queryKeys.myCurrentWeekPicks(account?.address, weekKey),
+      scope,
+      owned.data,
+    ],
+    enabled: Boolean(
+      account?.address && owned.data && (scope !== "current" || currentWeek),
+    ),
     staleTime: 30 * 1000,
     refetchInterval: 60 * 1000,
     queryFn: async (): Promise<CurrentWeekPickemEntry[]> => {
-      if (!account?.address || !currentWeek) return [];
+      if (
+        !account?.address ||
+        !owned.data ||
+        (scope === "current" && !currentWeek)
+      )
+        return [];
 
-      const contestIds = [
-        ...new Set(
-          (await getUserContests(account.address)).map(id => Number(id)),
-        ),
-      ];
-
-      const contests = (
-        await Promise.all(
-          contestIds.map(async contestId => {
-            try {
-              const contest = await getContest(contestId);
-              return { contestId, contest };
-            } catch (error) {
-              console.error(
-                `Error fetching pickem contest ${contestId}:`,
-                error,
-              );
-              return null;
-            }
-          }),
-        )
-      ).filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-
-      const matchingContests = selectCurrentWeekContests(
-        contests.map(({ contestId, contest }) => ({
-          contestId,
-          contest,
-          year: Number(contest.year),
-          seasonType: Number(contest.seasonType),
-          weekNumber: Number(contest.weekNumber),
-        })),
-        currentWeek,
+      const contestIds = [...new Set(owned.data.map(entry => entry.contestId))];
+      const contests = await Promise.all(
+        contestIds.map(async contestId => {
+          const contest = await getContest(contestId);
+          return {
+            contestId,
+            contest,
+            year: Number(contest.year),
+            seasonType: Number(contest.seasonType),
+            weekNumber: Number(contest.weekNumber),
+          };
+        }),
       );
+      const matchingContests =
+        typeof scope === "number"
+          ? contests.filter(c => c.contestId === scope)
+          : scope === "all"
+            ? contests
+            : selectCurrentWeekContests(contests, currentWeek!);
+      const payoutRules = await getPayoutRules();
 
       const weekGamesCache = new Map<string, Promise<WeekGameApi[]>>();
       const loadWeekGames = (
@@ -147,21 +161,22 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
 
       const entries = await Promise.all(
         matchingContests.map(async ({ contestId, contest }) => {
-          const tokenIds = (
-            await getUserTokens(contestId, account.address)
-          ).map(id => Number(id));
+          const tokenIds = owned.data
+            .filter(entry => entry.contestId === contestId)
+            .map(entry => entry.tokenId);
           if (tokenIds.length === 0) return [];
 
           const gameIds = contest.gameIds.map(id => id.toString());
           const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
 
-          const [games, contestTokenIds] = await Promise.all([
+          const [games, contestTokenIds, winners] = await Promise.all([
             loadWeekGames(
               Number(contest.year),
               Number(contest.seasonType),
               Number(contest.weekNumber),
             ),
             getContestTokenIds(contestId),
+            getContestWinners(contestId),
           ]);
 
           const contestEntries = await Promise.all(
@@ -174,6 +189,7 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
                 tokenId,
                 picks: picks.map(pick => Number(pick)),
                 tiebreakerPoints: Number(prediction[3]),
+                claimed: Boolean(prediction[5]),
               };
             }),
           );
@@ -248,6 +264,17 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
               year: Number(contest.year),
               totalEntries: Number(contest.totalEntries),
               gamesFinalized: contest.gamesFinalized,
+              currency: contest.currency,
+              payoutComplete: contest.payoutComplete,
+              payoutDeadline: Number(contest.payoutDeadline) * 1000,
+              claimed: userEntry?.claimed ?? false,
+              prizeWon: calculateEntryPrize(
+                contest.totalPrizePool,
+                payoutRules.fee,
+                payoutRules.denominator,
+                contest.payoutStructure.payoutPercentages,
+                winners.findIndex(id => Number(id) === tokenId),
+              ),
               rank: scoredGames > 0 ? (rankedEntry?.rank ?? null) : null,
               placeLabel:
                 scoredGames > 0 && rankedEntry
@@ -263,16 +290,34 @@ export function useMyCurrentWeekPicks(): UseMyCurrentWeekPicksReturn {
         }),
       );
 
-      return entries.flat().sort((a, b) => a.contestId - b.contestId);
+      return entries
+        .flat()
+        .sort(
+          (a, b) =>
+            b.year - a.year ||
+            b.seasonType - a.seasonType ||
+            b.weekNumber - a.weekNumber ||
+            b.contestId - a.contestId,
+        );
     },
   });
 
   return {
     isConnected: Boolean(account?.address),
-    isLoading: isWeekLoading || query.isLoading,
+    isLoading:
+      Boolean(account) &&
+      ((scope === "current" && isWeekLoading) ||
+        owned.isLoading ||
+        query.isLoading),
     currentWeek,
     entries: query.data ?? [],
-    error: query.error as Error | null,
+    error: (owned.error ||
+      query.error ||
+      (scope === "current" ? weekError : null)) as Error | null,
+    refetch: () => {
+      void owned.refetch();
+      void query.refetch();
+    },
   };
 }
 

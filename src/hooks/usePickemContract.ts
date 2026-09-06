@@ -16,13 +16,17 @@ import {
   useCapabilities,
   useSendTransaction,
 } from "thirdweb/react";
-import { sendCalls as walletSendCalls } from "thirdweb/wallets/eip5792";
+import {
+  sendCalls as walletSendCalls,
+  waitForCallsReceipt,
+} from "thirdweb/wallets/eip5792";
 import { isAddressEqual } from "viem";
 
 import { chain, pickem, pickemNFT } from "@/constants";
 import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
+import type { PendingEntry } from "@/lib/pickem-draft";
 import { supportsAtomicBatch } from "@/lib/wallet-capabilities";
 import { client } from "@/providers/Thirdweb";
 
@@ -102,8 +106,36 @@ export function usePickemContract() {
     }
   };
 
+  const confirmEntry = async (pending: PendingEntry) => {
+    if (!wallet) throw new Error("Reconnect the wallet used for this entry.");
+    if (pending.kind === "bundle") {
+      const result = await waitForCallsReceipt({
+        wallet,
+        client,
+        chain,
+        id: pending.id,
+      });
+      if (
+        result.status !== "success" ||
+        result.receipts?.some(receipt => receipt.status === "reverted")
+      )
+        throw new Error("ENTRY_REVERTED");
+      return result;
+    }
+    const receipt = await waitForReceipt({
+      client,
+      chain,
+      transactionHash: pending.id as `0x${string}`,
+    });
+    if (receipt.status !== "success") throw new Error("ENTRY_REVERTED");
+    return receipt;
+  };
+
   // Submit predictions for a contest
   const submitPredictions = async (params: {
+    submissionDeadline?: number;
+    onProgress?: (message: string) => void;
+    onBroadcast?: (pending: PendingEntry) => void;
     contestId: number;
     picks: number[]; // Array of 0s and 1s
     tiebreakerPoints: number;
@@ -250,12 +282,22 @@ export function usePickemContract() {
 
         console.log("Sending batched calls:", calls.length, "transactions");
 
+        if (
+          params.submissionDeadline &&
+          Date.now() >= params.submissionDeadline
+        )
+          throw new Error("Entries have closed.");
+        params.onProgress?.("Confirm entry in your wallet…");
         const bundleId = await walletSendCalls({
           wallet,
           calls,
         });
 
         console.log("✅ Batched transaction sent! Bundle ID:", bundleId);
+        const pending: PendingEntry = { kind: "bundle", id: bundleId.id };
+        params.onBroadcast?.(pending);
+        params.onProgress?.("Confirming entry…");
+        await confirmEntry(pending);
         return { bundleId, batched: true };
       } else if (!supportsBatching && needsApproval) {
         // Wallet doesn't support batching - send approval first, then main transaction
@@ -264,7 +306,9 @@ export function usePickemContract() {
         );
 
         // Send approval transaction
+        params.onProgress?.("Approve spending in your wallet…");
         const approvalResult = await sendTx(approveTransaction!);
+        params.onProgress?.("Confirming spending approval…");
         const approvalReceipt = await waitForReceipt({
           client,
           chain,
@@ -276,13 +320,23 @@ export function usePickemContract() {
           approvalReceipt.transactionHash,
         );
 
+        if (approvalReceipt.status !== "success")
+          throw new Error("Spending approval failed. Try again.");
+        if (
+          params.submissionDeadline &&
+          Date.now() >= params.submissionDeadline
+        )
+          throw new Error("Entries have closed.");
+        params.onProgress?.("Confirm entry in your wallet…");
         // Send main transaction
         const mainResult = await sendTx(mainTransaction);
-        const mainReceipt = await waitForReceipt({
-          client,
-          chain,
-          transactionHash: mainResult.transactionHash,
-        });
+        const pending: PendingEntry = {
+          kind: "transaction",
+          id: mainResult.transactionHash,
+        };
+        params.onBroadcast?.(pending);
+        params.onProgress?.("Confirming entry…");
+        const mainReceipt = await confirmEntry(pending);
 
         return {
           receipt: mainReceipt,
@@ -290,14 +344,20 @@ export function usePickemContract() {
           batched: false,
         };
       } else {
-        // No approval needed - send main transaction only
+        if (
+          params.submissionDeadline &&
+          Date.now() >= params.submissionDeadline
+        )
+          throw new Error("Entries have closed.");
+        params.onProgress?.("Confirm entry in your wallet…");
         const result = await sendTx(mainTransaction);
-        const receipt = await waitForReceipt({
-          client,
-          chain,
-          transactionHash: result.transactionHash,
-        });
-
+        const pending: PendingEntry = {
+          kind: "transaction",
+          id: result.transactionHash,
+        };
+        params.onBroadcast?.(pending);
+        params.onProgress?.("Confirming entry…");
+        const receipt = await confirmEntry(pending);
         return { receipt, batched: false };
       }
     } catch (error) {
@@ -862,7 +922,25 @@ export function usePickemContract() {
     }
   };
 
+  const getPayoutRules = async () => {
+    const [fee, denominator] = await Promise.all([
+      readContract({
+        contract: pickemContract,
+        method: "TREASURY_FEE",
+        params: [],
+      }),
+      readContract({
+        contract: pickemContract,
+        method: "PERCENT_DENOMINATOR",
+        params: [],
+      }),
+    ]);
+    return { fee, denominator };
+  };
+
   return {
+    getPayoutRules,
+    confirmEntry,
     createContest,
     submitPredictions,
     getContest,

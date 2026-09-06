@@ -21,7 +21,10 @@ function PickemPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = searchParams.get("tab");
-  const activeTab = tab === "create" || tab === "my-pickems" ? tab : "contests";
+  const activeTab =
+    tab === "create" || tab === "manage" || tab === "my-pickems"
+      ? tab
+      : "contests";
   const setActiveTab = (value: string) =>
     router.push(value === "contests" ? "/pickem" : `/pickem?tab=${value}`, {
       scroll: false,
@@ -50,7 +53,7 @@ function PickemPageContent() {
         value={activeTab}
         onValueChange={setActiveTab}
       >
-        {activeTab !== "create" && (
+        {activeTab !== "create" && activeTab !== "manage" && (
           <TabsList className="grid w-full grid-cols-2 sm:w-80">
             <TabsTrigger value="contests">Find a contest</TabsTrigger>
             <TabsTrigger value="my-pickems">My picks</TabsTrigger>
@@ -61,6 +64,14 @@ function PickemPageContent() {
           <PickemContestList />
         </TabsContent>
 
+        <TabsContent className="space-y-4" value="manage">
+          <h2 className="text-xl font-semibold">Contest management</h2>
+          <p className="text-muted-foreground">
+            Record final scores, calculate winners, and distribute prizes.
+            Player results update separately.
+          </p>
+          <PickemContestList management />
+        </TabsContent>
         <TabsContent className="space-y-4" value="create">
           <Card>
             <CardHeader>
@@ -79,6 +90,14 @@ function PickemPageContent() {
           <MyPickems />
         </TabsContent>
       </Tabs>
+      <div className="mt-8">
+        <Link
+          className="text-sm text-muted-foreground underline"
+          href="/pickem?tab=manage"
+        >
+          Manage contest settlement
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
 import { sdk } from "@farcaster/miniapp-sdk";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Clock, Shuffle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { FC, SVGProps, useEffect, useMemo, useState } from "react";
+import { FC, SVGProps, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getContract, toTokens } from "thirdweb";
 import {
@@ -21,6 +22,7 @@ import { erc20Abi } from "viem";
 
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
+import MyPickems from "@/components/pickem/MyPickems";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,7 @@ import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useOwnedPickemEntries } from "@/hooks/useOwnedPickemEntries";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
@@ -108,7 +111,27 @@ export default function PickemContestClient({
 }: PickemContestClientProps) {
   const router = useRouter();
   const account = useActiveAccount();
-  const { submitPredictions } = usePickemContract();
+  const { submitPredictions, confirmEntry } = usePickemContract();
+  const queryClient = useQueryClient();
+  const owned = useOwnedPickemEntries();
+  const [additionalEntry, setAdditionalEntry] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [submitStage, setSubmitStage] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const submissionLock = useRef(false);
+  const activeIdentity = `${account?.address}:${contest.id}`;
+  const identityRef = useRef(activeIdentity);
+  identityRef.current = activeIdentity;
+  const hasEntry =
+    confirmed ||
+    Boolean(owned.data?.some(entry => entry.contestId === contest.id));
+  const showEntryForm =
+    (!account || (!owned.isLoading && !owned.isError)) &&
+    (!hasEntry || additionalEntry);
+  useEffect(() => {
+    setAdditionalEntry(false);
+    setConfirmed(false);
+  }, [account?.address, contest.id]);
   const { selectionChanged } = useHaptics();
   const { setTokenAddress } = useDisplayToken();
   const { resolvedTheme } = useTheme();
@@ -145,7 +168,12 @@ export default function PickemContestClient({
     setTiebreakerPoints,
     getPickedCount,
     allPicksMade,
-  } = usePickemPicks(contest.gameIds);
+    ready: draftReady,
+    storageAvailable,
+    pending,
+    setPending,
+    clearDraft,
+  } = usePickemPicks(contest.id, contest.gameIds);
 
   // Prevent hydration mismatch by waiting for client mount
   useEffect(() => {
@@ -155,12 +183,16 @@ export default function PickemContestClient({
   const {
     data: walletBalance,
     isLoading: isLoadingWalletBalance,
+    isError: walletBalanceError,
     refetch: refetchWalletBalance,
   } = useWalletBalance({
     chain,
     address: account?.address,
     client,
-    tokenAddress: contest.currency,
+    tokenAddress:
+      contest.currency === "0x0000000000000000000000000000000000000000"
+        ? undefined
+        : contest.currency,
   });
 
   const { start: startBalanceRefresh } = useBalanceRefresh({
@@ -269,49 +301,72 @@ export default function PickemContestClient({
   };
 
   const handleSubmit = async () => {
-    if (!contest || !account || submitting) return;
-    if (contest.submissionDeadline <= Date.now()) {
-      toast.error("This contest is now closed.");
+    if (!account || submissionLock.current || !draftReady) return;
+    if (!pending && contest.submissionDeadline <= Date.now()) {
+      setSubmitError("This contest is now closed. Your draft was not entered.");
       return;
     }
-
-    // Validate all picks are made
-    if (!allPicksMade) {
-      toast.error("Please make a pick for every game");
+    if (!pending && (!allPicksMade || !isValidTiebreaker(tiebreakerPoints))) {
+      setSubmitError("Choose every winner and add a whole-number tiebreaker.");
       return;
     }
-
-    if (!isValidTiebreaker(tiebreakerPoints)) {
-      toast.error("Please enter a valid tiebreaker score");
-      return;
-    }
-
+    submissionLock.current = true;
     setSubmitting(true);
+    setSubmitError("");
+    let broadcast = Boolean(pending);
     try {
-      // Sort gameIds to match oracle's sorted order before mapping picks
-      const sortedGameIds = [...contest.gameIds].sort((a, b) =>
-        a.localeCompare(b),
-      );
-      // Convert picks to array format expected by contract
-      const picksArray = sortedGameIds.map(id => picks[id]);
-
-      // Don't format the entry fee - pass the raw bigint value as string
-      // submitPredictions will handle the decimal conversion internally
-      await submitPredictions({
-        contestId: contest.id,
-        picks: picksArray,
-        tiebreakerPoints: Number(tiebreakerPoints),
-        entryFee: contest.entryFee.toString(),
-        currency: contest.currency,
-      });
-
-      toast.success("Your picks have been submitted!");
+      if (pending) {
+        setSubmitStage("Checking entry confirmation…");
+        await confirmEntry(pending);
+      } else {
+        const sortedGameIds = [...contest.gameIds].sort((a, b) =>
+          a.localeCompare(b),
+        );
+        await submitPredictions({
+          contestId: contest.id,
+          submissionDeadline: contest.submissionDeadline,
+          picks: sortedGameIds.map(id => picks[id]),
+          tiebreakerPoints: Number(tiebreakerPoints),
+          entryFee: contest.entryFee.toString(),
+          currency: contest.currency,
+          onProgress: setSubmitStage,
+          onBroadcast: transaction => {
+            broadcast = true;
+            setPending(transaction);
+          },
+        });
+      }
+      clearDraft();
+      if (identityRef.current !== activeIdentity) return;
+      setConfirmed(true);
+      setAdditionalEntry(false);
+      // Refresh entry ownership and results after chain confirmation, not wallet approval.
+      void queryClient.invalidateQueries({ queryKey: ["ownedPickemEntries"] });
+      void queryClient.invalidateQueries({ queryKey: ["myCurrentWeekPicks"] });
+      void queryClient.invalidateQueries({ queryKey: ["pickemContests"] });
       setShareModalOpen(true);
     } catch (error) {
-      console.error("Error submitting picks:", error);
-      toast.error("Failed to submit picks");
+      if (identityRef.current !== activeIdentity) return;
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("ENTRY_REVERTED")) {
+        setPending(undefined);
+        setSubmitError(
+          "The entry transaction failed. Your picks are saved; you can try again while entries are open.",
+        );
+      } else if (broadcast) {
+        setSubmitError(
+          "Your transaction was sent, but confirmation is still pending. Check entry status before making another entry.",
+        );
+      } else {
+        setSubmitError(
+          /reject|denied|cancel/i.test(message)
+            ? "You cancelled the wallet request. Your picks are still here."
+            : "Couldn’t submit your entry. Your picks are still here. Check your wallet and try again.",
+        );
+      }
     } finally {
       setSubmitting(false);
+      submissionLock.current = false;
     }
   };
 
@@ -350,6 +405,9 @@ export default function PickemContestClient({
     );
   };
 
+  const orderedGames = [...games].sort(
+    (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
+  );
   const lastGame = games.find(game => game.gameId === contest.tiebreakerGameId);
 
   const { data: currencyDecimals } = useReadContract({
@@ -459,10 +517,58 @@ export default function PickemContestClient({
           totalPrizePool={contest.totalPrizePool}
         />
 
+        {account && owned.isLoading && <Skeleton className="h-40 w-full" />}
+        {pending && (
+          <Alert>
+            <AlertDescription>
+              <p className="font-semibold">Entry confirmation pending</p>
+              <p>
+                {submitError ||
+                  "Your transaction has been sent. Check its status before making another entry."}
+              </p>
+              <Button
+                className="mt-3"
+                disabled={submitting || !account}
+                onClick={handleSubmit}
+              >
+                {submitting ? submitStage : "Check entry status"}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {account && owned.isError && (
+          <Alert>
+            <AlertDescription>
+              We couldn’t check your existing entries.{" "}
+              <Button variant="outline" onClick={() => owned.refetch()}>
+                Try again
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {hasEntry && (
+          <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-bold">Your submitted picks</h2>
+              {!isSubmissionClosed && !pending && (
+                <Button
+                  disabled={submitting}
+                  variant="outline"
+                  onClick={() => setAdditionalEntry(!additionalEntry)}
+                >
+                  {additionalEntry
+                    ? "Back to my picks"
+                    : "Add another paid entry"}
+                </Button>
+              )}
+            </div>
+            <MyPickems contestId={contest.id} />
+          </section>
+        )}
         {/* Games and Picks */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] items-start gap-6">
           {/* Games List */}
-          {!isSubmissionClosed && (
+          {!isSubmissionClosed && showEntryForm && !pending && (
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -474,6 +580,13 @@ export default function PickemContestClient({
                 <p className="text-sm text-muted-foreground">
                   Tap one team in every matchup.
                 </p>
+                <p aria-live="polite" className="text-xs text-muted-foreground">
+                  {!draftReady
+                    ? "Loading draft…"
+                    : storageAvailable
+                      ? `${getPickedCount() > 0 ? "Draft saved on this device" : "Start a new draft"} · Not entered yet`
+                      : "Picks are only saved while this page stays open."}
+                </p>
                 <Progress
                   aria-label="Picks completed"
                   value={
@@ -484,9 +597,11 @@ export default function PickemContestClient({
                 />
                 <Button
                   className="self-start"
-                  disabled={submitting || gamesLoading || !!gamesError}
                   size="sm"
                   variant="ghost"
+                  disabled={
+                    submitting || !draftReady || gamesLoading || !!gamesError
+                  }
                   onClick={pickAtRandom}
                 >
                   <Shuffle className="mr-2 size-4" />
@@ -510,75 +625,90 @@ export default function PickemContestClient({
                     </AlertDescription>
                   </Alert>
                 )}
-                {games.map((game, index) => (
-                  <fieldset
-                    key={game.gameId}
-                    className="scroll-mt-40 rounded-xl border p-3 sm:p-4"
-                    disabled={submitting}
-                    id={`game-${game.gameId}`}
-                  >
-                    <legend className="px-2 text-xs text-muted-foreground">
-                      Game {index + 1} · {formatKickoffTime(game.kickoff)}
-                    </legend>
-                    <div className="grid grid-cols-2 gap-3">
-                      {([0, 1] as const).map(side => {
-                        const home = side === 1;
-                        const team = home ? game.homeTeam : game.awayTeam;
-                        const logo = home ? game.homeLogo : game.awayLogo;
-                        return (
-                          <label
-                            key={side}
-                            className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
-                          >
-                            <input
-                              checked={picks[game.gameId] === side}
-                              className="size-4 shrink-0 accent-primary"
-                              name={`winner-${game.gameId}`}
-                              type="radio"
-                              value={side}
-                              onChange={() => {
-                                selectionChanged();
-                                setPick(game.gameId, side);
-                              }}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                {logo && (
-                                  <img
-                                    alt=""
-                                    className="size-7 shrink-0 object-contain"
-                                    src={logo}
-                                  />
-                                )}
-                                <span
-                                  className="min-w-0 truncate text-sm font-semibold"
-                                  title={team}
-                                >
-                                  {team}
-                                </span>
+                {orderedGames.map((game, index) => (
+                  <div key={game.gameId}>
+                    {(index === 0 ||
+                      new Date(
+                        orderedGames[index - 1].kickoff,
+                      ).toDateString() !==
+                        new Date(game.kickoff).toDateString()) && (
+                      <h3 className="mb-3 pt-2 text-sm font-semibold">
+                        {new Date(game.kickoff).toLocaleDateString([], {
+                          weekday: "long",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </h3>
+                    )}
+                    <fieldset
+                      key={game.gameId}
+                      className="scroll-mt-40 rounded-xl border p-3 sm:p-4"
+                      disabled={submitting || !draftReady}
+                      id={`game-${game.gameId}`}
+                    >
+                      <legend className="px-2 text-xs text-muted-foreground">
+                        {formatKickoffTime(game.kickoff)}
+                      </legend>
+                      <div className="grid grid-cols-2 gap-3">
+                        {([0, 1] as const).map(side => {
+                          const home = side === 1;
+                          const team = home ? game.homeTeam : game.awayTeam;
+                          const logo = home ? game.homeLogo : game.awayLogo;
+                          return (
+                            <label
+                              key={side}
+                              className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
+                            >
+                              <input
+                                checked={picks[game.gameId] === side}
+                                className="size-4 shrink-0 accent-primary"
+                                name={`winner-${game.gameId}`}
+                                type="radio"
+                                value={side}
+                                onChange={() => {
+                                  selectionChanged();
+                                  setPick(game.gameId, side);
+                                }}
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  {logo && (
+                                    <img
+                                      alt=""
+                                      className="size-7 shrink-0 object-contain"
+                                      src={logo}
+                                    />
+                                  )}
+                                  <span
+                                    className="min-w-0 truncate text-sm font-semibold"
+                                    title={team}
+                                  >
+                                    {team}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {home ? "Home" : "Away"} ·{" "}
+                                  {home ? game.homeRecord : game.awayRecord}
+                                </p>
+                                <p className="mt-1 text-xs font-medium">
+                                  {picks[game.gameId] === side
+                                    ? "Your pick"
+                                    : "Select team"}
+                                </p>
                               </div>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {home ? "Home" : "Away"} ·{" "}
-                                {home ? game.homeRecord : game.awayRecord}
-                              </p>
-                              <p className="mt-1 text-xs font-medium">
-                                {picks[game.gameId] === side
-                                  ? "Your pick"
-                                  : "Select team"}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </fieldset>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
+                  </div>
                 ))}
               </CardContent>
             </Card>
           )}
 
           {/* Submission Panel */}
-          {!isSubmissionClosed && (
+          {!isSubmissionClosed && showEntryForm && !pending && (
             <Card
               className="scroll-mt-40 lg:sticky lg:top-24"
               id="review-picks"
@@ -587,12 +717,53 @@ export default function PickemContestClient({
                 <CardTitle>2. Review &amp; enter</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <details open className="rounded-lg border p-3">
+                  <summary className="cursor-pointer font-semibold">
+                    Your selected teams
+                  </summary>
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {orderedGames.map(game => (
+                      <li key={game.gameId}>
+                        <a
+                          className="flex justify-between gap-2 underline underline-offset-4"
+                          href={`#game-${game.gameId}`}
+                        >
+                          <span>
+                            {game.awayAbbreviation || game.awayTeam} @{" "}
+                            {game.homeAbbreviation || game.homeTeam}
+                          </span>
+                          <span className="font-semibold">
+                            {picks[game.gameId] === 0
+                              ? game.awayAbbreviation || game.awayTeam
+                              : picks[game.gameId] === 1
+                                ? game.homeAbbreviation || game.homeTeam
+                                : "Choose a team"}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+                <p className="text-sm">
+                  Entries close{" "}
+                  {mounted
+                    ? new Date(contest.submissionDeadline).toLocaleString([], {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        timeZoneName: "short",
+                      })
+                    : "…"}
+                  .
+                </p>
                 {/* Tiebreaker */}
                 <div className="space-y-2">
                   <Label htmlFor="tiebreaker">Tiebreaker: Total Points</Label>
                   <Input
                     aria-describedby="tiebreaker-help"
-                    disabled={submitting}
+                    disabled={submitting || !draftReady}
                     id="tiebreaker"
                     min="0"
                     placeholder="e.g., 45"
@@ -619,7 +790,8 @@ export default function PickemContestClient({
                 <p className="text-sm text-muted-foreground">
                   {getPickedCount()} of {contest.gameIds.length} winners
                   selected. You can change any pick before submitting. Each
-                  submission is a new paid entry.
+                  submission is a new paid entry. Submitted picks cannot be
+                  edited.
                 </p>
                 {/* Entry Fee Display */}
                 <div className="p-4 bg-muted rounded-lg">
@@ -638,6 +810,11 @@ export default function PickemContestClient({
                     </span>
                   </div>
                 </div>
+                {submitError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{submitError}</AlertDescription>
+                  </Alert>
+                )}
                 {/* Submit Button */}
                 {!account ? (
                   <ConnectButton
@@ -652,12 +829,23 @@ export default function PickemContestClient({
                   <Button disabled className="w-full">
                     Checking balance…
                   </Button>
+                ) : walletBalanceError ? (
+                  <div className="space-y-2" role="alert">
+                    <p className="text-sm">We couldn’t check your balance.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => refetchWalletBalance()}
+                    >
+                      Check balance again
+                    </Button>
+                  </div>
                 ) : hasSufficientBalance ? (
                   <Button
                     className="w-full"
                     size="lg"
                     disabled={
                       !account ||
+                      !draftReady ||
                       submitting ||
                       isSubmissionClosed ||
                       !readyToSubmit ||
@@ -668,7 +856,7 @@ export default function PickemContestClient({
                     onClick={handleSubmit}
                   >
                     {submitting
-                      ? "Submitting..."
+                      ? submitStage
                       : isSubmissionClosed
                         ? "Submissions Closed"
                         : !allPicksMade
@@ -763,7 +951,7 @@ export default function PickemContestClient({
         </details>
       </div>
 
-      {!isSubmissionClosed && (
+      {!isSubmissionClosed && showEntryForm && !pending && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
             <span aria-live="polite" className="text-sm font-medium">
@@ -774,7 +962,7 @@ export default function PickemContestClient({
                 href={
                   allPicksMade
                     ? "#review-picks"
-                    : `#game-${contest.gameIds.find(id => picks[id] !== 0 && picks[id] !== 1)}`
+                    : `#game-${orderedGames.find(game => picks[game.gameId] !== 0 && picks[game.gameId] !== 1)?.gameId}`
                 }
               >
                 {allPicksMade ? "Review & enter" : "Next unpicked game"}
@@ -789,49 +977,48 @@ export default function PickemContestClient({
           <DialogHeader>
             <DialogTitle>You’re in! Your picks are submitted.</DialogTitle>
             <DialogDescription>
-              Let your friends know you&apos;re in. Challenge them to join the
-              contest and see who comes out on top.
+              Your entry is confirmed. Follow your picks, scores, and standing.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <Button
+            className="w-full"
+            onClick={() => handleShareModalChange(false)}
+          >
+            View my picks
+          </Button>
+          <details className="rounded-xl border p-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Share with friends
+            </summary>
             <Textarea
-              className="min-h-24 resize-none text-sm"
+              className="mt-3 min-h-24 resize-none text-sm"
               value={shareText}
               onChange={event => setShareText(event.target.value)}
             />
-          </div>
-
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <div className="flex w-full gap-2">
-              <Button
-                className="flex-1 bg-black text-white hover:bg-black/90"
-                disabled={shareLoading}
-                type="button"
-                onClick={handleShareToX}
-              >
-                <XIcon className="mr-2 h-4 w-4" />
-                Compose Post
-              </Button>
-              <Button
-                className="flex-1 bg-[#8A63D2] text-white hover:bg-[#8A63D2]/90"
-                disabled={shareLoading}
-                type="button"
-                onClick={handleShareToFarcaster}
-              >
-                <FarcasterIcon className="mr-2 h-4 w-4" />
-                Compose Cast
-              </Button>
-            </div>
-            <Button
-              className="w-full"
-              type="button"
-              variant="outline"
-              onClick={() => handleShareModalChange(false)}
-            >
-              View my picks
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <div className="flex w-full gap-2">
+                <Button
+                  className="flex-1 bg-black text-white hover:bg-black/90"
+                  disabled={shareLoading}
+                  type="button"
+                  onClick={handleShareToX}
+                >
+                  <XIcon className="mr-2 h-4 w-4" />
+                  Compose Post
+                </Button>
+                <Button
+                  className="flex-1 bg-[#8A63D2] text-white hover:bg-[#8A63D2]/90"
+                  disabled={shareLoading}
+                  type="button"
+                  onClick={handleShareToFarcaster}
+                >
+                  <FarcasterIcon className="mr-2 h-4 w-4" />
+                  Compose Cast
+                </Button>
+              </div>
+            </DialogFooter>
+          </details>
         </DialogContent>
       </Dialog>
     </>
