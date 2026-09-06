@@ -15,6 +15,12 @@ import { base } from "viem/chains";
 import { chain, featuredPickemContestIds, pickem } from "@/constants";
 import { abi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
+import {
+  CACHE_TTL,
+  getPickemMatchupCacheKey,
+  redis,
+  safeRedisOperation,
+} from "@/lib/redis";
 
 import {
   type Matchup,
@@ -68,40 +74,76 @@ export async function contest(id: bigint) {
   return c;
 }
 type Contest = Awaited<ReturnType<typeof contest>>;
+async function fetchMatchup(gameId: string): Promise<Matchup> {
+  const response = await fetch(
+    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${gameId}`,
+    { next: { revalidate: 30 }, signal: AbortSignal.timeout(10000) },
+  );
+  if (!response.ok)
+    throw new Error("Game data unavailable. Try again shortly.");
+  const data = await response.json();
+  const game = data.header?.competitions?.[0];
+  type Team = {
+    homeAway: string;
+    team?: { abbreviation?: string };
+    score?: string;
+  };
+  const away = game?.competitors?.find(
+    (t: Team) => t.homeAway === "away",
+  ) as Team | undefined;
+  const home = game?.competitors?.find(
+    (t: Team) => t.homeAway === "home",
+  ) as Team | undefined;
+  if (!away?.team?.abbreviation || !home?.team?.abbreviation || !game.date)
+    throw new Error("Matchup unavailable; do not guess teams.");
+  return {
+    gameId,
+    away: away.team.abbreviation,
+    home: home.team.abbreviation,
+    kickoff: game.date,
+    awayScore: away.score === undefined ? undefined : Number(away.score),
+    homeScore: home.score === undefined ? undefined : Number(home.score),
+    completed: game.status?.type?.completed === true,
+  };
+}
+
+/**
+ * Resolves every game in the contest, never substituting or re-sorting
+ * ESPN's current weekly slate. This is the slow part of any pickem
+ * route — up to 16 ESPN fetches — so each game is cached in Redis (short
+ * TTL while live, hours once ESPN marks it final) and only a genuine cache
+ * miss reaches ESPN. Link-preview crawlers (e.g. X unfurling an OG image)
+ * need this to come back fast; on a cache hit it's one Redis round trip
+ * per game instead of one ESPN round trip per game.
+ */
 export async function matchups(c: Contest): Promise<Matchup[]> {
-  // Resolve each ID, never substitute or re-sort ESPN's current weekly slate.
   return Promise.all(
     c.gameIds.map(async gameId => {
-      const response = await fetch(
-        `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${gameId}`,
-        { next: { revalidate: 30 }, signal: AbortSignal.timeout(10000) },
-      );
-      if (!response.ok)
-        throw new Error("Game data unavailable. Try again shortly.");
-      const data = await response.json();
-      const game = data.header?.competitions?.[0];
-      type Team = {
-        homeAway: string;
-        team?: { abbreviation?: string };
-        score?: string;
-      };
-      const away = game?.competitors?.find(
-        (t: Team) => t.homeAway === "away",
-      ) as Team | undefined;
-      const home = game?.competitors?.find(
-        (t: Team) => t.homeAway === "home",
-      ) as Team | undefined;
-      if (!away?.team?.abbreviation || !home?.team?.abbreviation || !game.date)
-        throw new Error("Matchup unavailable; do not guess teams.");
-      return {
-        gameId: gameId.toString(),
-        away: away.team.abbreviation,
-        home: home.team.abbreviation,
-        kickoff: game.date,
-        awayScore: away.score === undefined ? undefined : Number(away.score),
-        homeScore: home.score === undefined ? undefined : Number(home.score),
-        completed: game.status?.type?.completed === true,
-      };
+      const id = gameId.toString();
+      const cacheKey = getPickemMatchupCacheKey(id);
+
+      if (redis) {
+        const cached = await safeRedisOperation(() => redis!.get(cacheKey), null);
+        if (cached) {
+          return (
+            typeof cached === "string" ? JSON.parse(cached) : cached
+          ) as Matchup;
+        }
+      }
+
+      const matchup = await fetchMatchup(id);
+
+      if (redis) {
+        const ttl = matchup.completed
+          ? CACHE_TTL.PICKEM_MATCHUP_FINAL
+          : CACHE_TTL.PICKEM_MATCHUP_LIVE;
+        await safeRedisOperation(
+          () => redis!.setex(cacheKey, ttl, JSON.stringify(matchup)),
+          null,
+        );
+      }
+
+      return matchup;
     }),
   );
 }

@@ -51,10 +51,24 @@ export const getCancelledOrdersKey = (chainId?: number) => {
   return `cancelled:orders:${currentChainId}`;
 };
 
+/**
+ * Per-game ESPN matchup data (teams, scores, completed) used by the pickem
+ * skill/API and its OG images. This is the slow part of those routes — up
+ * to 16 external ESPN fetches per request — and X's link-preview crawler
+ * needs a fast response to render a card, so every one of these is cached.
+ */
+export const getPickemMatchupCacheKey = (gameId: string) => {
+  return `pickem:matchup:${gameId}`;
+};
+
 export const CACHE_TTL = {
   CONTEST: 3600,
   CONTESTS_LIST: 300,
   USER_PROFILE: 900,
+  // A live/upcoming game's score can change any second; a completed one
+  // never will, so it's safe to cache far longer once ESPN marks it final.
+  PICKEM_MATCHUP_LIVE: 20,
+  PICKEM_MATCHUP_FINAL: 21600,
   USER_BIO: 86400,
   GAME_DETAILS: 300,
   OPENSEA_LISTINGS: 300,

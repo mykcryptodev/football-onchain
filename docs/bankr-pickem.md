@@ -38,6 +38,16 @@ Amounts and chain IDs use exact contract data; bigint JSON fields are decimal st
 
 `/pickem/{id}/picks` is the copyable blank template. `/pickem/{id}/entries/{tokenId}` displays one confirmed entry, including current NFT owner, without requiring a wallet connection. Its metadata points to `/api/og/pickem/{id}/picks?tokenId=…`, reusing the homepage hero's palette and field lines. The image itself renders every game the entry picked — team called, and (once decided) a green/red border for correct/wrong, gray for still pending — not just a score or rank summary, so sharing or linking the entry URL on X unfurls a card that actually shows the picks.
 
+## Performance: link-preview speed
+
+X (and most link-preview crawlers) fetch a link's OG image with a short timeout and give up silently if it doesn't come back in time — no card, no error shown to the poster. The slow part of every pickem read (`details`, `entries`, `leaderboard`, `settlement`, and both OG image routes) is `matchups()`: up to 16 external ESPN `summary` fetches, one per game, done in parallel but each individually slow.
+
+`matchups()` now checks Redis (`getPickemMatchupCacheKey`, `src/lib/redis.ts`) for each game before hitting ESPN, and writes back on a miss — 20s TTL for a live/upcoming game (score can change any second), 6h once ESPN marks it `completed` (it never will again). On a cache hit this turns "up to 16 ESPN round trips" into "up to 16 Redis round trips run in parallel," which is the actual latency win for a crawler's first fetch of a freshly-shared link. Requires `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` (already used elsewhere in the app); with neither set, `redis` is `null` and every call falls straight through to ESPN exactly as before — no behavior change, just no caching.
+
+Two things considered and not done, to keep this fix scoped to the actual bottleneck:
+- **Swapping the RPC endpoint** (e.g. to a Coinbase Developer Platform Base RPC) — `ORACLE_RPC_URL` already supports this (see `env.example`), but the contract reads in this file are a handful of `eth_call`s done in parallel and were not the slow part; a faster RPC does not fix a crawler timeout caused by ESPN.
+- **Coinbase Developer Platform's SQL API** as a replacement data layer — would help the many-entries case (`leaderboard`, `browse`) more than a single OG image, and swapping the read layer entirely is a much larger, riskier change than caching the one slow external call. Worth revisiting if `leaderboard` on a large contest ever needs the same treatment.
+
 ## Settlement behavior and deployment dependencies
 
 Bankr performs: request missing oracle results → wait for fulfillment → finalize contest → score every entry in batches of 25 → wait for the contract's 24-hour period → claim all prizes → verify completion. It rechecks state after every receipt. The worker/webhook/cron that already publishes authenticated oracle reports must remain operational; emitting a request does not itself publish scores.
