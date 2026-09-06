@@ -7,6 +7,7 @@ import { abi } from "@/constants/abis/pickem";
 
 import {
   address,
+  entries,
   entryPage,
   payoutPreview,
   prepareEntry,
@@ -98,6 +99,15 @@ test("ERC20 approval is a separate progress step, followed by exact entry callda
     decodeFunctionData({ abi, data: entry.transaction.data }).args,
     [3n, [1, 0], 44n],
   );
+});
+test("confirmed entries return exact share copy and a direct picks image", async () => {
+  setup();
+  const [entry] = await entries(c, [14n]);
+  assert.equal(entry.url, "http://localhost:3000/pickem/3/entries/14");
+  assert.deepEqual(entry.share, {
+    text: "My picks are in. Think you can beat me? http://localhost:3000/pickem/3/entries/14",
+    imageUrl: "http://localhost:3000/api/og/pickem/3/picks?tokenId=14",
+  });
 });
 test("native entry sends only exact entry fee and zero-reset approval works", async () => {
   setup({ getContest: { ...c, currency: zeroAddress } });
