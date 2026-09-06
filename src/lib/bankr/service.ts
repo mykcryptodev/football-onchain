@@ -22,6 +22,7 @@ import {
   safeRedisOperation,
 } from "@/lib/redis";
 
+import { entryShare } from "./entry-share";
 import {
   type Matchup,
   parsePicks,
@@ -242,10 +243,7 @@ export async function entries(c: Contest, ids: readonly bigint[]) {
         claimed: prediction[6],
         picks,
         url,
-        share: {
-          text: `My picks are in. Think you can beat me? ${url}`,
-          imageUrl: `${getBaseUrl()}/api/og/pickem/${c.id}/picks?tokenId=${tokenId}`,
-        },
+        share: entryShare(getBaseUrl(), c.id, tokenId),
       };
     }),
   );

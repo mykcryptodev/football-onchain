@@ -107,6 +107,11 @@ test("confirmed entries return exact share copy and a direct picks image", async
   assert.deepEqual(entry.share, {
     text: "My picks are in. Think you can beat me? http://localhost:3000/pickem/3/entries/14",
     imageUrl: "http://localhost:3000/api/og/pickem/3/picks?tokenId=14",
+    imageAlt: "BankrBall contest #3, entry #14 picks",
+    markdown:
+      "![BankrBall contest #3, entry #14 picks](http://localhost:3000/api/og/pickem/3/picks?tokenId=14)\n\nMy picks are in. Think you can beat me? http://localhost:3000/pickem/3/entries/14",
+    fallbackText:
+      "My picks are in. Think you can beat me? http://localhost:3000/pickem/3/entries/14\nPicks image: http://localhost:3000/api/og/pickem/3/picks?tokenId=14",
   });
 });
 test("native entry sends only exact entry fee and zero-reset approval works", async () => {
