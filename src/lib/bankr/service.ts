@@ -230,6 +230,7 @@ export async function entries(c: Contest, ids: readonly bigint[]) {
               functionName: "ownerOf",
               args: [tokenId],
             });
+      const url = `${contestUrl(c.id)}/entries/${tokenId}`;
       return {
         tokenId,
         predictor: prediction[1],
@@ -240,7 +241,11 @@ export async function entries(c: Contest, ids: readonly bigint[]) {
         scoreCalculated: prediction[5],
         claimed: prediction[6],
         picks,
-        url: `${contestUrl(c.id)}/entries/${tokenId}`,
+        url,
+        share: {
+          text: `My picks are in. Think you can beat me? ${url}`,
+          imageUrl: `${getBaseUrl()}/api/og/pickem/${c.id}/picks?tokenId=${tokenId}`,
+        },
       };
     }),
   );
