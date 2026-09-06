@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { visiblePickemContests } from "@/lib/hidden-contests";
 import { queryKeys } from "@/lib/query-keys";
 
 export interface PickemContestListItem {
@@ -66,7 +67,7 @@ export function usePickemContests(): UsePickemContestsReturn {
         }
       }
 
-      return contests;
+      return visiblePickemContests(contests);
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     refetchOnWindowFocus: true,

@@ -20,30 +20,38 @@ Only operate on the contest explicitly selected in this conversation. A public m
 3. Reply with the blank `template` **exactly as returned, as one copy-pasteable block** — it already ends with a `Tiebreaker (combined points, {away} vs {home}): ` line, so there is no separate tiebreaker question to ask. Tell the user to copy the whole block, fill in a winner after each colon and the tiebreaker number on the last line, and send it back as one reply. Do not prefill teams. The game-line order is the contract's `gameIds` order, NOT kickoff order or a new ESPN slate. Preserve this contest and numbering in the conversation.
 
 Example template (as returned by `GET /contests/{id}`, `template` field):
+
 ```
 1. CLE vs NE:
 2. SEA vs NYG:
 Tiebreaker (combined points, SEA vs NYG):
 ```
+
 Accept any of these back, filled in:
+
 ```
 1. CLE vs NE: NE
 2. SEA vs NYG: NYG
 Tiebreaker (combined points, SEA vs NYG): 45
 ```
+
 or:
+
 ```
 1. NE
 2. NYG
 Tiebreaker: 45
 ```
+
 or:
+
 ```
 1. NE
 2. NYG
 Fill in the rest randomly
 Tiebreaker: 45
 ```
+
 The tiebreaker line is recognized by its leading word, so a retyped or reworded version of it (dropping the parenthetical, changing spacing) still parses — it does not have to match character-for-character, unlike a game line's matchup text.
 
 4. Send the ENTIRE reply — game lines and the tiebreaker line together — to `POST /contests/{id}/parse` as `{"text":"1. NE\n2. NYG\nTiebreaker: 45"}` in one call. It returns `picks`, `randomized`, `missing` (game numbers still blank) and `tiebreakerPoints` (the parsed number, or `null` if that line was blank or absent) — never parse the tiebreaker yourself or track it as a separate value across turns. For partial replies across turns, combine previously explicit selections (picks and tiebreaker) with new ones before parsing again. An explicit correction replaces that prior selection; conflicting duplicates in one reply need clarification. For full team names, resolve only an unambiguous team in that numbered matchup and normalize to its returned abbreviation. Reject ambiguous cities and wrong opponents. The parser preserves explicit picks and randomizes only empty game positions when instructed — "fill randomly" never applies to the tiebreaker; a blank tiebreaker is always asked for, never guessed or defaulted. Ask for `missing` picks and a `null` `tiebreakerPoints` together, in the same follow-up. On errors, ask for the specific correction rather than guessing.
