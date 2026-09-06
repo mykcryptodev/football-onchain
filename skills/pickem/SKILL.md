@@ -59,7 +59,7 @@ Contest #{id} ({N} games) won't fit here — pick at {links.picks}
 Reply with numbered winners, e.g. "1. NE". Say "fill the rest randomly" for any you skip.
 ```
 
-Before sending, re-read your own draft: if the line that should carry `links.picks` has no `https://` URL in it, you dropped the link — fix it, don't send it anyway. A reply that promises a link and then omits it is worse than no reply. Never truncate games instead of linking out. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}" — same rule applies, the URL must actually be present. Its OG image uses the homepage's forest-green field design. The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
+Before sending, re-read your own draft: if the line that should carry `links.picks` has no `https://` URL in it, you dropped the link — fix it, don't send it anyway. A reply that promises a link and then omits it is worse than no reply. Never truncate games instead of linking out. After entry, make the entry URL the primary share action: "My picks are in. Think you can beat me? {entryUrl}" — same rule applies, the URL must actually be present, and don't attach or describe an image yourself: posting the bare `{entryUrl}` is enough for X to unfurl its own OG card showing every pick (team called, green/red once decided). The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
 
 ## My picks and who's winning
 

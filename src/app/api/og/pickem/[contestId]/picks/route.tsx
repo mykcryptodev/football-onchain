@@ -9,11 +9,21 @@ import {
   uint,
 } from "@/lib/bankr/service";
 import { loadPickemOgFonts } from "@/lib/og/pickem-card";
-import { renderPickemPicksOgCard } from "@/lib/og/pickem-picks-card";
+import {
+  type PickCardEntry,
+  renderPickemPicksOgCard,
+} from "@/lib/og/pickem-picks-card";
 import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const SEASON_TYPE_NAMES: Record<number, string> = {
+  1: "Preseason",
+  2: "Regular Season",
+  3: "Postseason",
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ contestId: string }> },
@@ -31,37 +41,41 @@ export async function GET(
       entries(c, [token]),
       matchups(c),
     ]);
-    const gamesDecided = games.filter(g => g.completed).length;
-    const correctPicks = games.reduce(
-      (score, g, i) =>
-        score +
-        (g.completed &&
+
+    // `games[i]` and `entry.picks[i]` both come from `c.gameIds` in the
+    // same order (see src/lib/bankr/service.ts), so they line up by index
+    // with no reordering needed.
+    const picks: PickCardEntry[] = games.map((g, i) => {
+      const homeWon =
+        g.completed &&
         g.homeScore !== undefined &&
         g.awayScore !== undefined &&
-        g.homeScore !== g.awayScore &&
-        entry.picks[i] === (g.homeScore > g.awayScore ? 1 : 0)
-          ? 1
-          : 0),
-      0,
-    );
+        g.homeScore !== g.awayScore
+          ? g.homeScore > g.awayScore
+          : null;
+      const pickedHome = entry.picks[i] === 1;
+      const result: PickCardEntry["result"] =
+        homeWon === null ? "pending" : pickedHome === homeWon ? "correct" : "wrong";
+      return {
+        number: i + 1,
+        team: pickedHome ? g.home : g.away,
+        opponent: pickedHome ? g.away : g.home,
+        result,
+      };
+    });
+    const correctPicks = picks.filter(p => p.result === "correct").length;
+    const gamesDecided = picks.filter(p => p.result !== "pending").length;
+
     return new ImageResponse(
       renderPickemPicksOgCard({
         contestId: Number(id),
         tokenId: token.toString(),
         weekNumber: c.weekNumber,
-        seasonTypeName:
-          (
-            { 1: "Preseason", 2: "Regular Season", 3: "Postseason" } as Record<
-              number,
-              string
-            >
-          )[c.seasonType] || "Season",
+        seasonTypeName: SEASON_TYPE_NAMES[c.seasonType] || "Season",
         year: Number(c.year),
         correctPicks,
         gamesDecided,
-        totalGames: games.length,
-        rank: null,
-        totalEntries: Number(c.totalEntries),
+        picks,
       }),
       {
         ...PICKEM_OG_SIZES.og,

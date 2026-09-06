@@ -36,7 +36,7 @@ Amounts and chain IDs use exact contract data; bigint JSON fields are decimal st
 
 `/{id}` and `/` both include `entriesCloseAt`, an ISO string computed server-side from the contract's `submissionDeadline`. Seen in the wild: a reply stated an entries-close date 4 days after the real deadline — the model most likely read a kickoff off `games[]` (contract `gameIds` order, not chronological) instead of the actual deadline field. `entriesCloseAt` exists specifically so there's one unambiguous, pre-formatted value to relay instead of asking the model to compute or pick one out of raw contract/game data.
 
-`/pickem/{id}/picks` is the copyable blank template. `/pickem/{id}/entries/{tokenId}` displays one confirmed entry, including current NFT owner, without requiring a wallet connection. Its metadata points to `/api/og/pickem/{id}/picks?tokenId=…`, reusing the homepage hero's palette, field lines and ring. The image shows the entry number and completed-game score, not an invented live rank.
+`/pickem/{id}/picks` is the copyable blank template. `/pickem/{id}/entries/{tokenId}` displays one confirmed entry, including current NFT owner, without requiring a wallet connection. Its metadata points to `/api/og/pickem/{id}/picks?tokenId=…`, reusing the homepage hero's palette and field lines. The image itself renders every game the entry picked — team called, and (once decided) a green/red border for correct/wrong, gray for still pending — not just a score or rank summary, so sharing or linking the entry URL on X unfurls a card that actually shows the picks.
 
 ## Settlement behavior and deployment dependencies
 

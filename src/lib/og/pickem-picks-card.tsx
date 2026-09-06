@@ -1,10 +1,7 @@
 import {
-  Chip,
   CREAM,
   FieldLines,
   FOREST,
-  LIME,
-  LIME_INK,
   MIST,
   SAGE,
 } from "@/lib/og/pickem-card";
@@ -12,9 +9,18 @@ import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
 
 /**
  * Share card for a single wallet's Pick'em picks. Same palette, field lines
- * and general layout as `renderPickemOgCard` on the homepage/contest page,
- * so a picks link previews as part of the same visual family.
+ * and general layout family as `renderPickemOgCard` on the homepage/contest
+ * page, but the point of this one is to actually show the picks — every
+ * game, the team called, and (once decided) whether it hit — not just a
+ * score summary, so it's worth looking at on its own in a timeline.
  */
+export interface PickCardEntry {
+  number: number;
+  team: string;
+  opponent: string;
+  result: "correct" | "wrong" | "pending";
+}
+
 export interface PickemPicksOgCardProps {
   contestId: number;
   tokenId: string;
@@ -23,106 +29,90 @@ export interface PickemPicksOgCardProps {
   year: number;
   correctPicks: number;
   gamesDecided: number;
-  totalGames: number;
-  rank: number | null;
-  totalEntries: number;
+  picks: PickCardEntry[];
 }
 
-function RankRing({
-  tokenId,
-  size,
-  rank,
-  totalEntries,
-}: {
-  tokenId: string;
-  size: number;
-  rank: number | null;
-  totalEntries: number;
-}) {
-  const inset = Math.round(size * 0.12);
-  const rankLabel = rank ? `#${rank}` : `#${tokenId}`;
+const RESULT_STYLE: Record<
+  PickCardEntry["result"],
+  { bg: string; border: string; dot: string }
+> = {
+  correct: {
+    bg: "rgba(74,222,128,0.16)",
+    border: "rgba(74,222,128,0.45)",
+    dot: "#4ade80",
+  },
+  wrong: {
+    bg: "rgba(248,113,113,0.16)",
+    border: "rgba(248,113,113,0.45)",
+    dot: "#f87171",
+  },
+  pending: {
+    bg: "rgba(255,255,255,0.05)",
+    border: "rgba(255,255,255,0.14)",
+    dot: "rgba(255,255,255,0.3)",
+  },
+};
 
+const PAD_X = 64;
+const GAP = 14;
+const CONTENT_WIDTH = PICKEM_OG_SIZES.og.width - PAD_X * 2;
+
+function columnsFor(count: number): number {
+  if (count > 12) return 4;
+  if (count > 6) return 3;
+  return Math.max(1, Math.min(count, 2));
+}
+
+function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
+  const style = RESULT_STYLE[entry.result];
   return (
     <div
       style={{
-        position: "relative",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: size,
-        height: size,
-        borderRadius: size,
-        border: "2px solid rgba(255,255,255,0.25)",
-        backgroundColor: "rgba(0,0,0,0.1)",
-        overflow: "hidden",
+        flexDirection: "column",
+        width,
+        padding: "12px 16px",
+        borderRadius: 14,
+        border: `1.5px solid ${style.border}`,
+        backgroundColor: style.bg,
       }}
     >
-      <div
-        style={{
-          position: "absolute",
-          top: Math.round(size / 2) - 1,
-          left: 0,
-          width: size,
-          height: 2,
-          backgroundColor: "rgba(255,255,255,0.1)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          left: Math.round(size / 2) - 1,
-          width: 2,
-          height: size,
-          backgroundColor: "rgba(255,255,255,0.1)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: inset,
-          left: inset,
-          width: size - inset * 2,
-          height: size - inset * 2,
-          borderRadius: size,
-          border: "2px dashed rgba(255,255,255,0.25)",
-        }}
-      />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          padding: "0 40px",
-        }}
-      >
-        <div
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <span
           style={{
             fontFamily: "Geist Mono",
-            fontSize: 15,
-            letterSpacing: "0.22em",
+            fontSize: 13,
             color: SAGE,
+            letterSpacing: "0.05em",
           }}
         >
-          {rank ? "CURRENT RANK" : "ENTRY"}
-        </div>
+          {entry.number}
+        </span>
         <div
           style={{
-            marginTop: 14,
-            fontSize: tokenId.length > 6 ? 46 : 76,
-            fontWeight: 800,
-            letterSpacing: "-0.06em",
-            lineHeight: 1,
-            color: CREAM,
+            display: "flex",
+            marginLeft: 8,
+            width: 8,
+            height: 8,
+            borderRadius: 8,
+            backgroundColor: style.dot,
           }}
-        >
-          {rankLabel}
-        </div>
-        {rank ? (
-          <div style={{ marginTop: 18, fontSize: 22, color: MIST }}>
-            {`of ${totalEntries} ${totalEntries === 1 ? "entry" : "entries"}`}
-          </div>
-        ) : null}
+        />
+      </div>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 30,
+          fontWeight: 800,
+          letterSpacing: "-0.03em",
+          color: CREAM,
+          lineHeight: 1,
+        }}
+      >
+        {entry.team}
+      </div>
+      <div style={{ marginTop: 4, fontSize: 14, color: MIST }}>
+        {`vs ${entry.opponent}`}
       </div>
     </div>
   );
@@ -136,23 +126,22 @@ export function renderPickemPicksOgCard({
   year,
   correctPicks,
   gamesDecided,
-  totalGames,
-  rank,
-  totalEntries,
+  picks,
 }: PickemPicksOgCardProps) {
   const { width, height } = PICKEM_OG_SIZES.og;
-  const radarSize = Math.min(height - 150, 580);
-
   const scoreLine =
-    gamesDecided > 0
-      ? `${correctPicks}/${gamesDecided} correct`
-      : "Picks locked in";
+    gamesDecided > 0 ? `${correctPicks}/${gamesDecided} correct` : "Picks locked in";
+  const columns = columnsFor(picks.length);
+  const cellWidth = Math.floor(
+    (CONTENT_WIDTH - (columns - 1) * GAP) / columns,
+  );
 
   return (
     <div
       style={{
         position: "relative",
         display: "flex",
+        flexDirection: "column",
         width: "100%",
         height: "100%",
         backgroundColor: FOREST,
@@ -169,74 +158,60 @@ export function renderPickemPicksOgCard({
         style={{
           position: "relative",
           display: "flex",
+          flexDirection: "column",
           width: "100%",
           height: "100%",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 48,
-          padding: "0 72px",
+          padding: `40px ${PAD_X}px 32px`,
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-          <div
-            style={{
-              fontFamily: "Geist Mono",
-              fontSize: 15,
-              letterSpacing: "0.2em",
-              color: SAGE,
-            }}
-          >
-            {`MY PICKS · CONTEST #${contestId}`}
-          </div>
+        <div
+          style={{
+            fontFamily: "Geist Mono",
+            fontSize: 15,
+            letterSpacing: "0.2em",
+            color: SAGE,
+          }}
+        >
+          {`MY PICKS · CONTEST #${contestId} · ENTRY #${tokenId}`}
+        </div>
 
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            marginTop: 14,
+          }}
+        >
           <div
             style={{
-              marginTop: 18,
-              fontSize: 68,
+              fontSize: 56,
               fontWeight: 800,
-              letterSpacing: "-0.05em",
+              letterSpacing: "-0.04em",
               lineHeight: 1,
               color: CREAM,
             }}
           >
             {scoreLine}
           </div>
-
-          <div style={{ marginTop: 16, fontSize: 26, color: MIST }}>
+          <div style={{ marginLeft: 20, fontSize: 22, color: MIST }}>
             {`Week ${weekNumber} Pick'em · ${seasonTypeName} ${year}`}
-          </div>
-
-          <div style={{ display: "flex", marginTop: 34 }}>
-            <Chip label={`${totalGames} games`} />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", marginTop: 40 }}>
-            <div
-              style={{
-                display: "flex",
-                borderRadius: 999,
-                backgroundColor: LIME,
-                color: LIME_INK,
-                padding: "10px 22px",
-                fontSize: 18,
-                fontWeight: 800,
-                letterSpacing: "0.06em",
-              }}
-            >
-              PICK’EM
-            </div>
-            <div style={{ marginLeft: 16, fontSize: 20, color: SAGE }}>
-              Beat my picks
-            </div>
           </div>
         </div>
 
-        <RankRing
-          rank={rank}
-          size={radarSize}
-          tokenId={tokenId}
-          totalEntries={totalEntries}
-        />
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: GAP,
+            marginTop: 26,
+            flex: 1,
+            alignContent: "center",
+          }}
+        >
+          {picks.map(entry => (
+            <PickCell key={entry.number} entry={entry} width={cellWidth} />
+          ))}
+        </div>
       </div>
     </div>
   );
