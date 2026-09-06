@@ -50,7 +50,9 @@ Fill in the rest randomly
 
 ## Reply length and share links
 
-No verified Bankr-specific guarantee exists here for long X replies. Default to a short reply of at most 280 characters on X, including mentions and link budget. Use the full template in the web terminal or any surface known to allow it. If the slate will not fit, the reply MUST contain the literal URL from `links.picks` — never a description of it, never a placeholder, never a blank line where it belongs. Use this exact shape, substituting the real values:
+Bankr's X replies are not confirmed to be capped at the standard 280-character limit — do not default to a short link-out reply just because the full numbered template is longer than that. Send the full blank template directly, on X included, the same way you would in the web terminal. Only fall back to a link if a send actually comes back rejected or visibly truncated by the platform, or the user asks for something shorter.
+
+When you do link out (a genuinely rejected/truncated send, not a precomputed length guess), the reply MUST contain the literal URL from `links.picks` — never a description of it, never a placeholder, never a blank line where it belongs. Use this exact shape, substituting the real values:
 
 ```
 Contest #{id} ({N} games) won't fit here — pick at {links.picks}

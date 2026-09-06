@@ -67,6 +67,6 @@ Seen in the wild: a 16-game contest correctly decided to fall back to a link-out
 - Bankr documents recurring Agent Command automations: https://docs.bankr.bot/agent/automations/
 - No Bankr-specific long-X-reply guarantee was found in its published documentation, including the full documentation index: https://docs.bankr.bot/llms-full.txt
 
-Therefore X replies use a conservative 280-character budget and link to the full template/entry. The web terminal can show the full copyable card. This is a compatibility choice, not a claim that Bankr cannot post longer replies.
+That absence of a documented guarantee was originally read as "assume 280 and link out." Confirmed otherwise: Bankr's X replies are not actually capped at 280 characters, so the skill now sends the full template directly on X too, same as the web terminal, and only links out on an actual rejected/truncated send rather than a precomputed length threshold.
 
 Settlement responses in `pay`, `wait` and `complete` include a `payout` breakdown with current winning NFT owners, exact base-unit amounts, treasury fee, claimed flags, unpaid total and any unallocated tiers/rounding dust. This mirrors contract arithmetic without reallocating unused prize tiers. Completion requires every winner’s claim flag; historical recipients must come from receipt events because NFTs can transfer after payout.
