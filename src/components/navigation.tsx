@@ -82,9 +82,13 @@ export function Navigation() {
       <div className="mx-auto flex h-[4.5rem] max-w-[1400px] items-center justify-between px-4 md:px-8">
         <div className="flex min-w-0 items-center gap-8 lg:gap-12">
           <Link className="group flex min-w-0 items-center gap-2.5" href="/">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl border bg-card shadow-sm transition-transform group-hover:-rotate-3">
-              <Image alt={appName} height={26} src="/icon.png" width={26} />
-            </span>
+            <Image
+              alt={appName}
+              className="size-9 shrink-0 transition-transform group-hover:-rotate-3"
+              height={36}
+              src="/icon.png"
+              width={36}
+            />
             <span className="truncate text-base font-extrabold tracking-[-0.035em] sm:text-lg">
               {appName}
             </span>
