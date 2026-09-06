@@ -1,6 +1,6 @@
 ---
 name: pickem
-description: Join existing BankrBall NFL Pick'em contests on Base, make and view picks, see contest leaders, and settle all prizes with one request. Use for pick em, pick'em, NFL picks, contest leaderboard, or contest payout requests. Contest creation is outside this skill.
+description: Join existing BankrBall NFL Pick'em contests on Base, make and view picks, see contest leaders, settle prizes, and maintain frontend contest visibility. Use for pick em, pick'em, NFL picks, contest leaderboard, contest payout, hide contest, or show contest requests. Contest creation is outside this skill.
 ---
 
 # BankrBall Pick'em
@@ -77,6 +77,15 @@ The confirmation includes the actual entry's picks OG image, without another use
 5. If image fetching or attachment actually fails, or this surface has no image delivery capability, confirm the successful entry honestly and use `share.fallbackText` verbatim, which includes BOTH the entry URL and direct image URL. State that the image could not be attached here. Do not claim an attachment succeeded or promise that X will unfurl the link. Keep the token ID so a request to resend the image is a read-only retry, never another paid entry.
 
 The entry page displays actual onchain picks without connecting a wallet. A template or draft is never described as submitted.
+
+## Hide or show a contest in the Football Onchain UI
+
+"Hide contest 10" means hide Pick'em contest 10 unless the user explicitly says Squares or supplies a Squares URL. This is a repository and deployment change, not an onchain transaction. Never claim the contest was deleted or made private.
+
+1. In the Football Onchain repository, update only `hiddenPickemContestIds` in `src/lib/hidden-contests.ts`: add the numeric ID to hide it or remove it to show it. Preserve all other IDs, de-duplicate, and sort ascending. If the requested state already matches the array, report that no code change is needed.
+2. Run `bun test src/lib/hidden-contests.test.ts`, lint the changed files, and run `git diff --check`.
+3. Commit the change on a dedicated branch, push it, and open a PR. Report the PR URL and state that the contest becomes hidden only after the PR is merged and deployed. Never merge or deploy unless the user separately asks and the available tools authorize it.
+4. Hidden contests must stay reachable by direct URL and remain visible in owned-entry history and settlement management. They must be absent from public home/browse/featured surfaces and Bankr's open-contest discovery.
 
 ## My picks and who's winning
 

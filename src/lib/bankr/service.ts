@@ -15,6 +15,7 @@ import { base } from "viem/chains";
 import { chain, featuredPickemContestIds, pickem } from "@/constants";
 import { abi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
+import { isPickemContestHidden } from "@/lib/hidden-contests";
 import {
   CACHE_TTL,
   getPickemMatchupCacheKey,
@@ -631,7 +632,10 @@ export async function browse(cursor: number) {
   const rows = candidates
     .filter(
       (c): c is Contest =>
-        !!c && !c.gamesFinalized && c.submissionDeadline > now,
+        !!c &&
+        !isPickemContestHidden(c.id) &&
+        !c.gamesFinalized &&
+        c.submissionDeadline > now,
     )
     .map(c => ({
       ...c,

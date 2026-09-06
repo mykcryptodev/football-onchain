@@ -21,6 +21,7 @@ import {
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { useMultipleWeekResultsFinalized } from "@/hooks/useWeekResultsFinalized";
+import { visiblePickemContests } from "@/lib/hidden-contests";
 
 interface PickemContest {
   id: number;
@@ -212,7 +213,9 @@ export default function PickemContestList({
         return contest;
       });
 
-      setContests(contestsWithUsd);
+      setContests(
+        management ? contestsWithUsd : visiblePickemContests(contestsWithUsd),
+      );
     } catch (error) {
       setLoadError(true);
       console.error("Error fetching contests:", error);
