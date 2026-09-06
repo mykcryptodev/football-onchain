@@ -7,12 +7,12 @@ import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
  * The palette, field lines and radar target mirror `FeaturedPickemHero` on the
  * homepage so a shared link looks like the section it came from.
  */
-const FOREST = "#10281e";
-const CREAM = "#f4f4e9";
-const SAGE = "#a8c6b4";
-const MIST = "#cbd8cf";
-const LIME = "#e5ff4f";
-const LIME_INK = "#142018";
+export const FOREST = "#10281e";
+export const CREAM = "#f4f4e9";
+export const SAGE = "#a8c6b4";
+export const MIST = "#cbd8cf";
+export const LIME = "#e5ff4f";
+export const LIME_INK = "#142018";
 
 const PAD_X = 72;
 const COLUMN_GAP = 48;
@@ -32,7 +32,7 @@ export interface PickemOgCardProps {
 }
 
 /** Faint yard lines, center line and grid — the `field-lines` motif in divs. */
-function FieldLines({ width, height }: { width: number; height: number }) {
+export function FieldLines({ width, height }: { width: number; height: number }) {
   const yardLines = Array.from({ length: 9 }, (_, i) => (i + 1) / 10);
   const gridLines = Array.from(
     { length: Math.floor(width / 120) - 1 },
@@ -81,7 +81,7 @@ function FieldLines({ width, height }: { width: number; height: number }) {
   );
 }
 
-function Chip({ label }: { label: string }) {
+export function Chip({ label }: { label: string }) {
   return (
     <div
       style={{
