@@ -9,7 +9,7 @@ import { usePickemContract } from "@/hooks/usePickemContract";
 import { queryKeys } from "@/lib/query-keys";
 
 interface FeaturedPickemHeroProps {
-  contestId: number;
+  contestId?: number;
 }
 
 export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
@@ -17,9 +17,10 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
 
   const contestQuery = useQuery({
     queryKey: [...queryKeys.pickemContests(), "featured", contestId],
+    enabled: contestId !== undefined,
     queryFn: async () => {
-      const contest = await getContest(contestId);
-      const tokenIds = await getContestTokenIds(contestId);
+      const contest = await getContest(contestId!);
+      const tokenIds = await getContestTokenIds(contestId!);
       const owners = await Promise.all(tokenIds.map(getNFTOwner));
 
       return {
@@ -42,9 +43,13 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
 
   return (
     <Link
-      aria-label={`View featured Pick'em contest ${contestId}`}
       className="group block"
-      href={`/pickem/${contestId}`}
+      href={contestId === undefined ? "/pickem" : `/pickem/${contestId}`}
+      aria-label={
+        contestId === undefined
+          ? "Browse Pick’em contests"
+          : `View featured Pick’em contest ${contestId}`
+      }
     >
       <div className="field-board relative aspect-[4/5] overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] transition-transform group-hover:-translate-y-1 sm:p-7">
         <div className="absolute inset-0 field-lines opacity-80" />
@@ -57,7 +62,9 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
               <p className="mt-2 text-2xl font-bold tracking-tight">
                 {contest
                   ? `Week ${contest.weekNumber} Pick’em`
-                  : "Loading Pick’em"}
+                  : contestId === undefined
+                    ? "Your next winning week"
+                    : "Loading Pick’em"}
               </p>
             </div>
             <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
@@ -77,9 +84,11 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
               <p className="mt-3 text-sm text-[#cbd8cf]">
                 {contest
                   ? `${contest.totalEntries} ${contest.totalEntries === 1 ? "entry" : "entries"}`
-                  : contestQuery.isError
-                    ? "Contest unavailable"
-                    : "Loading contest"}
+                  : contestId === undefined
+                    ? "Find your next pool"
+                    : contestQuery.isError
+                      ? "Contest unavailable"
+                      : "Loading contest"}
               </p>
             </div>
           </div>

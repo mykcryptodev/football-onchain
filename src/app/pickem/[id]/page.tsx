@@ -18,7 +18,10 @@ import {
 } from "@/lib/pickem-share";
 import { client } from "@/providers/Thirdweb";
 
+import ContestReadPending from "./ContestReadPending";
 import PickemContestClient from "./PickemContestClient";
+
+export const dynamic = "force-dynamic";
 
 interface ContestData {
   id: number;
@@ -156,10 +159,10 @@ export async function generateMetadata({
     params,
     searchParams,
   ]);
-  const contestId = parseInt(id);
+  const contestId = /^\d+$/.test(id) ? Number(id) : NaN;
   const entered = isEnteredShare(resolvedSearchParams[PICKEM_ENTERED_PARAM]);
 
-  if (isNaN(contestId)) {
+  if (!Number.isSafeInteger(contestId)) {
     return {
       title: "Contest Not Found",
     };
@@ -222,9 +225,9 @@ export default async function PickemContestPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const contestId = parseInt(id);
+  const contestId = /^\d+$/.test(id) ? Number(id) : NaN;
 
-  if (isNaN(contestId)) {
+  if (!Number.isSafeInteger(contestId)) {
     notFound();
   }
 
@@ -242,8 +245,12 @@ export default async function PickemContestPage({
       params: [BigInt(contestId)],
     });
 
-    if (!contestData || Number(contestData.id) !== contestId) {
-      notFound();
+    if (
+      !contestData ||
+      Number(contestData.id) !== contestId ||
+      contestData.creator === "0x0000000000000000000000000000000000000000"
+    ) {
+      return <ContestReadPending />;
     }
 
     // Fetch token data to get USD price
@@ -291,6 +298,6 @@ export default async function PickemContestPage({
     return <PickemContestClient contest={contest} />;
   } catch (error) {
     console.error("Error fetching contest:", error);
-    notFound();
+    return <ContestReadPending />;
   }
 }

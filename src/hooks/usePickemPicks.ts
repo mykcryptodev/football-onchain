@@ -1,59 +1,50 @@
-import { useState } from "react";
+import { usePickemDraft } from "@/hooks/usePickemDraft";
+import type { PendingEntry } from "@/lib/pickem-draft";
 
-interface UsePickemPicksReturn {
-  picks: Record<string, number>;
-  setPick: (gameId: string, pick: number) => void;
-  pickAtRandom: () => void;
-  tiebreakerPoints: string;
-  setTiebreakerPoints: (points: string) => void;
-  getPickedCount: () => number;
-  allPicksMade: boolean;
-}
-
-export function usePickemPicks(gameIds: string[]): UsePickemPicksReturn {
-  const [picks, setPicks] = useState<Record<string, number>>(() => {
-    const initial: Record<string, number> = {};
-    gameIds.forEach(id => {
-      initial[id] = -1;
+export function usePickemPicks(contestId: number, gameIds: string[]) {
+  const { draft, ready, storageAvailable, save } = usePickemDraft(
+    contestId,
+    gameIds,
+  );
+  const picks = draft?.picks ?? {};
+  const tiebreakerPoints = draft?.tiebreakerPoints ?? "";
+  const update = (changes: Partial<NonNullable<typeof draft>>) =>
+    save({
+      version: 1,
+      picks,
+      tiebreakerPoints,
+      ...draft,
+      ...changes,
+      updatedAt: Date.now(),
     });
-    return initial;
-  });
-  const [tiebreakerPoints, setTiebreakerPoints] = useState("");
-
-  const setPick = (gameId: string, pick: number) => {
-    setPicks(prev => ({ ...prev, [gameId]: pick }));
-  };
-
-  const pickAtRandom = () => {
-    setPicks(previous =>
-      Object.fromEntries(
-        gameIds.map(id => [
-          id,
-          previous[id] === 0 || previous[id] === 1
-            ? previous[id]
-            : Math.random() < 0.5
-              ? 0
-              : 1,
-        ]),
-      ),
-    );
-    setTiebreakerPoints(
-      previous => previous || (Math.floor(Math.random() * 51) + 20).toString(),
-    );
-  };
-
   const getPickedCount = () =>
     gameIds.filter(id => picks[id] === 0 || picks[id] === 1).length;
-  const allPicksMade =
-    gameIds.length > 0 && getPickedCount() === gameIds.length;
-
   return {
     picks,
-    setPick,
-    pickAtRandom,
     tiebreakerPoints,
-    setTiebreakerPoints,
+    ready,
+    storageAvailable,
+    pending: draft?.pending,
+    setPending: (pending: PendingEntry | undefined) => update({ pending }),
+    clearDraft: () => save(null),
+    setPick: (id: string, pick: number) =>
+      update({ picks: { ...picks, [id]: pick } }),
+    setTiebreakerPoints: (points: string) =>
+      update({ tiebreakerPoints: points }),
+    pickAtRandom: () =>
+      update({
+        picks: Object.fromEntries(
+          gameIds.map(id => [
+            id,
+            picks[id] === 0 || picks[id] === 1
+              ? picks[id]
+              : Math.random() < 0.5
+                ? 0
+                : 1,
+          ]),
+        ),
+      }),
     getPickedCount,
-    allPicksMade,
+    allPicksMade: gameIds.length > 0 && getPickedCount() === gameIds.length,
   };
 }

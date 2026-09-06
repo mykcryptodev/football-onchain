@@ -1,5 +1,4 @@
 "use client";
-
 import { Clock, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -8,6 +7,7 @@ import { useActiveAccount } from "thirdweb/react";
 
 import type { TokensResponse } from "@/app/api/tokens/route";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
+import { PickemEntryAction } from "@/components/pickem/PickemEntryAction";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -35,6 +35,7 @@ interface PickemContest {
   submissionDeadline: number;
   gamesFinalized: boolean;
   payoutComplete: boolean;
+  payoutDeadline: number;
   payoutType: number;
   gameIds: string[];
   tiebreakerGameId: string;
@@ -53,7 +54,11 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
   2: "Top 5",
 };
 
-export default function PickemContestList() {
+export default function PickemContestList({
+  management = false,
+}: {
+  management?: boolean;
+}) {
   const account = useActiveAccount();
   const {
     getContest,
@@ -68,7 +73,7 @@ export default function PickemContestList() {
     getUserPicks,
   } = usePickemContract();
   const [contests, setContests] = useState<PickemContest[]>([]);
-  const [filter, setFilter] = useState("open");
+  const [filter, setFilter] = useState(management ? "live" : "open");
   const [loadError, setLoadError] = useState(false);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -97,7 +102,7 @@ export default function PickemContestList() {
         year: contest.year,
         seasonType: contest.seasonType,
         weekNumber: contest.weekNumber,
-        enabled: !contest.gamesFinalized, // Only check if games aren't finalized yet
+        enabled: management && !contest.gamesFinalized, // Only check if games aren't finalized yet
       })),
     );
 
@@ -132,6 +137,7 @@ export default function PickemContestList() {
               submissionDeadline: Number(contest.submissionDeadline) * 1000, // Convert to milliseconds
               gamesFinalized: contest.gamesFinalized,
               payoutComplete: contest.payoutComplete,
+              payoutDeadline: Number(contest.payoutDeadline) * 1000,
               payoutType: contest.payoutStructure.payoutType,
               gameIds: contest.gameIds.map(id => id.toString()),
               tiebreakerGameId: contest.tiebreakerGameId.toString(),
@@ -224,6 +230,22 @@ export default function PickemContestList() {
     setFetchingResults(prev => ({ ...prev, [contest.id]: true }));
 
     try {
+      const response = await fetch(
+        `/api/week-games?year=${contest.year}&seasonType=${contest.seasonType}&week=${contest.weekNumber}`,
+      );
+      if (!response.ok)
+        throw new Error("Couldn’t check game status. Try again.");
+      const games: { completed?: boolean; status?: string }[] =
+        await response.json();
+      if (
+        !games.length ||
+        !games.every(
+          g => g.completed || g.status?.toLowerCase().includes("final"),
+        )
+      )
+        throw new Error(
+          "Wait until every game in the week is final before recording scores.",
+        );
       await requestWeekResults({
         year: contest.year,
         seasonType: contest.seasonType,
@@ -254,6 +276,9 @@ export default function PickemContestList() {
     setClaimingPrizes(prev => ({ ...prev, [contestId]: true }));
 
     try {
+      const contest = await getContest(contestId);
+      if (Date.now() < Number(contest.payoutDeadline) * 1000)
+        throw new Error("The payout waiting period has not ended yet.");
       await claimAllPrizes(contestId);
       toast.success("All prizes distributed to winners!");
       // Optionally refresh contests
@@ -271,6 +296,8 @@ export default function PickemContestList() {
     setFinalizingGames(prev => ({ ...prev, [contestId]: true }));
 
     try {
+      if (!weekResultsFinalized[contestId])
+        throw new Error("Week results are still being confirmed.");
       await updateContestResults(contestId);
       toast.success("Onchain scores synced. You can calculate winners next.");
       await fetchContests();
@@ -523,15 +550,9 @@ export default function PickemContestList() {
           totalPrizePool={contest.totalPrizePool}
         />
 
-        <Link className="w-full block mb-2" href={`/pickem/${contest.id}`}>
-          <Button className="w-full" size="sm" variant="default">
-            {contest.submissionDeadline > now
-              ? "Make Your Picks"
-              : "View All Picks"}
-          </Button>
-        </Link>
+        <PickemEntryAction contest={contest} />
 
-        {!contest.payoutComplete && (
+        {management && !contest.payoutComplete && (
           <details className="mt-3 border-t pt-3">
             <summary className="cursor-pointer text-sm text-muted-foreground">
               Contest settlement
@@ -591,9 +612,13 @@ export default function PickemContestList() {
                 <div className="flex gap-2 items-center w-full">
                   <Button
                     className="flex-1"
-                    disabled={claimingPrizes[contest.id] || !account}
                     size="sm"
                     variant="outline"
+                    disabled={
+                      claimingPrizes[contest.id] ||
+                      !account ||
+                      now < contest.payoutDeadline
+                    }
                     onClick={() => handleClaimAllPrizes(contest.id)}
                   >
                     {claimingPrizes[contest.id]

@@ -1,11 +1,11 @@
 "use client";
-
 import { AlertCircle, Clock, Trophy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ZERO_ADDRESS } from "thirdweb";
 import { TokenIcon, TokenProvider, useActiveAccount } from "thirdweb/react";
+import { parseEventLogs } from "viem";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import {
   pickem,
   usdc,
 } from "@/constants";
+import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { Token, useTokens } from "@/hooks/useTokens";
 import { formatKickoffTime } from "@/lib/date";
@@ -229,18 +230,16 @@ export default function CreatePickemForm() {
 
       toast.success("Pick'em contest created successfully!");
 
-      // ContestCreated event has signature: event ContestCreated(uint256 indexed contestId, address indexed creator, ...)
-      // The contestId is in topics[1] as an indexed parameter
-      const contestCreatedLog = receipt.logs.find(
-        log =>
-          log.address.toLowerCase() === pickem[chain.id].toLowerCase() &&
-          log.topics &&
-          log.topics.length >= 2,
-      );
-
-      if (contestCreatedLog && contestCreatedLog.topics[1]) {
-        const contestId = BigInt(contestCreatedLog.topics[1]);
-        router.push(`/pickem/${contestId}`);
+      const [created] = parseEventLogs({
+        abi: pickemAbi,
+        eventName: "ContestCreated",
+        logs: receipt.logs.filter(
+          log => log.address.toLowerCase() === pickem[chain.id].toLowerCase(),
+        ),
+      });
+      if (created) {
+        const contestId = created.args.contestId;
+        router.push(`/pickem/${contestId}?created=1`);
       } else {
         console.error("ContestCreated event not found in receipt", receipt);
         router.push("/pickem");

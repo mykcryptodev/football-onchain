@@ -18,6 +18,7 @@ export interface PickemContestListItem {
   submissionDeadline: number;
   gamesFinalized: boolean;
   payoutComplete: boolean;
+  payoutDeadline: number;
   payoutType: number;
   gameIds: string[];
 }
@@ -55,6 +56,7 @@ export function usePickemContests(): UsePickemContestsReturn {
               submissionDeadline: Number(contest.submissionDeadline) * 1000,
               gamesFinalized: contest.gamesFinalized,
               payoutComplete: contest.payoutComplete,
+              payoutDeadline: Number(contest.payoutDeadline) * 1000,
               payoutType: contest.payoutStructure.payoutType,
               gameIds: contest.gameIds.map(id => id.toString()),
             });

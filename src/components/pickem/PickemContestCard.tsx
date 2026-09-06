@@ -1,12 +1,10 @@
 "use client";
-
-import Link from "next/link";
 import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
+import { PickemEntryAction } from "@/components/pickem/PickemEntryAction";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PickemContestListItem } from "@/hooks/usePickemContests";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -42,8 +40,7 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="text-xl mb-2">
-              {SEASON_TYPE_LABELS[contest.seasonType]} Week{" "}
-              {contest.weekNumber}
+              {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {contest.year} Season • {contest.gameIds.length} Games
@@ -103,11 +100,7 @@ export function PickemContestCard({ contest }: PickemContestCardProps) {
           totalPrizePool={contest.totalPrizePool}
         />
 
-        <Link className="block" href={`/pickem/${contest.id}`}>
-          <Button className="w-full" size="lg" variant="default">
-            {isOpen ? "Make Your Picks" : "View Contest"}
-          </Button>
-        </Link>
+        <PickemEntryAction contest={contest} />
       </CardContent>
     </Card>
   );
