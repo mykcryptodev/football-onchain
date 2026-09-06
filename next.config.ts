@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/skills/pickem/SKILL.md": ["./skills/pickem/SKILL.md"],
+  },
   typescript: {
     // Ignore TypeScript errors in the solidity folder during build
     ignoreBuildErrors: false,

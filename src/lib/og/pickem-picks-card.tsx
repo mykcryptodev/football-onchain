@@ -17,6 +17,7 @@ import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
  */
 export interface PickemPicksOgCardProps {
   contestId: number;
+  tokenId: string;
   weekNumber: number;
   seasonTypeName: string;
   year: number;
@@ -28,16 +29,18 @@ export interface PickemPicksOgCardProps {
 }
 
 function RankRing({
+  tokenId,
   size,
   rank,
   totalEntries,
 }: {
+  tokenId: string;
   size: number;
   rank: number | null;
   totalEntries: number;
 }) {
   const inset = Math.round(size * 0.12);
-  const rankLabel = rank ? `#${rank}` : "—";
+  const rankLabel = rank ? `#${rank}` : `#${tokenId}`;
 
   return (
     <div
@@ -101,12 +104,12 @@ function RankRing({
             color: SAGE,
           }}
         >
-          {rank ? "CURRENT RANK" : "ENTERED"}
+          {rank ? "CURRENT RANK" : "ENTRY"}
         </div>
         <div
           style={{
             marginTop: 14,
-            fontSize: 76,
+            fontSize: tokenId.length > 6 ? 46 : 76,
             fontWeight: 800,
             letterSpacing: "-0.06em",
             lineHeight: 1,
@@ -117,7 +120,7 @@ function RankRing({
         </div>
         {rank ? (
           <div style={{ marginTop: 18, fontSize: 22, color: MIST }}>
-            {`of ${totalEntries} ${totalEntries === 1 ? "player" : "players"}`}
+            {`of ${totalEntries} ${totalEntries === 1 ? "entry" : "entries"}`}
           </div>
         ) : null}
       </div>
@@ -127,6 +130,7 @@ function RankRing({
 
 export function renderPickemPicksOgCard({
   contestId,
+  tokenId,
   weekNumber,
   seasonTypeName,
   year,
@@ -140,7 +144,9 @@ export function renderPickemPicksOgCard({
   const radarSize = Math.min(height - 150, 580);
 
   const scoreLine =
-    gamesDecided > 0 ? `${correctPicks}/${gamesDecided} correct so far` : "Picks locked in";
+    gamesDecided > 0
+      ? `${correctPicks}/${gamesDecided} correct`
+      : "Picks locked in";
 
   return (
     <div
@@ -225,7 +231,12 @@ export function renderPickemPicksOgCard({
           </div>
         </div>
 
-        <RankRing rank={rank} size={radarSize} totalEntries={totalEntries} />
+        <RankRing
+          rank={rank}
+          size={radarSize}
+          tokenId={tokenId}
+          totalEntries={totalEntries}
+        />
       </div>
     </div>
   );
