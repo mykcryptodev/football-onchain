@@ -34,6 +34,8 @@ All routes live under `/api/bankr/contests`. GET reads live data. POST only vali
 
 Amounts and chain IDs use exact contract data; bigint JSON fields are decimal strings. Templates retain contract `gameIds` order, even if kickoffs move. The tiebreaker must be supplied explicitly. The parse response's random picks must be preserved across approvals/retries. Entry preparation requires the original `expectedEntryCount`; it rejects a changed count rather than silently buying a second entry.
 
+`/{id}` and `/` both include `entriesCloseAt`, an ISO string computed server-side from the contract's `submissionDeadline`. Seen in the wild: a reply stated an entries-close date 4 days after the real deadline — the model most likely read a kickoff off `games[]` (contract `gameIds` order, not chronological) instead of the actual deadline field. `entriesCloseAt` exists specifically so there's one unambiguous, pre-formatted value to relay instead of asking the model to compute or pick one out of raw contract/game data.
+
 `/pickem/{id}/picks` is the copyable blank template. `/pickem/{id}/entries/{tokenId}` displays one confirmed entry, including current NFT owner, without requiring a wallet connection. Its metadata points to `/api/og/pickem/{id}/picks?tokenId=…`, reusing the homepage hero's palette, field lines and ring. The image shows the entry number and completed-game score, not an invented live rank.
 
 ## Settlement behavior and deployment dependencies

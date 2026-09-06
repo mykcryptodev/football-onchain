@@ -16,7 +16,7 @@ Only operate on the contest explicitly selected in this conversation. A public m
 ## Find and join
 
 1. `GET /contests` lists open pools, featured first then most entries within each page. Follow `nextCursor` using `?cursor=N` before concluding none exist. Respect a supplied contest URL/ID; otherwise recommend a featured or populated pool and let the user choose. Don't replace a selected contest silently.
-2. `GET /contests/{id}` returns live fee/currency, deadline, immutable ordered games, a copyable `template`, tiebreaker matchup, and links. Show cost, deadline, field size and payout structure. If `open=false`, do not enter.
+2. `GET /contests/{id}` returns live fee/currency, deadline, immutable ordered games, a copyable `template`, tiebreaker matchup, and links. Show cost, `entriesCloseAt`, field size and payout structure. Report `entriesCloseAt` verbatim (it's already the correct ISO instant) — never compute your own date from `contest.submissionDeadline` (raw unix seconds) or from any game's `kickoff`. `games` is in the contract's `gameIds` order, not chronological order, so the first or last entry in that array is not reliably the first game of the week; treating its kickoff as the deadline understates or overstates it by days. Same rule for `GET /contests`, which returns `entriesCloseAt` per contest. If `open=false`, do not enter.
 3. Reply with the blank template exactly as returned, plus a separate question for the tiebreaker (combined points in the designated latest game). Do not prefill teams. The template order is the contract's `gameIds` order, NOT kickoff order or a new ESPN slate. Preserve this contest and numbering in the conversation.
 
 Example template:
