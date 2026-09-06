@@ -82,3 +82,14 @@ Seen in the wild: a 16-game contest correctly decided to fall back to a link-out
 That absence of a documented guarantee was originally read as "assume 280 and link out." Confirmed otherwise: Bankr's X replies are not actually capped at 280 characters, so the skill now sends the full template directly on X too, same as the web terminal, and only links out on an actual rejected/truncated send rather than a precomputed length threshold.
 
 Settlement responses in `pay`, `wait` and `complete` include a `payout` breakdown with current winning NFT owners, exact base-unit amounts, treasury fee, claimed flags, unpaid total and any unallocated tiers/rounding dust. This mirrors contract arithmetic without reallocating unused prize tiers. Completion requires every winner’s claim flag; historical recipients must come from receipt events because NFTs can transfer after payout.
+
+
+### Required entry image delivery
+
+The verified `GET /api/bankr/contests/{id}/entries?tokenId={tokenId}` response wraps the entry in `entries[]`. Each entry's `share` includes `text`, `imageUrl`, `imageAlt`, `markdown` (inline image plus share text), and `fallbackText` (entry link plus direct image link). These are app response fields, not a Bankr-specific media API schema.
+
+The skill now makes image delivery a separate required post-confirmation step: GET and validate the image, attach it through the current reply surface (uploading bytes if required), or use the exact Markdown on surfaces that render images. A link preview is not a substitute for an X media attachment. If media delivery is unavailable or fails after one fetch retry, report that limitation and include both direct links; never re-enter the contest to retry delivery.
+
+After merging/deploying, reinstall the hosted skill in Bankr with `install the skill from https://bankrball.com/skills/pickem/SKILL.md`. Installed skills must be refreshed; repository edits alone do not prove the account loaded the new instructions. Bankr documents that repeating the install overwrites the previous version: https://docs.bankr.bot/skills/in-bankr/skill-format/.
+
+Validate through Bankr using an existing confirmed entry first: ask to resend that entry's picks image without making a new entry. Check the X reply contains actual attached media for the matching token ID. App response tests cannot verify Bankr's hosted reply transport; no documented native @bankrbot media tool schema was found, so the skill uses only capabilities actually exposed at runtime and reports their absence honestly.
