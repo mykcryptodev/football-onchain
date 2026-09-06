@@ -118,6 +118,7 @@ export default function PickemContestClient({
   const [confirmed, setConfirmed] = useState(false);
   const [submitStage, setSubmitStage] = useState("");
   const [submitError, setSubmitError] = useState("");
+  const [approvalConfirmed, setApprovalConfirmed] = useState(false);
   const submissionLock = useRef(false);
   const activeIdentity = `${account?.address}:${contest.id}`;
   const identityRef = useRef(activeIdentity);
@@ -131,6 +132,7 @@ export default function PickemContestClient({
   useEffect(() => {
     setAdditionalEntry(false);
     setConfirmed(false);
+    setApprovalConfirmed(false);
   }, [account?.address, contest.id]);
   const { selectionChanged } = useHaptics();
   const { setTokenAddress } = useDisplayToken();
@@ -322,7 +324,7 @@ export default function PickemContestClient({
         const sortedGameIds = [...contest.gameIds].sort((a, b) =>
           a.localeCompare(b),
         );
-        await submitPredictions({
+        const result = await submitPredictions({
           contestId: contest.id,
           submissionDeadline: contest.submissionDeadline,
           picks: sortedGameIds.map(id => picks[id]),
@@ -335,6 +337,11 @@ export default function PickemContestClient({
             setPending(transaction);
           },
         });
+        if ("approvalOnly" in result && result.approvalOnly) {
+          if (identityRef.current !== activeIdentity) return;
+          setApprovalConfirmed(true);
+          return;
+        }
       }
       clearDraft();
       if (identityRef.current !== activeIdentity) return;
@@ -653,6 +660,9 @@ export default function PickemContestClient({
                         {([0, 1] as const).map(side => {
                           const home = side === 1;
                           const team = home ? game.homeTeam : game.awayTeam;
+                          const teamLabel = home
+                            ? game.homeAbbreviation
+                            : game.awayAbbreviation;
                           const logo = home ? game.homeLogo : game.awayLogo;
                           return (
                             <label
@@ -662,6 +672,7 @@ export default function PickemContestClient({
                               <input
                                 checked={picks[game.gameId] === side}
                                 className="size-4 shrink-0 accent-primary"
+                                aria-label={`Pick ${team}`}
                                 name={`winner-${game.gameId}`}
                                 type="radio"
                                 value={side}
@@ -683,7 +694,7 @@ export default function PickemContestClient({
                                     className="min-w-0 truncate text-sm font-semibold"
                                     title={team}
                                   >
-                                    {team}
+                                    {teamLabel || team}
                                   </span>
                                 </div>
                                 <p className="mt-1 text-xs text-muted-foreground">
@@ -810,6 +821,14 @@ export default function PickemContestClient({
                     </span>
                   </div>
                 </div>
+                {approvalConfirmed && (
+                  <Alert>
+                    <AlertDescription>
+                      Spending approved. Your picks are saved. Continue below to
+                      submit your entry.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {submitError && (
                   <Alert variant="destructive">
                     <AlertDescription>{submitError}</AlertDescription>
@@ -863,7 +882,7 @@ export default function PickemContestClient({
                           ? "Complete All Picks"
                           : !isValidTiebreaker(tiebreakerPoints)
                             ? "Add a tiebreaker score"
-                            : `Submit picks · ${formattedEntryFee}`}
+                            : `${approvalConfirmed ? "Continue to submit entry" : "Submit picks"} · ${formattedEntryFee}`}
                   </Button>
                 ) : (
                   <div className="flex flex-col items-center">
@@ -977,20 +996,13 @@ export default function PickemContestClient({
           <DialogHeader>
             <DialogTitle>You’re in! Your picks are submitted.</DialogTitle>
             <DialogDescription>
-              Your entry is confirmed. Follow your picks, scores, and standing.
+              Your entry is confirmed. Invite your friends to join and beat your
+              picks.
             </DialogDescription>
           </DialogHeader>
 
-          <Button
-            className="w-full"
-            onClick={() => handleShareModalChange(false)}
-          >
-            View my picks
-          </Button>
-          <details className="rounded-xl border p-3">
-            <summary className="cursor-pointer text-sm font-semibold">
-              Share with friends
-            </summary>
+          <div className="space-y-3">
+            <h3 className="font-semibold">Share with friends</h3>
             <Textarea
               className="mt-3 min-h-24 resize-none text-sm"
               value={shareText}
@@ -1018,7 +1030,14 @@ export default function PickemContestClient({
                 </Button>
               </div>
             </DialogFooter>
-          </details>
+          </div>
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => handleShareModalChange(false)}
+          >
+            View my picks
+          </Button>
         </DialogContent>
       </Dialog>
     </>

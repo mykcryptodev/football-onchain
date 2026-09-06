@@ -322,27 +322,9 @@ export function usePickemContract() {
 
         if (approvalReceipt.status !== "success")
           throw new Error("Spending approval failed. Try again.");
-        if (
-          params.submissionDeadline &&
-          Date.now() >= params.submissionDeadline
-        )
-          throw new Error("Entries have closed.");
-        params.onProgress?.("Confirm entry in your wallet…");
-        // Send main transaction
-        const mainResult = await sendTx(mainTransaction);
-        const pending: PendingEntry = {
-          kind: "transaction",
-          id: mainResult.transactionHash,
-        };
-        params.onBroadcast?.(pending);
-        params.onProgress?.("Confirming entry…");
-        const mainReceipt = await confirmEntry(pending);
-
-        return {
-          receipt: mainReceipt,
-          approvalReceipt,
-          batched: false,
-        };
+        // Approval is a completed step, not a submitted entry. Let the user
+        // explicitly continue once the wallet has finished the approval flow.
+        return { approvalOnly: true as const, approvalReceipt, batched: false };
       } else {
         if (
           params.submissionDeadline &&

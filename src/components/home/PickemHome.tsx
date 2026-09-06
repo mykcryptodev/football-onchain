@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useActiveAccount } from "thirdweb/react";
 
+import { FeaturedPickemHero } from "@/components/home/FeaturedPickemHero";
 import MyPickems from "@/components/pickem/MyPickems";
 import { PickemContestCard } from "@/components/pickem/PickemContestCard";
 import { Button } from "@/components/ui/button";
@@ -77,25 +78,28 @@ export function PickemHome() {
     <main>
       <section className="hero-field border-b">
         <div className="mx-auto max-w-6xl px-4 py-8 md:py-12 space-y-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="font-mono text-xs uppercase tracking-widest text-primary">
-                NFL Pick’em
-              </p>
-              <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight">
-                {hasEntries
-                  ? "Your game day."
-                  : "Pick the winners. Follow every game."}
-              </h1>
-              <p className="mt-3 text-muted-foreground">
-                {hasEntries
-                  ? "Your teams, your results, your place in the pool."
-                  : "Choose a weekly pool, pick each winner, and compete with friends."}
-              </p>
+          <div className="grid items-center gap-8 lg:grid-cols-2">
+            <div className="space-y-6">
+              <div>
+                <p className="font-mono text-xs uppercase tracking-widest text-primary">
+                  NFL Pick’em
+                </p>
+                <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight">
+                  {hasEntries
+                    ? "Your game day."
+                    : "Pick the winners. Follow every game."}
+                </h1>
+                <p className="mt-3 text-muted-foreground">
+                  {hasEntries
+                    ? "Your teams, your results, your place in the pool."
+                    : "Choose a weekly pool, pick each winner, and compete with friends."}
+                </p>
+              </div>
+              <Button asChild variant="outline">
+                <Link href="/pickem">Find a contest</Link>
+              </Button>
             </div>
-            <Button asChild variant="outline">
-              <Link href="/pickem">Find a contest</Link>
-            </Button>
+            <FeaturedPickemHero contestId={open[0]?.id} />
           </div>
           {contests.map(contest => (
             <ResumeDraft key={contest.id} contest={contest} />
