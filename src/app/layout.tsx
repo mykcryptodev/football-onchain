@@ -37,7 +37,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const fullUrl = `${baseUrl}${pathname}`;
   const ogImageUrl = `${baseUrl}/og.png`;
 
-  const title = "Football - Ultimate Football Squares and Pick'em Experience";
+  const title =
+    "BankrBall - Ultimate Football Squares and Pick'em Experience";
   const description =
     "Create and join football squares contests with blockchain-powered fair play and instant payouts. The ultimate football boxes experience.";
 
