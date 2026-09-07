@@ -87,6 +87,7 @@ export async function GET(request: NextRequest, { params }: Context) {
         const image = await ensureEntryImage(id, tokenId, {
           contestId: Number(id),
           tokenId: tokenId.toString(),
+          walletAddress: entry.predictor,
           weekNumber: c.weekNumber,
           seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
           year: Number(c.year),

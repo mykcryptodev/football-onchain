@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
 import PickemLeaderboard from "@/components/pickem/PickemLeaderboard";
+import PickemShareImage from "@/components/pickem/PickemShareImage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -293,13 +294,21 @@ export function PickemEntryCard({ entry }: { entry: CurrentWeekPickemEntry }) {
                   ? "Games in progress · Live standing is provisional"
                   : "Upcoming"}
           </p>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setStandings(true)}
-          >
-            View standings
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setStandings(true)}
+            >
+              View standings
+            </Button>
+            <PickemShareImage
+              key={`${entry.contestId}:${entry.tokenId}`}
+              compact
+              contestId={entry.contestId}
+              tokenId={String(entry.tokenId)}
+            />
+          </div>
         </div>
         {entry.claimed ? (
           <p className="text-sm font-semibold">Winnings claimed</p>

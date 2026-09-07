@@ -23,6 +23,7 @@ import { erc20Abi } from "viem";
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import MyPickems from "@/components/pickem/MyPickems";
+import PickemShareImage from "@/components/pickem/PickemShareImage";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,20 +127,16 @@ export default function PickemContestClient({
   const hasEntry =
     confirmed ||
     Boolean(owned.data?.some(entry => entry.contestId === contest.id));
-  // Token IDs mint sequentially, so the highest one owned for this contest is
-  // this wallet's most recent entry — used to link to its share-image page
-  // without decoding the mint receipt's event log.
-  const myNewestEntryTokenId = useMemo(() => {
-    const mine = owned.data?.filter(entry => entry.contestId === contest.id) ?? [];
-    if (!mine.length) return null;
-    return mine.reduce((max, entry) => Math.max(max, entry.tokenId), mine[0].tokenId);
-  }, [owned.data, contest.id]);
+  const [submittedEntryTokenId, setSubmittedEntryTokenId] = useState<
+    string | null
+  >(null);
   const showEntryForm =
     (!account || (!owned.isLoading && !owned.isError)) &&
     (!hasEntry || additionalEntry);
   useEffect(() => {
     setAdditionalEntry(false);
     setConfirmed(false);
+    setSubmittedEntryTokenId(null);
     setApprovalConfirmed(false);
   }, [account?.address, contest.id]);
   const { selectionChanged } = useHaptics();
@@ -327,7 +324,9 @@ export default function PickemContestClient({
     try {
       if (pending) {
         setSubmitStage("Checking entry confirmation…");
-        await confirmEntry(pending);
+        const receipt = await confirmEntry(pending);
+        if (identityRef.current === activeIdentity)
+          setSubmittedEntryTokenId(receipt.entryTokenId);
       } else {
         const sortedGameIds = [...contest.gameIds].sort((a, b) =>
           a.localeCompare(b),
@@ -349,6 +348,9 @@ export default function PickemContestClient({
           if (identityRef.current !== activeIdentity) return;
           setApprovalConfirmed(true);
           return;
+        }
+        if (identityRef.current === activeIdentity && "receipt" in result) {
+          setSubmittedEntryTokenId(result.receipt?.entryTokenId ?? null);
         }
       }
       clearDraft();
@@ -1000,7 +1002,7 @@ export default function PickemContestClient({
       )}
 
       <Dialog open={shareModalOpen} onOpenChange={handleShareModalChange}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>You’re in! Your picks are submitted.</DialogTitle>
             <DialogDescription>
@@ -1008,6 +1010,14 @@ export default function PickemContestClient({
               picks.
             </DialogDescription>
           </DialogHeader>
+
+          {shareModalOpen && (
+            <PickemShareImage
+              key={`${contest.id}:${submittedEntryTokenId}`}
+              contestId={contest.id}
+              tokenId={submittedEntryTokenId}
+            />
+          )}
 
           <div className="space-y-3">
             <h3 className="font-semibold">Share with friends</h3>
@@ -1039,10 +1049,10 @@ export default function PickemContestClient({
               </div>
             </DialogFooter>
           </div>
-          {myNewestEntryTokenId !== null && (
+          {submittedEntryTokenId !== null && (
             <Button asChild className="w-full" variant="outline">
               <Link
-                href={`/pickem/${contest.id}/entries/${myNewestEntryTokenId}`}
+                href={`/pickem/${contest.id}/entries/${submittedEntryTokenId}`}
               >
                 View & share my picks image
               </Link>

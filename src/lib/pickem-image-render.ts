@@ -23,6 +23,7 @@ import {
   type PickemPicksOgCardProps,
   renderPickemPicksOgCard,
 } from "@/lib/og/pickem-picks-card";
+import { resolvePickemImageProfile } from "@/lib/pickem-image-profile";
 import {
   imagePathname,
   markImageReady,
@@ -34,11 +35,32 @@ import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
 export async function renderPickemEntryImagePng(
   cardProps: PickemPicksOgCardProps,
 ): Promise<Buffer> {
-  const image = new ImageResponse(renderPickemPicksOgCard(cardProps), {
-    ...PICKEM_OG_SIZES.og,
-    fonts: await loadPickemOgFonts(getBaseUrl()),
-  });
-  return Buffer.from(await image.arrayBuffer());
+  const profile = cardProps.walletAddress
+    ? await resolvePickemImageProfile(cardProps.walletAddress)
+    : undefined;
+  const props = {
+    ...cardProps,
+    walletName: profile?.name,
+    walletAvatar: profile?.avatar,
+  };
+  const fonts = await loadPickemOgFonts(getBaseUrl());
+  const render = async (walletAvatar?: string) => {
+    const image = new ImageResponse(
+      renderPickemPicksOgCard({ ...props, walletAvatar }),
+      {
+        ...PICKEM_OG_SIZES.og,
+        fonts,
+      },
+    );
+    return Buffer.from(await image.arrayBuffer());
+  };
+  try {
+    return await render(props.walletAvatar);
+  } catch (error) {
+    // A broken remote avatar must not prevent the actual picks being shared.
+    if (!props.walletAvatar) throw error;
+    return render();
+  }
 }
 
 async function uploadEntryImage(
@@ -92,6 +114,7 @@ export async function renderAndStoreFromScratch(
     const cardProps: PickemPicksOgCardProps = {
       contestId: Number(contestId),
       tokenId: tokenId.toString(),
+      walletAddress: entry.predictor,
       weekNumber: c.weekNumber,
       seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
       year: Number(c.year),

@@ -74,7 +74,7 @@ export function FieldLines({ width, height }: { width: number; height: number })
           left: Math.round(width / 2) - 1,
           width: 2,
           height,
-          backgroundColor: "rgba(255,255,255,0.18)",
+          backgroundColor: "rgba(255,255,255,0.06)",
         }}
       />
     </div>

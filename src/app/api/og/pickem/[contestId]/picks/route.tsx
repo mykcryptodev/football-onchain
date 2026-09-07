@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { uint } from "@/lib/bankr/service";
+import { downloadPickemImage } from "@/lib/pickem-image-download";
 import { getImageStatus } from "@/lib/pickem-image-status";
 
 export const runtime = "nodejs";
@@ -32,6 +33,11 @@ export async function GET(
     );
     const record = await getImageStatus(id, token);
     if (record?.status === "ready" && record.blobUrl) {
+      // Same-origin attachment bytes let browsers save the file reliably even
+      // though the persisted image lives on a different Blob origin.
+      if (request.nextUrl.searchParams.get("download") === "1") {
+        return downloadPickemImage(record.blobUrl, id, token);
+      }
       return NextResponse.redirect(record.blobUrl, {
         status: 307,
         headers: { "Cache-Control": "public, max-age=300" },

@@ -27,6 +27,7 @@ import { abi as oracleAbi } from "@/constants/abis/oracle";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { abi as pickemNFTAbi } from "@/constants/abis/pickemNFT";
 import type { PendingEntry } from "@/lib/pickem-draft";
+import { submittedTokenId } from "@/lib/pickem-receipt";
 import { supportsAtomicBatch } from "@/lib/wallet-capabilities";
 import { client } from "@/providers/Thirdweb";
 
@@ -120,7 +121,14 @@ export function usePickemContract() {
         result.receipts?.some(receipt => receipt.status === "reverted")
       )
         throw new Error("ENTRY_REVERTED");
-      return result;
+      return {
+        ...result,
+        entryTokenId: submittedTokenId(
+          result.receipts?.flatMap(receipt => receipt.logs) ?? [],
+          pickemContract.address,
+          account?.address ?? "",
+        ),
+      };
     }
     const receipt = await waitForReceipt({
       client,
@@ -128,7 +136,14 @@ export function usePickemContract() {
       transactionHash: pending.id as `0x${string}`,
     });
     if (receipt.status !== "success") throw new Error("ENTRY_REVERTED");
-    return receipt;
+    return {
+      ...receipt,
+      entryTokenId: submittedTokenId(
+        receipt.logs,
+        pickemContract.address,
+        account?.address ?? "",
+      ),
+    };
   };
 
   // Submit predictions for a contest
@@ -297,8 +312,8 @@ export function usePickemContract() {
         const pending: PendingEntry = { kind: "bundle", id: bundleId.id };
         params.onBroadcast?.(pending);
         params.onProgress?.("Confirming entry…");
-        await confirmEntry(pending);
-        return { bundleId, batched: true };
+        const receipt = await confirmEntry(pending);
+        return { bundleId, receipt, batched: true };
       } else if (!supportsBatching && needsApproval) {
         // Wallet doesn't support batching - send approval first, then main transaction
         console.log(

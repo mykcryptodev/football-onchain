@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import PickemShareImage from "@/components/pickem/PickemShareImage";
 import {
   contest,
   entries,
@@ -55,9 +56,10 @@ export default async function EntryPage({ params }: Props) {
     matchups(c),
   ]);
   const picks = buildPickCardEntries(games, entry.picks);
-  const image = await ensureEntryImage(contestId, token, {
+  await ensureEntryImage(contestId, token, {
     contestId: Number(contestId),
     tokenId: token.toString(),
+    walletAddress: entry.predictor,
     weekNumber: c.weekNumber,
     seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
     year: Number(c.year),
@@ -80,26 +82,13 @@ export default async function EntryPage({ params }: Props) {
           View contest &amp; join
         </Link>
       </header>
-      <div className="rounded-2xl border px-4 py-4 text-sm">
-        {image.status === "ready" && image.blobUrl ? (
-          <a
-            className="font-semibold underline"
-            href={image.blobUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            Download my picks image
-          </a>
-        ) : image.status === "failed" ? (
-          <span className="text-muted-foreground">
-            Picks image could not be rendered.
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            Picks image is rendering — refresh in a few seconds to share it.
-          </span>
-        )}
-      </div>
+      <PickemShareImage
+        key={`${id}:${tokenId}`}
+        compact
+        contestId={Number(contestId)}
+        tokenId={token.toString()}
+      />
+
       <p className="break-all text-sm text-muted-foreground">
         Current owner: {entry.owner}
       </p>
