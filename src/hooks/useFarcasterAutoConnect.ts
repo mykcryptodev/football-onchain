@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useActiveWallet, useConnect } from "thirdweb/react";
 import { EIP1193 } from "thirdweb/wallets";
 
-import { chain } from "@/constants";
 import { client } from "@/providers/Thirdweb";
 
 import { useFarcasterContext } from "./useFarcasterContext";
@@ -14,6 +13,28 @@ type AutoConnectState = {
   isAutoConnecting: boolean;
   autoConnectError: string | null;
 };
+
+// The Farcaster wallet provider doesn't reliably respond to (or reject) a
+// wallet_switchEthereumChain request, so a connect attempt that waits on it
+// can hang forever and leave the Login button spinning. Bound the whole
+// attempt so it always settles.
+const CONNECT_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 /**
  * Hook that automatically connects the user's wallet when running in a Farcaster mini app.
@@ -45,11 +66,15 @@ export function useFarcasterAutoConnect(): AutoConnectState {
           provider: sdk.wallet.ethProvider,
         });
 
-        // Trigger the connection
-        await walletInstance.connect({
-          client,
-          chain,
-        });
+        // Trigger the connection. Deliberately omit `chain` here: asking the
+        // Farcaster wallet to switch networks as part of connecting can hang
+        // forever instead of resolving or rejecting, which otherwise leaves
+        // the Login button stuck in its connecting state indefinitely.
+        await withTimeout(
+          walletInstance.connect({ client }),
+          CONNECT_TIMEOUT_MS,
+          "Timed out connecting to the Farcaster wallet",
+        );
 
         // Return the wallet to the app context
         return walletInstance;
