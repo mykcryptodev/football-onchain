@@ -32,11 +32,18 @@ fixes both.
    blob URL to Redis. On failure it schedules a retry instead of throwing.
 3. **Retry.** Failures go into a Redis sorted-set queue
    (`pickem:image:queue`, scored by next-attempt time) with exponential
-   backoff: 1m, 5m, 15m, 1h, 4h. The cron at `/api/cron/pickem-images` sweeps
-   due items every 2 minutes and calls `renderAndStoreFromScratch()`, which
-   re-fetches the contest/entry/matchups from scratch (it has nothing but the
-   IDs) and renders again. After 5 total attempts a job is marked
-   `"failed"` permanently — no further automatic retries.
+   backoff: 5m, 15m, 1h, 4h (the first automatic attempt already happened
+   inline in step 2, so the queue's backoff table — `[1m, 5m, 15m, 1h, 4h]`
+   indexed by attempt count — starts at its second entry). The cron at
+   `/api/cron/pickem-images` sweeps due items every 2 minutes and calls
+   `renderAndStoreFromScratch()`, which re-fetches the contest/entry/matchups
+   from scratch (it has nothing but the IDs) and renders again. After 5 total
+   attempts a job is marked `"failed"` permanently — no further automatic
+   retries. A successful claim also seeds this same queue with a 5-minute
+   watchdog entry, so a render that never finishes (process killed before
+   `after()` runs, a deploy rollover, etc.) still surfaces to the cron as a
+   due retry instead of being stuck `"pending"` forever with nothing
+   watching it.
 4. **Serve.** The GET route (`src/app/api/og/pickem/[contestId]/picks/route.tsx`)
    reads only the Redis status record: `307` redirect to the blob URL when
    `"ready"`, `404` when `"failed"` or unknown, `503` with `Retry-After: 5`

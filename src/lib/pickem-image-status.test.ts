@@ -184,6 +184,32 @@ describe("claim / ready / retry lifecycle", () => {
   });
 });
 
+describe("orphaned claim recovery", () => {
+  test("a claimed-but-never-finished job still surfaces to the retry sweep", async () => {
+    const contestId = 1005n,
+      tokenId = 5n;
+    // Simulate a claim whose `after()` render never ran (process killed,
+    // deploy rollover, etc.): claim the job, then fast-forward its watchdog
+    // entry into the past instead of waiting out the real window.
+    expect(await claimImageJob(contestId, tokenId)).toBe(true);
+    await fakeRedis.zadd(PICKEM_IMAGE_QUEUE_KEY, {
+      score: Date.now() - 1_000,
+      member: `${contestId}:${tokenId}`,
+    });
+
+    const due = await claimDueRetries(10);
+    expect(
+      due.map(item => `${item.contestId}:${item.tokenId}`),
+    ).toContain(`${contestId}:${tokenId}`);
+
+    // Still "pending" with zero attempts recorded — the cron treats it like
+    // any other due retry rather than requiring a special-cased status.
+    const record = await getImageStatus(contestId, tokenId);
+    expect(record?.status).toBe("pending");
+    expect(record?.attempts).toBe(0);
+  });
+});
+
 describe("cron sweeps", () => {
   test("claimDueRetries only returns and pops items due now", async () => {
     const past = Date.now() - 1_000;

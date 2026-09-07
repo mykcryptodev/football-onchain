@@ -81,10 +81,21 @@ export async function getImageStatus(
   return parseRecord(raw);
 }
 
+// How long a freshly-claimed render gets before it's treated as abandoned
+// (process killed before `after()` ran, etc.) and picked up as a retry by
+// the cron instead of being stuck "pending" forever with no one watching it.
+const CLAIM_WATCHDOG_MS = 5 * 60_000;
+
 /**
  * Atomically claims the render job for a not-yet-tracked entry. Returns
  * `true` only for the caller that should actually perform the render; every
  * other concurrent caller gets `false` and should just report "pending".
+ *
+ * The claim also seeds the retry queue with a watchdog entry, so a claim
+ * that never completes (the in-flight render dies before recording success
+ * or failure) still surfaces to the cron sweep instead of being stuck
+ * `pending` with no record in either the queue or the retention index.
+ * `markImageReady`/`scheduleRetry` both overwrite this entry on completion.
  */
 export async function claimImageJob(
   contestId: bigint,
@@ -103,7 +114,16 @@ export async function claimImageJob(
       }),
     null,
   );
-  return claimed === "OK";
+  if (claimed !== "OK") return false;
+  await safeRedisOperation(
+    () =>
+      redis!.zadd(QUEUE_KEY, {
+        score: Date.now() + CLAIM_WATCHDOG_MS,
+        member: member(contestId, tokenId),
+      }),
+    null,
+  );
+  return true;
 }
 
 export async function markImageReady(
