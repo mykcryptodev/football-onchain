@@ -53,11 +53,11 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
           : `View featured Pick’em contest ${contestId}`
       }
     >
-      <div className="field-board relative aspect-[4/5] overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] transition-transform group-hover:-translate-y-1 sm:p-7">
+      <div className="field-board relative overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] transition-transform group-hover:-translate-y-1 sm:p-7">
         <div className="absolute inset-0 field-lines opacity-80" />
-        <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
+        <div className="relative flex flex-col gap-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 basis-48">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a8c6b4]">
                 {contestId !== undefined &&
                 contestId === featuredPickemContestOfWeekId
@@ -72,7 +72,7 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
                     : "Loading Pick’em"}
               </p>
             </div>
-            <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
+            <div className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
               {contest ? `${contest.totalPlayers} players` : "— players"}
             </div>
           </div>
