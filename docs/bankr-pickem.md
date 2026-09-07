@@ -24,7 +24,7 @@ All routes live under `/api/bankr/contests`. GET reads live data. POST only vali
 | --- | --- |
 | GET `/` | Featured and recent open contests; cursor pagination |
 | GET `/{id}` | Fee, deadline, numbered slate and tiebreaker |
-| POST `/{id}/parse` | Numbered text (+ tiebreaker line) to validated picks and `tiebreakerPoints`; optional explicit random fill |
+| POST `/{id}/parse` | Numbered text (+ tiebreaker line) to validated picks and `tiebreakerPoints`; optional explicit random fill covers both |
 | GET `/{id}/entry-count?wallet=…` | Original submission count for duplicate-entry protection |
 | POST `/{id}/entry` | Next approval/reset/entry transaction, simulated for caller |
 | GET `/{id}/entries?wallet=…&cursor=…` | Current NFT-owned entries, 50 candidate entries per page |
@@ -32,9 +32,11 @@ All routes live under `/api/bankr/contests`. GET reads live data. POST only vali
 | GET `/{id}/leaderboard?limit=10&cursor=…` | Provisional completed-game scores and onchain prize positions |
 | GET / POST `/{id}/settlement` | Current step; POST takes wallet and simulates next transaction |
 
-Amounts and chain IDs use exact contract data; bigint JSON fields are decimal strings. Templates retain contract `gameIds` order, even if kickoffs move. The tiebreaker must be supplied explicitly. The parse response's random picks must be preserved across approvals/retries. Entry preparation requires the original `expectedEntryCount`; it rejects a changed count rather than silently buying a second entry.
+Amounts and chain IDs use exact contract data; bigint JSON fields are decimal strings. Templates retain contract `gameIds` order, even if kickoffs move. The tiebreaker must be supplied explicitly, unless the reply also asks for random fill (see below). The parse response's random picks must be preserved across approvals/retries. Entry preparation requires the original `expectedEntryCount`; it rejects a changed count rather than silently buying a second entry.
 
 `template` (from `GET /{id}`) is one copy-paste block, not just the numbered games: `pickTemplate()` (`src/lib/bankr/picks.ts`) appends a final `Tiebreaker (combined points, {away} vs {home}): ` line, and `parsePicks()` extracts it from that same text (matched by its leading word, so a retyped/reworded version of the line still parses) into `tiebreakerPoints` — `null` if that line was blank or missing entirely, same treatment as a blank game pick, never a guessed default. Before this, the tiebreaker was a separate question the skill had to track across turns by itself; folding it into the same template/parse call removes that failure mode the same way `entriesCloseAt` and the link-out hardening did for their own values — hand over the exact thing to relay, don't make the model responsible for carrying a second value alongside it.
+
+`fillRandom` ("Fill in the rest randomly" as its own line) now also covers a blank/missing tiebreaker, not just blank game picks: `parsePicks()` picks a whole number uniformly between 30 and 60 — a realistic combined-score range for an NFL game (recent seasons average roughly 44-45 combined points, from defensive slogs to shootouts) — and reports it via the response's `tiebreakerRandomized: true` flag so the skill can tell the user it guessed rather than silently presenting it as their answer. An explicit tiebreaker value is never overwritten by random fill. Without the random-fill line, a blank tiebreaker is still just unanswered (`tiebreakerPoints: null`, `tiebreakerRandomized: false`).
 
 `/{id}` and `/` both include `entriesCloseAt`, an ISO string computed server-side from the contract's `submissionDeadline`. Seen in the wild: a reply stated an entries-close date 4 days after the real deadline — the model most likely read a kickoff off `games[]` (contract `gameIds` order, not chronological) instead of the actual deadline field. `entriesCloseAt` exists specifically so there's one unambiguous, pre-formatted value to relay instead of asking the model to compute or pick one out of raw contract/game data.
 
