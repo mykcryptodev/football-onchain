@@ -170,7 +170,7 @@ export default function PickemLeaderboard({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
@@ -178,7 +178,7 @@ export default function PickemLeaderboard({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Prize Pool Info */}
           <Card className="p-4 bg-accent/50">
             <div className="flex justify-between items-center">
@@ -209,22 +209,22 @@ export default function PickemLeaderboard({
                   key={entry.tokenId}
                   className={`p-4 ${entry.address === account?.address ? "border-primary" : ""}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     {/* Rank */}
-                    <div className="w-12 text-center">
+                    <div className="w-12 shrink-0 text-center">
                       {getRankIcon(entry.rank)}
                     </div>
 
                     {/* User Info */}
-                    <div className="flex items-center gap-3 flex-1">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Avatar className="h-8 w-8 shrink-0">
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-medium">
                             {formatAddress(entry.address)}
                           </p>
                           {entry.address === account?.address && (
@@ -238,7 +238,7 @@ export default function PickemLeaderboard({
                           <p>NFT #{entry.tokenId}</p>
                           {entry.address.toLowerCase() !==
                             entry.originalPredictor.toLowerCase() && (
-                            <p className="text-xs text-orange-500 dark:text-orange-400">
+                            <p className="truncate text-xs text-orange-500 dark:text-orange-400">
                               Transferred from{" "}
                               {entry.originalPredictor.slice(0, 6)}...
                               {entry.originalPredictor.slice(-4)}
@@ -249,7 +249,7 @@ export default function PickemLeaderboard({
                     </div>
 
                     {/* Score */}
-                    <div className="text-center">
+                    <div className="shrink-0 text-center">
                       <p className="font-bold text-lg">
                         {entry.correctPicks}/{entry.totalGames}
                       </p>
@@ -263,7 +263,7 @@ export default function PickemLeaderboard({
                     </div>
 
                     {/* Tiebreaker */}
-                    <div className="text-center">
+                    <div className="shrink-0 text-center">
                       <p className="text-sm text-muted-foreground">
                         Tiebreaker
                       </p>
@@ -274,7 +274,7 @@ export default function PickemLeaderboard({
 
                     {/* Prize */}
                     {entry.prize > 0 && currency && (
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p className="text-sm text-muted-foreground">Prize</p>
                         <PrizeDisplay currency={currency} prize={entry.prize} />
                       </div>
