@@ -1,3 +1,4 @@
+import type { Matchup } from "@/lib/bankr/picks";
 import {
   CREAM,
   FieldLines,
@@ -116,6 +117,36 @@ function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Maps a contest's resolved games and one entry's raw 0/1 picks into the
+ * per-game display data this card renders. `games[i]` and `picks[i]` both
+ * come from the same `c.gameIds` order (see `src/lib/bankr/service.ts`), so
+ * they line up by index with no reordering needed.
+ */
+export function buildPickCardEntries(
+  games: Matchup[],
+  picks: readonly number[],
+): PickCardEntry[] {
+  return games.map((g, i) => {
+    const homeWon =
+      g.completed &&
+      g.homeScore !== undefined &&
+      g.awayScore !== undefined &&
+      g.homeScore !== g.awayScore
+        ? g.homeScore > g.awayScore
+        : null;
+    const pickedHome = picks[i] === 1;
+    const result: PickCardEntry["result"] =
+      homeWon === null ? "pending" : pickedHome === homeWon ? "correct" : "wrong";
+    return {
+      number: i + 1,
+      team: pickedHome ? g.home : g.away,
+      opponent: pickedHome ? g.away : g.home,
+      result,
+    };
+  });
 }
 
 export function renderPickemPicksOgCard({

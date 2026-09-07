@@ -1,29 +1,25 @@
-import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import {
-  contest,
-  entries,
-  matchups,
-  tokenIds,
-  uint,
-} from "@/lib/bankr/service";
-import { loadPickemOgFonts } from "@/lib/og/pickem-card";
-import {
-  type PickCardEntry,
-  renderPickemPicksOgCard,
-} from "@/lib/og/pickem-picks-card";
-import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
+import { uint } from "@/lib/bankr/service";
+import { getImageStatus } from "@/lib/pickem-image-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SEASON_TYPE_NAMES: Record<number, string> = {
-  1: "Preseason",
-  2: "Regular Season",
-  3: "Postseason",
-};
-
+/**
+ * Serves one entry's pre-generated picks image. This route deliberately
+ * does NOT read the blockchain or ESPN — it only reads a Redis status
+ * record written by the background render job (see `pickem-image.ts` /
+ * `pickem-image-render.ts`) and, once ready, redirects to the persisted
+ * Vercel Blob URL. Bankr and link-preview crawlers both follow redirects,
+ * so this stays a drop-in replacement for the old live-rendered route.
+ *
+ * A missing status record (never queued, or an invalid contestId/tokenId
+ * pair) and a permanently failed render both return 404 — this route has
+ * no chain access to tell those cases apart, which is exactly the point.
+ * A record that's still `pending` returns 503 with `Retry-After` so callers
+ * know to wait rather than treat it as a permanent failure.
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ contestId: string }> },
@@ -34,62 +30,27 @@ export async function GET(
     const token = uint(
       request.nextUrl.searchParams.get("tokenId") || "invalid",
     );
-    const c = await contest(id);
-    if (!(await tokenIds(id)).includes(token))
-      return new Response("Entry not found", { status: 404 });
-    const [[entry], games] = await Promise.all([
-      entries(c, [token]),
-      matchups(c),
-    ]);
-
-    // `games[i]` and `entry.picks[i]` both come from `c.gameIds` in the
-    // same order (see src/lib/bankr/service.ts), so they line up by index
-    // with no reordering needed.
-    const picks: PickCardEntry[] = games.map((g, i) => {
-      const homeWon =
-        g.completed &&
-        g.homeScore !== undefined &&
-        g.awayScore !== undefined &&
-        g.homeScore !== g.awayScore
-          ? g.homeScore > g.awayScore
-          : null;
-      const pickedHome = entry.picks[i] === 1;
-      const result: PickCardEntry["result"] =
-        homeWon === null ? "pending" : pickedHome === homeWon ? "correct" : "wrong";
-      return {
-        number: i + 1,
-        team: pickedHome ? g.home : g.away,
-        opponent: pickedHome ? g.away : g.home,
-        result,
-      };
+    const record = await getImageStatus(id, token);
+    if (record?.status === "ready" && record.blobUrl) {
+      return NextResponse.redirect(record.blobUrl, {
+        status: 307,
+        headers: { "Cache-Control": "public, max-age=300" },
+      });
+    }
+    if (record?.status === "failed") {
+      return new Response("Picks image unavailable", {
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    return new Response("Picks image not ready yet", {
+      status: 503,
+      headers: { "Cache-Control": "no-store", "Retry-After": "5" },
     });
-    const correctPicks = picks.filter(p => p.result === "correct").length;
-    const gamesDecided = picks.filter(p => p.result !== "pending").length;
-
-    return new ImageResponse(
-      renderPickemPicksOgCard({
-        contestId: Number(id),
-        tokenId: token.toString(),
-        weekNumber: c.weekNumber,
-        seasonTypeName: SEASON_TYPE_NAMES[c.seasonType] || "Season",
-        year: Number(c.year),
-        correctPicks,
-        gamesDecided,
-        picks,
-      }),
-      {
-        ...PICKEM_OG_SIZES.og,
-        fonts: await loadPickemOgFonts(
-          process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin,
-        ),
-        headers: {
-          "Cache-Control":
-            "public, max-age=60, s-maxage=60, stale-while-revalidate=300",
-        },
-      },
-    );
-  } catch (error) {
-    console.error("Picks image unavailable", error);
-    return new Response("Picks image temporarily unavailable", { status: 503 });
+  } catch {
+    return new Response("Picks image not found", {
+      status: 404,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }

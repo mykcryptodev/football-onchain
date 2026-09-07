@@ -19,6 +19,9 @@ import {
   uint,
   wallet,
 } from "@/lib/bankr/service";
+import { buildPickCardEntries } from "@/lib/og/pickem-picks-card";
+import { ensureEntryImage } from "@/lib/pickem-image";
+import { SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -60,6 +63,7 @@ export async function GET(request: NextRequest, { params }: Context) {
       const owner = request.nextUrl.searchParams.get("wallet");
       const token = request.nextUrl.searchParams.get("tokenId");
       if (token !== null) {
+        const tokenId = uint(token);
         const c = await contest(id);
         const ids = await rpc.readContract({
           address,
@@ -67,9 +71,26 @@ export async function GET(request: NextRequest, { params }: Context) {
           functionName: "getContestTokenIds",
           args: [id],
         });
-        if (!ids.includes(uint(token))) throw new Error("Entry not found.");
+        if (!ids.includes(tokenId)) throw new Error("Entry not found.");
+        const [[entry], games] = await Promise.all([
+          entries(c, [tokenId]),
+          matchups(c),
+        ]);
+        const picks = buildPickCardEntries(games, entry.picks);
+        const image = await ensureEntryImage(id, tokenId, {
+          contestId: Number(id),
+          tokenId: tokenId.toString(),
+          weekNumber: c.weekNumber,
+          seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
+          year: Number(c.year),
+          correctPicks: picks.filter(p => p.result === "correct").length,
+          gamesDecided: picks.filter(p => p.result !== "pending").length,
+          picks,
+        });
         return response({
-          entries: await entries(c, [uint(token)]),
+          entries: [
+            { ...entry, share: { ...entry.share, status: image.status } },
+          ],
           nextCursor: null,
         });
       }
