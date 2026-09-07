@@ -28,6 +28,7 @@ import {
   safeRedisOperation,
 } from "@/lib/redis";
 
+import { contestDescription, resolveCreator } from "./contest-description";
 import { entryShare } from "./entry-share";
 import {
   type Matchup,
@@ -157,8 +158,11 @@ export async function matchups(c: Contest): Promise<Matchup[]> {
 }
 export async function details(id: bigint) {
   const c = await contest(id);
-  const games = await matchups(c);
-  const block = await rpc.getBlock();
+  const [games, block, creator] = await Promise.all([
+    matchups(c),
+    rpc.getBlock(),
+    resolveCreator(c.creator),
+  ]);
   let currency = { symbol: "ETH", decimals: 18 };
   if (c.currency !== zeroAddress) {
     const [symbol, decimals] = await Promise.all([
@@ -179,6 +183,12 @@ export async function details(id: bigint) {
     games.find(g => g.gameId === c.tiebreakerGameId.toString()) ||
     [...games].sort((a, b) => Date.parse(b.kickoff) - Date.parse(a.kickoff))[0];
   return {
+    ...contestDescription(
+      c,
+      creator,
+      formatUnits(c.entryFee, currency.decimals),
+      currency.symbol,
+    ),
     contest: c,
     chainId: chain.id,
     contract: address,

@@ -106,3 +106,10 @@ Set `featuredPickemContestOfWeekId` in `src/constants/index.ts` to the desired c
 Bankr uses this resolver only when no contest has already been selected and the featured contest satisfies the user's constraints. It announces the selection and continues without an extra contest-choice prompt. Explicit IDs and existing conversation/job selections always win. All subsequent calls use the resolved numeric ID, including delayed settlement; changing the feature never redirects an in-progress entry or payout. Paid-entry authorization and existing duplicate-entry protections still apply.
 
 After deploying, refresh the installed Bankr skill with `install the skill from https://bankrball.com/skills/pickem/SKILL.md`. Verify “I want to make picks” selects the feature, an explicit different ID stays selected, and a closed feature asks for a contest for entry but remains selectable for standings and settlement.
+
+
+### Creator identity and contest descriptions
+
+`GET /api/bankr/contests/{id}` also returns `season` (week, type, year, label), `creator` (full address, displayName, source), and `summary`, combining the exact formatted entry fee with the contest's season and creator. ENS is preferred over Farcaster usernames and Lens labels; the fallback is a shortened wallet. The existing Thirdweb social provider is queried by the onchain creator address using `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`. Farcaster uses `metadata.username`, never an arbitrary display name. Ambiguous profiles are skipped, and an ENS profile explicitly pointing at another wallet is rejected. Names are provider-reported labels, not an endorsement.
+
+Identity enrichment runs alongside game/block reads with a 1.5-second response budget. It uses a separate Redis cache for only the necessary name fields (15 minutes for identities, 60 seconds for no match); missing configuration, provider errors, and cache errors fall back to the wallet. No biographies, avatars, or private contact fields are returned. The underlying provider lookup may finish after the response budget and populate the cache. Refresh the installed hosted skill after deployment to enable the introduction wording.
