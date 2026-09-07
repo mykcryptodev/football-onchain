@@ -17,6 +17,15 @@ import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
 
+const PERCENT_DENOMINATOR = 1000;
+const PLACE_LABELS = [
+  "1st Place",
+  "2nd Place",
+  "3rd Place",
+  "4th Place",
+  "5th Place",
+];
+
 interface LeaderboardEntry {
   tokenId: number;
   address: string;
@@ -66,6 +75,7 @@ export default function PickemLeaderboard({
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
   const [currency, setCurrency] = useState<string>("");
+  const [payoutPercentages, setPayoutPercentages] = useState<bigint[]>([]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -78,13 +88,13 @@ export default function PickemLeaderboard({
       const contest = await getContest(contestId);
       setPrizePool(contest.totalPrizePool);
       setCurrency(contest.currency);
+      setPayoutPercentages(contest.payoutStructure.payoutPercentages ?? []);
 
       // Fetch leaderboard entries
       const leaderboard = await getContestLeaderboard(contestId);
 
       // Calculate prize pool after treasury fee (2%)
       const TREASURY_FEE = 20; // 2%
-      const PERCENT_DENOMINATOR = 1000;
       const treasuryFee =
         (contest.totalPrizePool * BigInt(TREASURY_FEE)) /
         BigInt(PERCENT_DENOMINATOR);
@@ -289,18 +299,15 @@ export default function PickemLeaderboard({
           <Card className="p-4 bg-accent/30">
             <p className="text-sm font-medium mb-2">Payout Structure</p>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>1st Place</span>
-                <span className="font-medium">70% of pool</span>
-              </div>
-              <div className="flex justify-between">
-                <span>2nd Place</span>
-                <span className="font-medium">20% of pool</span>
-              </div>
-              <div className="flex justify-between">
-                <span>3rd Place</span>
-                <span className="font-medium">10% of pool</span>
-              </div>
+              {payoutPercentages.map((percentage, index) => (
+                <div key={index} className="flex justify-between">
+                  <span>{PLACE_LABELS[index] ?? `${index + 1}th Place`}</span>
+                  <span className="font-medium">
+                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of
+                    pool
+                  </span>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
