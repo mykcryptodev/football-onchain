@@ -14,10 +14,11 @@ describe("hidden pick'em contests", () => {
     expect(isContestIdHidden(10, [10])).toBe(true);
   });
 
-  test("hides all Pick'em contests while the global switch is enabled", () => {
-    const contests = [{ id: 9 }, { id: 10 }, { id: 11 }];
-    expect(visiblePickemContests(contests)).toEqual([]);
-    expect(isPickemContestHidden(10)).toBe(true);
+  test("hides existing contests and leaves future contests visible", () => {
+    const contests = [{ id: 0 }, { id: 14 }, { id: 15 }];
+    expect(visiblePickemContests(contests)).toEqual([{ id: 15 }]);
+    expect(isPickemContestHidden(14)).toBe(true);
+    expect(isPickemContestHidden(15)).toBe(false);
   });
 
   test("accepts bigint IDs used by Bankr discovery", () => {
