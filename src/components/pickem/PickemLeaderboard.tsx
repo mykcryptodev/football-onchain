@@ -75,7 +75,9 @@ export default function PickemLeaderboard({
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
   const [currency, setCurrency] = useState<string>("");
-  const [payoutPercentages, setPayoutPercentages] = useState<bigint[]>([]);
+  const [payoutPercentages, setPayoutPercentages] = useState<
+    readonly bigint[]
+  >([]);
 
   useEffect(() => {
     fetchLeaderboard();
