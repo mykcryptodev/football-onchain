@@ -1,10 +1,17 @@
 "use client";
 
-import { Award, Medal, Trophy, User } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useActiveAccount } from "thirdweb/react";
+import {
+  AccountAddress,
+  AccountAvatar,
+  AccountName,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
+import { shortenAddress } from "thirdweb/utils";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -13,9 +20,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
+import { calculateEntryPrize } from "@/lib/pickem-prize";
+import { rankEntries, type ScoredGame } from "@/lib/pickem-scoring";
+import { client } from "@/providers/Thirdweb";
 
 const PERCENT_DENOMINATOR = 1000;
 const PLACE_LABELS = [
@@ -43,6 +62,20 @@ interface PickemLeaderboardProps {
   onClose: () => void;
 }
 
+async function fetchWeekGames(
+  year: number,
+  seasonType: number,
+  weekNumber: number,
+): Promise<ScoredGame[]> {
+  const response = await fetch(
+    `/api/week-games?year=${year}&seasonType=${seasonType}&week=${weekNumber}`,
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch week games");
+  }
+  return response.json() as Promise<ScoredGame[]>;
+}
+
 // Helper component to display formatted prize
 function PrizeDisplay({
   prize,
@@ -57,10 +90,16 @@ function PrizeDisplay({
   });
 
   return (
-    <p className="font-bold text-green-600 dark:text-green-400">
+    <p className="font-semibold text-green-600 dark:text-green-400">
       {isLoading ? "..." : formattedValue}
     </p>
   );
+}
+
+function rankBadgeVariant(rank: number): "default" | "secondary" | "outline" {
+  if (rank === 1) return "default";
+  if (rank <= 3) return "secondary";
+  return "outline";
 }
 
 export default function PickemLeaderboard({
@@ -68,8 +107,14 @@ export default function PickemLeaderboard({
   onClose,
 }: PickemLeaderboardProps) {
   const account = useActiveAccount();
-  const { getContest, getContestLeaderboard, getNFTPrediction } =
-    usePickemContract();
+  const {
+    getContest,
+    getContestTokenIds,
+    getContestWinners,
+    getUserPicks,
+    getPayoutRules,
+    getNFTPrediction,
+  } = usePickemContract();
   const { getNFTOwner } = usePickemNFT();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,50 +137,89 @@ export default function PickemLeaderboard({
       setCurrency(contest.currency);
       setPayoutPercentages(contest.payoutStructure.payoutPercentages ?? []);
 
-      // Fetch leaderboard entries
-      const leaderboard = await getContestLeaderboard(contestId);
+      const gameIds = contest.gameIds.map(id => id.toString());
+      const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
 
-      // Calculate prize pool after treasury fee (2%)
-      const TREASURY_FEE = 20; // 2%
-      const treasuryFee =
-        (contest.totalPrizePool * BigInt(TREASURY_FEE)) /
-        BigInt(PERCENT_DENOMINATOR);
-      const netPool = contest.totalPrizePool - treasuryFee;
+      // Fetch every entry in the contest, not just the on-chain top-N
+      // leaderboard cache (which stays empty until scores are calculated
+      // via calculateScoresBatch/calculateScore).
+      const [tokenIds, winners, games] = await Promise.all([
+        getContestTokenIds(contestId),
+        getContestWinners(contestId),
+        fetchWeekGames(
+          Number(contest.year),
+          Number(contest.seasonType),
+          Number(contest.weekNumber),
+        ),
+      ]);
 
-      // Process each leaderboard entry
-      const processedEntries: LeaderboardEntry[] = [];
-
-      for (let i = 0; i < leaderboard.length; i++) {
-        const entry = leaderboard[i];
-        const tokenId = Number(entry.tokenId);
-
-        // Get current owner and original predictor
-        const currentOwner = await getNFTOwner(tokenId);
-        const predictionData = await getNFTPrediction(tokenId);
-        const originalPredictor = predictionData[1]; // predictor is second element
-
-        // Calculate prize amount based on position
-        let prizeAmount = BigInt(0);
-        if (
-          contest.payoutStructure.payoutPercentages &&
-          i < contest.payoutStructure.payoutPercentages.length
-        ) {
-          const percentage = contest.payoutStructure.payoutPercentages[i];
-          prizeAmount = (netPool * percentage) / BigInt(PERCENT_DENOMINATOR);
-        }
-
-        processedEntries.push({
-          tokenId,
-          address: currentOwner,
-          originalPredictor,
-          correctPicks: Number(entry.score),
-          totalGames: contest.gameIds.length,
-          tiebreakerPoints: Number(entry.tiebreakerPoints),
-          submissionTime: Number(entry.submissionTime) * 1000,
-          rank: i + 1,
-          prize: prizeAmount,
-        });
+      if (tokenIds.length === 0) {
+        setEntries([]);
+        return;
       }
+
+      const payoutRules = await getPayoutRules();
+
+      const rawEntries = await Promise.all(
+        tokenIds.map(async tokenId => {
+          const [owner, prediction, picks] = await Promise.all([
+            getNFTOwner(tokenId),
+            getNFTPrediction(tokenId),
+            getUserPicks(tokenId, gameIdsBigInt),
+          ]);
+
+          return {
+            tokenId,
+            address: owner,
+            originalPredictor: prediction[1] as string, // predictor is second element
+            submissionTime: Number(prediction[2]) * 1000,
+            tiebreakerPoints: Number(prediction[3]),
+            picks: picks.map(pick => Number(pick)),
+          };
+        }),
+      );
+
+      // Rank entries client-side from live/final game results, since the
+      // on-chain leaderboard/winners are only populated after scoring runs.
+      const ranked = rankEntries(
+        rawEntries.map(entry => ({
+          tokenId: entry.tokenId,
+          picks: entry.picks,
+          tiebreakerPoints: entry.tiebreakerPoints,
+        })),
+        gameIds,
+        games,
+        contest.tiebreakerGameId.toString(),
+      );
+      const rankByToken = new Map(ranked.map(entry => [entry.tokenId, entry]));
+
+      const processedEntries: LeaderboardEntry[] = rawEntries
+        .map(entry => {
+          const rankedEntry = rankByToken.get(entry.tokenId);
+          const winnerIndex = winners.findIndex(
+            id => Number(id) === entry.tokenId,
+          );
+          const prize = calculateEntryPrize(
+            contest.totalPrizePool,
+            payoutRules.fee,
+            payoutRules.denominator,
+            contest.payoutStructure.payoutPercentages,
+            winnerIndex,
+          );
+
+          return {
+            tokenId: entry.tokenId,
+            address: entry.address,
+            originalPredictor: entry.originalPredictor,
+            correctPicks: rankedEntry?.correctPicks ?? 0,
+            totalGames: gameIds.length,
+            tiebreakerPoints: entry.tiebreakerPoints,
+            submissionTime: entry.submissionTime,
+            rank: rankedEntry?.rank ?? 0,
+            prize,
+          };
+        })
+        .sort((a, b) => a.rank - b.rank);
 
       setEntries(processedEntries);
     } catch (error) {
@@ -145,34 +229,9 @@ export default function PickemLeaderboard({
     }
   };
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Trophy className="h-5 w-5 text-yellow-500" />;
-      case 2:
-        return <Medal className="h-5 w-5 text-gray-400" />;
-      case 3:
-        return <Award className="h-5 w-5 text-orange-600" />;
-      default:
-        return (
-          <span className="text-lg font-bold text-muted-foreground">
-            #{rank}
-          </span>
-        );
-    }
-  };
-
-  const getRankBadge = (rank: number) => {
-    if (rank === 1) return <Badge className="bg-yellow-500">1st Place</Badge>;
-    if (rank === 2) return <Badge className="bg-gray-400">2nd Place</Badge>;
-    if (rank === 3) return <Badge className="bg-orange-600">3rd Place</Badge>;
-    return null;
-  };
-
-  const formatAddress = (address: string) => {
-    if (address === account?.address) return "You";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+  const isYou = (address: string) =>
+    Boolean(account?.address) &&
+    address.toLowerCase() === account!.address.toLowerCase();
 
   const { formattedValue: prizePoolFormatted, isLoading: prizePoolLoading } =
     useFormattedCurrency({
@@ -198,103 +257,146 @@ export default function PickemLeaderboard({
                 <p className="text-sm text-muted-foreground">
                   Total Prize Pool
                 </p>
-                <p className="text-2xl font-bold">
+                <p className="text-2xl font-black tracking-[-0.04em]">
                   {prizePoolLoading || !currency ? "..." : prizePoolFormatted}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Entries</p>
-                <p className="text-2xl font-bold">{entries.length}</p>
+                <p className="text-2xl font-black tracking-[-0.04em]">
+                  {entries.length}
+                </p>
               </div>
             </div>
           </Card>
 
           {/* Leaderboard */}
-          <div className="space-y-2">
-            {loading ? (
-              <div className="text-center py-8">Loading leaderboard...</div>
-            ) : entries.length === 0 ? (
-              <div className="text-center py-8">No entries yet</div>
-            ) : (
-              entries.map(entry => (
-                <Card
-                  key={entry.tokenId}
-                  className={`p-4 ${entry.address === account?.address ? "border-primary" : ""}`}
-                >
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                    {/* Rank */}
-                    <div className="w-12 shrink-0 text-center">
-                      {getRankIcon(entry.rank)}
-                    </div>
-
-                    {/* User Info */}
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarFallback>
-                          <User className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate font-medium">
-                            {formatAddress(entry.address)}
-                          </p>
-                          {entry.address === account?.address && (
-                            <Badge className="text-xs" variant="secondary">
-                              You
-                            </Badge>
-                          )}
-                          {getRankBadge(entry.rank)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          <p>NFT #{entry.tokenId}</p>
-                          {entry.address.toLowerCase() !==
-                            entry.originalPredictor.toLowerCase() && (
-                            <p className="truncate text-xs text-orange-500 dark:text-orange-400">
-                              Transferred from{" "}
-                              {entry.originalPredictor.slice(0, 6)}...
-                              {entry.originalPredictor.slice(-4)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Score */}
-                    <div className="shrink-0 text-center">
-                      <p className="font-bold text-lg">
-                        {entry.correctPicks}/{entry.totalGames}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(
-                          (entry.correctPicks / entry.totalGames) *
-                          100
-                        ).toFixed(0)}
-                        %
-                      </p>
-                    </div>
-
-                    {/* Tiebreaker */}
-                    <div className="shrink-0 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Tiebreaker
-                      </p>
-                      <p className="font-medium">
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">Rank</TableHead>
+                  <TableHead>Entrant</TableHead>
+                  <TableHead className="text-right">Score</TableHead>
+                  <TableHead className="text-right">Tiebreaker</TableHead>
+                  <TableHead className="text-right">Prize</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell colSpan={5}>
+                        <Skeleton className="h-8 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : entries.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      className="text-center text-muted-foreground py-8"
+                      colSpan={5}
+                    >
+                      No entries yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  entries.map(entry => (
+                    <TableRow
+                      key={entry.tokenId}
+                      className={isYou(entry.address) ? "bg-accent/50" : ""}
+                    >
+                      <TableCell>
+                        <Badge variant={rankBadgeVariant(entry.rank)}>
+                          #{entry.rank}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <AccountProvider address={entry.address} client={client}>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <AccountAvatar
+                              className="shrink-0"
+                              fallbackComponent={
+                                <Blobbie
+                                  address={entry.address}
+                                  className="size-8 rounded-full"
+                                />
+                              }
+                              loadingComponent={
+                                <div className="size-8 rounded-full bg-muted animate-pulse" />
+                              }
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "100%",
+                              }}
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <AccountName
+                                  className="truncate text-sm font-medium"
+                                  fallbackComponent={
+                                    <AccountAddress
+                                      formatFn={addr => shortenAddress(addr)}
+                                    />
+                                  }
+                                  loadingComponent={
+                                    <span className="text-sm text-muted-foreground">
+                                      Loading...
+                                    </span>
+                                  }
+                                />
+                                {isYou(entry.address) && (
+                                  <Badge className="text-xs" variant="secondary">
+                                    You
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="truncate text-xs text-muted-foreground">
+                                NFT #{entry.tokenId}
+                              </p>
+                              {entry.address.toLowerCase() !==
+                                entry.originalPredictor.toLowerCase() && (
+                                <p className="truncate text-xs text-orange-500 dark:text-orange-400">
+                                  Transferred from{" "}
+                                  {entry.originalPredictor.slice(0, 6)}...
+                                  {entry.originalPredictor.slice(-4)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </AccountProvider>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <p className="font-semibold tabular-nums">
+                          {entry.correctPicks}/{entry.totalGames}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(
+                            (entry.correctPicks / entry.totalGames) *
+                            100
+                          ).toFixed(0)}
+                          %
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {entry.tiebreakerPoints} pts
-                      </p>
-                    </div>
-
-                    {/* Prize */}
-                    {entry.prize > 0 && currency && (
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm text-muted-foreground">Prize</p>
-                        <PrizeDisplay currency={currency} prize={entry.prize} />
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))
-            )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {entry.prize > 0 && currency ? (
+                          <PrizeDisplay
+                            currency={currency}
+                            prize={entry.prize}
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Payout Structure */}
