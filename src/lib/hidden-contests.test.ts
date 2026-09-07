@@ -14,10 +14,10 @@ describe("hidden pick'em contests", () => {
     expect(isContestIdHidden(10, [10])).toBe(true);
   });
 
-  test("keeps every contest visible when the repository denylist is empty", () => {
+  test("hides all Pick'em contests while the global switch is enabled", () => {
     const contests = [{ id: 9 }, { id: 10 }, { id: 11 }];
-    expect(visiblePickemContests(contests)).toEqual(contests);
-    expect(isPickemContestHidden(10)).toBe(false);
+    expect(visiblePickemContests(contests)).toEqual([]);
+    expect(isPickemContestHidden(10)).toBe(true);
   });
 
   test("accepts bigint IDs used by Bankr discovery", () => {

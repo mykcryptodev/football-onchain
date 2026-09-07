@@ -4,6 +4,8 @@
  * Keep direct contest URLs and owned-entry history available so hiding a
  * contest never makes an onchain entry inaccessible.
  */
+export const hideAllPickemContests = true;
+
 export const hiddenPickemContestIds: readonly number[] = [];
 
 export function isContestIdHidden(
@@ -14,7 +16,10 @@ export function isContestIdHidden(
 }
 
 export function isPickemContestHidden(contestId: number | bigint): boolean {
-  return isContestIdHidden(contestId, hiddenPickemContestIds);
+  return (
+    hideAllPickemContests ||
+    isContestIdHidden(contestId, hiddenPickemContestIds)
+  );
 }
 
 export function visibleContests<T extends { id: number }>(
@@ -27,5 +32,7 @@ export function visibleContests<T extends { id: number }>(
 export function visiblePickemContests<T extends { id: number }>(
   contests: readonly T[],
 ): T[] {
-  return visibleContests(contests, hiddenPickemContestIds);
+  return hideAllPickemContests
+    ? []
+    : visibleContests(contests, hiddenPickemContestIds);
 }
