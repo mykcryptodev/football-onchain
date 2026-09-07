@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Grid3x3, Trophy } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { featuredPickemContestOfWeekId } from "@/constants";
@@ -44,7 +45,7 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
 
   return (
     <Link
-      className="group block"
+      className="group block rounded-[2rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
       href={contestId === undefined ? "/pickem" : `/pickem/${contestId}`}
       aria-label={
         contestId === undefined
@@ -52,11 +53,11 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
           : `View featured Pick’em contest ${contestId}`
       }
     >
-      <div className="field-board relative aspect-[4/5] overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] transition-transform group-hover:-translate-y-1 sm:p-7">
+      <div className="field-board relative overflow-hidden rounded-[2rem] border bg-[#10281e] p-5 text-[#f4f4e9] shadow-[0_30px_90px_-45px_rgba(5,25,16,.9)] transition-transform group-hover:-translate-y-1 sm:p-7">
         <div className="absolute inset-0 field-lines opacity-80" />
-        <div className="relative flex h-full flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
+        <div className="relative flex flex-col gap-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 basis-48">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a8c6b4]">
                 {contestId !== undefined &&
                 contestId === featuredPickemContestOfWeekId
@@ -71,7 +72,7 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
                     : "Loading Pick’em"}
               </p>
             </div>
-            <div className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
+            <div className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 font-mono text-xs">
               {contest ? `${contest.totalPlayers} players` : "— players"}
             </div>
           </div>
@@ -97,19 +98,25 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
-              <Grid3x3 className="size-5 text-[#bdd4c5]" />
-              <p className="mt-3 font-semibold">Squares</p>
-              <p className="mt-1 text-xs text-[#b7c8bc]">
-                Every quarter matters
+          <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-[#e5ff4f] p-4 text-[#142018] sm:gap-4">
+            <Image
+              alt="Bankrball"
+              className="size-12 shrink-0 object-contain sm:size-16"
+              height={64}
+              src="/icon.png"
+              width={64}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {contestId === undefined
+                  ? "Explore Pick’em"
+                  : "View Pick’em contest"}
+              </p>
+              <p className="mt-1 text-xs text-[#3e4c42]">
+                Pick the winners. Climb the leaderboard.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/15 bg-[#e5ff4f] p-4 text-[#142018]">
-              <Trophy className="size-5" />
-              <p className="mt-3 font-semibold">Pick&apos;em</p>
-              <p className="mt-1 text-xs text-[#3e4c42]">Call every winner</p>
-            </div>
+            <ArrowUpRight aria-hidden="true" className="size-5 shrink-0" />
           </div>
         </div>
       </div>
