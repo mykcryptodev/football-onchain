@@ -7,8 +7,10 @@ import { abi } from "@/constants/abis/pickem";
 
 import {
   address,
+  browse,
   entries,
   entryPage,
+  featuredContest,
   payoutPreview,
   prepareEntry,
   rpc,
@@ -38,6 +40,7 @@ const c = {
 afterEach(() => mock.restoreAll());
 function setup(overrides: Record<string, unknown> = {}) {
   const values = {
+    nextContestId: 4n,
     getContest: c,
     getUserTokensForContest: [],
     allowance: 0n,
@@ -254,4 +257,62 @@ test("completed payout verifies winner claims and never reports current owner as
     getUserPrediction: [3n, account, 1n, 44n, 2, true, false],
   });
   await assert.rejects(settlement(3n, account), /claim state disagree/);
+});
+
+test("featured resolver returns the configured pool and an exact deadline", async () => {
+  setup();
+  const result = await featuredContest();
+  assert.equal(result.contestId, 3n);
+  assert.equal(result.open, true);
+  assert.equal(result.url, "http://localhost:3000/pickem/3");
+  assert.equal(result.entriesCloseAt, "1970-01-01T00:16:40.000Z");
+});
+
+test("closed, finalized, and paid features cannot default a new entry", async () => {
+  for (const state of [
+    { submissionDeadline: 100n },
+    { gamesFinalized: true },
+    { payoutComplete: true },
+  ]) {
+    mock.restoreAll();
+    setup({ getContest: { ...c, ...state } });
+    assert.equal((await featuredContest("enter")).contestId, null);
+    assert.equal((await featuredContest("view")).contestId, 3n);
+    assert.equal((await featuredContest("settle")).contestId, 3n);
+  }
+});
+
+test("missing feature returns no default; invalid intents and RPC failures surface", async () => {
+  setup({ nextContestId: 3n });
+  assert.equal((await featuredContest()).contestId, null);
+  await assert.rejects(featuredContest("invalid"), /Invalid intent/);
+  mock.method(rpc, "readContract", async () => {
+    throw new Error("RPC unavailable");
+  });
+  await assert.rejects(featuredContest(), /RPC unavailable/);
+});
+
+test("discovery includes an older featured pool outside the first page", async () => {
+  setup();
+  mock.method(
+    rpc,
+    "readContract",
+    async ({
+      functionName,
+      args,
+    }: {
+      functionName: string;
+      args: bigint[];
+    }) => {
+      if (functionName === "nextContestId") return 60n;
+      if (functionName === "getContest")
+        return { ...c, id: args[0], totalEntries: args[0] === 3n ? 1n : 100n };
+      throw new Error("Unexpected read");
+    },
+  );
+  const result = await browse(0);
+  assert.equal(result.contests[0].id, 3n);
+  assert.equal(result.contests[0].featured, true);
+  assert.equal(result.contests.length, 26);
+  assert.equal(result.nextCursor, 25);
 });

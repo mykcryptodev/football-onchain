@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Grid3x3, Trophy } from "lucide-react";
 import Link from "next/link";
 
+import { featuredPickemContestOfWeekId } from "@/constants";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { queryKeys } from "@/lib/query-keys";
@@ -57,7 +58,10 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
           <div className="flex items-start justify-between">
             <div>
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#a8c6b4]">
-                Sunday pool
+                {contestId !== undefined &&
+                contestId === featuredPickemContestOfWeekId
+                  ? "Featured contest of the week"
+                  : "Weekly pool"}
               </p>
               <p className="mt-2 text-2xl font-bold tracking-tight">
                 {contest

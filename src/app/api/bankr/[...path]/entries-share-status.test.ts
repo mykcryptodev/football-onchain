@@ -15,6 +15,7 @@ const jsonSafe = (value: unknown) =>
   );
 
 const readContract = mock(async () => [10n]);
+const resolveFeatured = mock(async () => ({ contestId: 3n }));
 const share = {
   text: "I'm in!",
   imageUrl: "https://app.example/api/og/pickem/1/picks?tokenId=10",
@@ -26,6 +27,7 @@ const share = {
 mock.module("@/lib/bankr/service", () => ({
   address: "0x0000000000000000000000000000000000000001",
   browse: async () => ({}),
+  featuredContest: resolveFeatured,
   contest: async (id: bigint) => ({
     id,
     weekNumber: 1,
@@ -87,5 +89,32 @@ describe("GET /api/bankr/contests/{id}/entries?tokenId=", () => {
     // The original share fields are untouched — only `status` is additive.
     expect(body.entries[0].share.imageUrl).toBe(share.imageUrl);
     expect(ensureEntryImage).toHaveBeenCalledWith(1n, 10n, expect.anything());
+  });
+});
+
+describe("GET /api/bankr/contests/featured", () => {
+  test("resolves the default entry intent and serializes the numeric ID", async () => {
+    const res = await GET(
+      new NextRequest("https://app.example/api/bankr/contests/featured"),
+      {
+        params: Promise.resolve({ path: ["contests", "featured"] }),
+      },
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ contestId: "3" });
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(resolveFeatured).toHaveBeenLastCalledWith("enter");
+  });
+  test("passes the settlement intent through for closed contests", async () => {
+    const res = await GET(
+      new NextRequest(
+        "https://app.example/api/bankr/contests/featured?intent=settle",
+      ),
+      {
+        params: Promise.resolve({ path: ["contests", "featured"] }),
+      },
+    );
+    expect(res.status).toBe(200);
+    expect(resolveFeatured).toHaveBeenLastCalledWith("settle");
   });
 });

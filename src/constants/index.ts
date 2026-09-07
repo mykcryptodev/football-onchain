@@ -99,4 +99,8 @@ export const chainlinkGasLimit: Record<number, bigint> = {
 
 export const featuredContestIds: number[] = [77, 73, 74, 76, 70];
 
-export const featuredPickemContestIds: number[] = [3];
+// Rotate this ID each week; set null when no contest should be featured.
+// Shared by the homepage and Bankr's default contest resolver.
+export const featuredPickemContestOfWeekId: number | null = 3;
+export const featuredPickemContestIds: number[] =
+  featuredPickemContestOfWeekId === null ? [] : [featuredPickemContestOfWeekId];

@@ -9,6 +9,7 @@ import {
   details,
   entries,
   entryPage,
+  featuredContest,
   jsonSafe,
   leaderboard,
   matchups,
@@ -56,6 +57,12 @@ export async function GET(request: NextRequest, { params }: Context) {
       return response(await browse(cursor));
     if (path[0] !== "contests" || !path[1])
       throw new Error("Unknown endpoint.");
+    if (path.length === 2 && path[1] === "featured")
+      return response(
+        await featuredContest(
+          request.nextUrl.searchParams.get("intent") || "enter",
+        ),
+      );
     const id = uint(path[1]);
     if (path.length === 2) return response(await details(id));
     if (path.length !== 3) throw new Error("Unknown endpoint.");
