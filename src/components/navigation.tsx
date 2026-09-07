@@ -34,12 +34,17 @@ function NavigationLinks({ mobile = false }: { mobile?: boolean }) {
         pathname.startsWith("/contest/") ||
         pathname.startsWith("/contests/"),
     },
+    {
+      href: "/bankr-skill",
+      label: "Bankr skill",
+      active: pathname === "/bankr-skill",
+    },
   ];
   return (
     <div
       className={
         mobile
-          ? "grid grid-cols-3 border-t px-4 md:hidden"
+          ? "grid grid-cols-4 border-t px-4 md:hidden"
           : "hidden items-center gap-1 md:flex"
       }
     >
