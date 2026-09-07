@@ -1,5 +1,6 @@
-import { ArrowLeft, Bot, Check, ExternalLink, Trophy } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Trophy } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { CopyInstallPromptButton } from "@/components/CopyInstallPromptButton";
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
 
 export default function BankrSkillPage() {
   return (
-    <main className="min-h-[calc(100dvh-4.5rem)]">
-      <div className="mx-auto max-w-5xl px-5 py-10 md:px-8 md:py-16">
+    <main className="min-w-0 min-h-[calc(100dvh-4.5rem)] overflow-x-hidden">
+      <div className="mx-auto min-w-0 max-w-5xl px-4 py-8 sm:px-5 sm:py-10 md:px-8 md:py-16">
         <Button asChild className="mb-8 -ml-3" variant="ghost">
           <Link href="/">
             <ArrowLeft /> Back home
@@ -32,11 +33,15 @@ export default function BankrSkillPage() {
         </Button>
 
         <section className="overflow-hidden rounded-[2rem] border bg-card">
-          <div className="grid gap-10 p-6 sm:p-9 lg:grid-cols-[1.1fr_.9fr] lg:p-12">
-            <div>
-              <div className="mb-6 grid size-16 place-items-center rounded-2xl bg-primary text-primary-foreground">
-                <Bot className="size-8" />
-              </div>
+          <div className="grid min-w-0 gap-10 p-5 sm:p-9 lg:grid-cols-[1.1fr_.9fr] lg:p-12">
+            <div className="min-w-0">
+              <Image
+                alt="Bankr"
+                className="mb-6 size-16 rounded-full object-cover"
+                height={64}
+                src="/bankr-avatar.png"
+                width={64}
+              />
               <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
                 Bankr skill
               </p>
@@ -49,12 +54,12 @@ export default function BankrSkillPage() {
               </p>
             </div>
 
-            <div className="rounded-[1.5rem] border bg-background p-5 sm:p-6">
+            <div className="min-w-0 rounded-[1.5rem] border bg-background p-4 sm:p-6">
               <p className="text-sm font-semibold">Install in Bankr</p>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Open your Bankr agent and send this prompt exactly as written.
               </p>
-              <div className="mt-5 rounded-xl border bg-secondary/60 p-4 font-mono text-sm leading-6 break-words">
+              <div className="mt-5 min-w-0 overflow-wrap-anywhere rounded-xl border bg-secondary/60 p-4 font-mono text-sm leading-6 [word-break:break-word]">
                 {installPrompt}
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
