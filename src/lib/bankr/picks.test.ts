@@ -86,6 +86,42 @@ test("the tiebreaker line is parsed out of the same reply, never a separate mess
     51,
   );
 });
+test("fill in the rest randomly also randomizes a blank or absent tiebreaker into a realistic range", () => {
+  const noLine = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ\nFill in the rest randomly",
+    games,
+    () => 0.5,
+  );
+  assert.equal(noLine.tiebreakerRandomized, true);
+  assert.ok(noLine.tiebreakerPoints !== null);
+  assert.ok(noLine.tiebreakerPoints! >= 30 && noLine.tiebreakerPoints! <= 60);
+
+  const blankLine = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ\nTiebreaker (combined points, BUF vs NYJ): \nFill in the rest randomly",
+    games,
+    () => 0,
+  );
+  assert.equal(blankLine.tiebreakerPoints, 30);
+  assert.equal(blankLine.tiebreakerRandomized, true);
+
+  // An explicit tiebreaker is never overwritten, even with random fill on.
+  const explicit = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ\nTiebreaker: 45\nFill in the rest randomly",
+    games,
+    () => 0,
+  );
+  assert.equal(explicit.tiebreakerPoints, 45);
+  assert.equal(explicit.tiebreakerRandomized, false);
+
+  // Without "fill in the rest randomly," a blank tiebreaker is still just
+  // unanswered — no silent guessing.
+  const noRandomFill = parsePicks(
+    "1. NE\n2. SEA\n3. NYJ",
+    games,
+  );
+  assert.equal(noRandomFill.tiebreakerPoints, null);
+  assert.equal(noRandomFill.tiebreakerRandomized, false);
+});
 test("rejects wrong matchups, duplicate numbers and invalid choices without silently randomizing", () => {
   for (const text of [
     "1. NYG",

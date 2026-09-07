@@ -20,6 +20,12 @@ export function pickTemplate(games: Matchup[], tiebreaker: Matchup): string {
 
 const TIEBREAKER_LINE = /^tiebreaker\b/i;
 
+// Recent NFL seasons average roughly 44-45 combined points per game; a
+// blind guess anywhere in the range a real matchup could plausibly land
+// (a defensive slog to a shootout) beats a coin-flip toward one extreme.
+const MIN_RANDOM_TIEBREAKER = 30;
+const MAX_RANDOM_TIEBREAKER = 60;
+
 /** Numbering always refers to the immutable contest gameIds order. The
  * tiebreaker line (see `pickTemplate`) is parsed out of the same text —
  * it is never a separate message the caller has to track across turns. */
@@ -80,21 +86,35 @@ export function parsePicks(
     picks[index] = team === game.home.toUpperCase() ? 1 : 0;
   }
   const randomized: number[] = [];
-  if (fillRandom)
+  let tiebreakerRandomized = false;
+  if (fillRandom) {
     picks.forEach((pick, i) => {
       if (pick === null) {
         picks[i] = random() < 0.5 ? 0 : 1;
         randomized.push(i + 1);
       }
     });
+    // "Fill in the rest randomly" covers the whole reply, tiebreaker
+    // included — same blank-means-unanswered treatment as a game pick, but
+    // the same instruction that randomizes missing picks also randomizes it.
+    if (tiebreakerPoints === null) {
+      tiebreakerPoints =
+        MIN_RANDOM_TIEBREAKER +
+        Math.floor(
+          random() * (MAX_RANDOM_TIEBREAKER - MIN_RANDOM_TIEBREAKER + 1),
+        );
+      tiebreakerRandomized = true;
+    }
+  }
   return {
     picks,
     randomized,
     missing: picks.flatMap((p, i) => (p === null ? [i + 1] : [])),
-    // null means the tiebreaker line was blank (or absent) — never guess a
-    // value here; the caller must ask for it explicitly, same as a missing
-    // game pick.
+    // null means the tiebreaker line was blank (or absent) and random fill
+    // was not requested — never guess a value here; the caller must ask
+    // for it explicitly, same as a missing game pick.
     tiebreakerPoints,
+    tiebreakerRandomized,
   };
 }
 
