@@ -74,7 +74,7 @@ export default function BankrSkillPage() {
           </div>
         </section>
 
-        <section className="grid gap-px overflow-hidden rounded-[2rem] border bg-border md:grid-cols-3">
+        <section className="mt-9 grid gap-px overflow-hidden rounded-[2rem] border bg-border md:grid-cols-3">
           {[
             {
               step: "01",
