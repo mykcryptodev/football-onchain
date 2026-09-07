@@ -1,4 +1,5 @@
 import type { Matchup } from "@/lib/bankr/picks";
+import { getBaseUrl } from "@/lib/farcaster-metadata";
 import { CREAM, FieldLines, FOREST, MIST, SAGE } from "@/lib/og/pickem-card";
 import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
 
@@ -22,6 +23,7 @@ export interface PickemPicksOgCardProps {
   walletAddress?: string;
   walletName?: string;
   walletAvatar?: string;
+  logoUrl?: string;
   weekNumber: number;
   seasonTypeName: string;
   year: number;
@@ -156,6 +158,7 @@ export function renderPickemPicksOgCard({
   walletAddress,
   walletName,
   walletAvatar,
+  logoUrl = `${getBaseUrl()}/icon.png`,
   weekNumber,
   seasonTypeName,
   year,
@@ -245,8 +248,21 @@ export function renderPickemPicksOgCard({
               ).slice(0, 32)}
             </div>
           </div>
-          <div style={{ fontFamily: "Geist Mono", fontSize: 15, color: SAGE }}>
-            {`CONTEST #${contestId} · ENTRY #${tokenId}`}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Use the same BankrBall mark as the app navigation. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt="BankrBall"
+              height={72}
+              src={logoUrl}
+              style={{ objectFit: "contain" }}
+              width={72}
+            />
+            <div
+              style={{ fontFamily: "Geist Mono", fontSize: 15, color: SAGE }}
+            >
+              {`CONTEST #${contestId} · ENTRY #${tokenId}`}
+            </div>
           </div>
         </div>
 
