@@ -1,11 +1,5 @@
 import type { Matchup } from "@/lib/bankr/picks";
-import {
-  CREAM,
-  FieldLines,
-  FOREST,
-  MIST,
-  SAGE,
-} from "@/lib/og/pickem-card";
+import { CREAM, FieldLines, FOREST, MIST, SAGE } from "@/lib/og/pickem-card";
 import { PICKEM_OG_SIZES } from "@/lib/pickem-share";
 
 /**
@@ -25,6 +19,9 @@ export interface PickCardEntry {
 export interface PickemPicksOgCardProps {
   contestId: number;
   tokenId: string;
+  walletAddress?: string;
+  walletName?: string;
+  walletAvatar?: string;
   weekNumber: number;
   seasonTypeName: string;
   year: number;
@@ -139,7 +136,11 @@ export function buildPickCardEntries(
         : null;
     const pickedHome = picks[i] === 1;
     const result: PickCardEntry["result"] =
-      homeWon === null ? "pending" : pickedHome === homeWon ? "correct" : "wrong";
+      homeWon === null
+        ? "pending"
+        : pickedHome === homeWon
+          ? "correct"
+          : "wrong";
     return {
       number: i + 1,
       team: pickedHome ? g.home : g.away,
@@ -152,6 +153,9 @@ export function buildPickCardEntries(
 export function renderPickemPicksOgCard({
   contestId,
   tokenId,
+  walletAddress,
+  walletName,
+  walletAvatar,
   weekNumber,
   seasonTypeName,
   year,
@@ -161,11 +165,11 @@ export function renderPickemPicksOgCard({
 }: PickemPicksOgCardProps) {
   const { width, height } = PICKEM_OG_SIZES.og;
   const scoreLine =
-    gamesDecided > 0 ? `${correctPicks}/${gamesDecided} correct` : "Picks locked in";
+    gamesDecided > 0
+      ? `${correctPicks}/${gamesDecided} correct`
+      : "Picks locked in";
   const columns = columnsFor(picks.length);
-  const cellWidth = Math.floor(
-    (CONTENT_WIDTH - (columns - 1) * GAP) / columns,
-  );
+  const cellWidth = Math.floor((CONTENT_WIDTH - (columns - 1) * GAP) / columns);
 
   return (
     <div
@@ -197,13 +201,53 @@ export function renderPickemPicksOgCard({
       >
         <div
           style={{
-            fontFamily: "Geist Mono",
-            fontSize: 15,
-            letterSpacing: "0.2em",
-            color: SAGE,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            height: 48,
           }}
         >
-          {`MY PICKS · CONTEST #${contestId} · ENTRY #${tokenId}`}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {walletAvatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt=""
+                height={48}
+                src={walletAvatar}
+                style={{ borderRadius: 24, objectFit: "cover" }}
+                width={48}
+              />
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: SAGE,
+                  color: FOREST,
+                  fontSize: 20,
+                }}
+              >
+                {(walletName || walletAddress?.slice(2) || "BB")
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+            )}
+            <div style={{ fontSize: 24, color: CREAM }}>
+              {(
+                walletName ||
+                (walletAddress
+                  ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`
+                  : "My picks")
+              ).slice(0, 32)}
+            </div>
+          </div>
+          <div style={{ fontFamily: "Geist Mono", fontSize: 15, color: SAGE }}>
+            {`CONTEST #${contestId} · ENTRY #${tokenId}`}
+          </div>
         </div>
 
         <div
