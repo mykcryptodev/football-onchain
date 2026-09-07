@@ -8,6 +8,7 @@ import { abi } from "@/constants/abis/pickem";
 import {
   address,
   browse,
+  details,
   entries,
   entryPage,
   featuredContest,
@@ -40,6 +41,8 @@ const c = {
 afterEach(() => mock.restoreAll());
 function setup(overrides: Record<string, unknown> = {}) {
   const values = {
+    symbol: "USDC",
+    decimals: 6,
     nextContestId: 4n,
     getContest: c,
     getUserTokensForContest: [],
@@ -315,4 +318,38 @@ test("discovery includes an older featured pool outside the first page", async (
   assert.equal(result.contests[0].featured, true);
   assert.equal(result.contests.length, 26);
   assert.equal(result.nextCursor, 25);
+});
+
+test("contest details describe the creator and format the onchain fee", async () => {
+  setup();
+  mock.method(
+    globalThis,
+    "fetch",
+    async () =>
+      new Response(
+        JSON.stringify({
+          header: {
+            competitions: [
+              {
+                date: "2026-09-10T00:00:00Z",
+                competitors: [
+                  { homeAway: "away", team: { abbreviation: "CLE" } },
+                  { homeAway: "home", team: { abbreviation: "NE" } },
+                ],
+              },
+            ],
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      ),
+  );
+  const result = await details(3n);
+  assert.equal(result.creator.address, account);
+  assert.equal(result.entryFee, "1");
+  assert.equal(result.season.label, "regular season");
+  assert.match(
+    result.summary,
+    /Week 1 of the regular season \(2026\), created by .*, for 1 USDC per entry\./,
+  );
+  assert.equal(result.entriesCloseAt, "1970-01-01T00:16:40.000Z");
 });
