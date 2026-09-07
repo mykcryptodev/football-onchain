@@ -8,16 +8,20 @@ import { Button } from "@/components/ui/button";
 export default function PickemShareImage({
   contestId,
   tokenId,
+  compact = false,
 }: {
   contestId: number;
   tokenId: string | null;
+  compact?: boolean;
 }) {
+  const [requested, setRequested] = useState(!compact);
+  const filename = `bankrball-contest-${contestId}-entry-${tokenId}.png`;
   const [imageUrl, setImageUrl] = useState<string>();
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    if (tokenId === null) return;
+    if (tokenId === null || !requested) return;
     const controller = new AbortController();
     let objectUrl: string | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -73,7 +77,53 @@ export default function PickemShareImage({
       clearTimeout(timer);
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [contestId, tokenId, retry]);
+  }, [contestId, tokenId, retry, requested]);
+
+  useEffect(() => {
+    if (!compact || !imageUrl) return;
+    const link = document.createElement("a");
+    link.href = imageUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, [compact, imageUrl, filename]);
+
+  if (compact) {
+    if (imageUrl) {
+      return (
+        <Button asChild size="sm" variant="outline">
+          <a download={filename} href={imageUrl}>
+            <Download className="mr-2 h-4 w-4" />
+            Download image
+          </a>
+        </Button>
+      );
+    }
+    return (
+      <Button
+        disabled={tokenId === null || (requested && !failed)}
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setRequested(true);
+          setFailed(false);
+          setRetry(value => value + 1);
+        }}
+      >
+        {requested && !failed ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="mr-2 h-4 w-4" />
+        )}
+        {failed
+          ? "Retry image download"
+          : requested
+            ? "Preparing image…"
+            : "Download image"}
+      </Button>
+    );
+  }
 
   return (
     <section aria-label="Your picks share image" className="space-y-2">
@@ -104,10 +154,7 @@ export default function PickemShareImage({
       )}
       {imageUrl ? (
         <Button asChild className="w-full" variant="outline">
-          <a
-            download={`bankrball-contest-${contestId}-entry-${tokenId}.png`}
-            href={imageUrl}
-          >
+          <a download={filename} href={imageUrl}>
             <Download className="mr-2 h-4 w-4" />
             Download image
           </a>
