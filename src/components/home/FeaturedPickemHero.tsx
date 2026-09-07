@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Grid3x3, Trophy } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { featuredPickemContestOfWeekId } from "@/constants";
@@ -44,7 +45,7 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
 
   return (
     <Link
-      className="group block"
+      className="group block rounded-[2rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 focus-visible:ring-offset-background"
       href={contestId === undefined ? "/pickem" : `/pickem/${contestId}`}
       aria-label={
         contestId === undefined
@@ -97,19 +98,25 @@ export function FeaturedPickemHero({ contestId }: FeaturedPickemHeroProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
-              <Grid3x3 className="size-5 text-[#bdd4c5]" />
-              <p className="mt-3 font-semibold">Squares</p>
-              <p className="mt-1 text-xs text-[#b7c8bc]">
-                Every quarter matters
+          <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-[#e5ff4f] p-4 text-[#142018] sm:gap-4">
+            <Image
+              alt="Bankrball"
+              className="size-12 shrink-0 object-contain sm:size-16"
+              height={64}
+              src="/icon.png"
+              width={64}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold">
+                {contestId === undefined
+                  ? "Explore Pick’em"
+                  : "View Pick’em contest"}
+              </p>
+              <p className="mt-1 text-xs text-[#3e4c42]">
+                Pick the winners. Climb the leaderboard.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/15 bg-[#e5ff4f] p-4 text-[#142018]">
-              <Trophy className="size-5" />
-              <p className="mt-3 font-semibold">Pick&apos;em</p>
-              <p className="mt-1 text-xs text-[#3e4c42]">Call every winner</p>
-            </div>
+            <ArrowUpRight aria-hidden="true" className="size-5 shrink-0" />
           </div>
         </div>
       </div>
