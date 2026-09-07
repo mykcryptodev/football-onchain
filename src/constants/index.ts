@@ -101,6 +101,6 @@ export const featuredContestIds: number[] = [77, 73, 74, 76, 70];
 
 // Rotate this ID each week; set null when no contest should be featured.
 // Shared by the homepage and Bankr's default contest resolver.
-export const featuredPickemContestOfWeekId: number | null = 3;
+export const featuredPickemContestOfWeekId: number | null = 15;
 export const featuredPickemContestIds: number[] =
   featuredPickemContestOfWeekId === null ? [] : [featuredPickemContestOfWeekId];
