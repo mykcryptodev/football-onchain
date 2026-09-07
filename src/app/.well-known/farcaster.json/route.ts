@@ -26,7 +26,7 @@ export async function GET() {
       screenshotUrls: [],
       primaryCategory: "games",
       tags: ["pickem", "superbowl", "football", "sports"],
-      heroImageUrl: "https://ex.co/og.png",
+      heroImageUrl: `${URL}/og.png`,
       tagline: "Bet, win, repeat",
       ogTitle: appName,
       ogDescription: appDescription,
