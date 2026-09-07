@@ -126,6 +126,14 @@ export default function PickemContestClient({
   const hasEntry =
     confirmed ||
     Boolean(owned.data?.some(entry => entry.contestId === contest.id));
+  // Token IDs mint sequentially, so the highest one owned for this contest is
+  // this wallet's most recent entry — used to link to its share-image page
+  // without decoding the mint receipt's event log.
+  const myNewestEntryTokenId = useMemo(() => {
+    const mine = owned.data?.filter(entry => entry.contestId === contest.id) ?? [];
+    if (!mine.length) return null;
+    return mine.reduce((max, entry) => Math.max(max, entry.tokenId), mine[0].tokenId);
+  }, [owned.data, contest.id]);
   const showEntryForm =
     (!account || (!owned.isLoading && !owned.isError)) &&
     (!hasEntry || additionalEntry);
@@ -1031,6 +1039,15 @@ export default function PickemContestClient({
               </div>
             </DialogFooter>
           </div>
+          {myNewestEntryTokenId !== null && (
+            <Button asChild className="w-full" variant="outline">
+              <Link
+                href={`/pickem/${contest.id}/entries/${myNewestEntryTokenId}`}
+              >
+                View & share my picks image
+              </Link>
+            </Button>
+          )}
           <Button
             className="w-full"
             variant="outline"
