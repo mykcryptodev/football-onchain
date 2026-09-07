@@ -1,13 +1,19 @@
 "use client";
-import { Clock, Trophy } from "lucide-react";
+import { Clock, Star, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useActiveAccount } from "thirdweb/react";
+import {
+  AccountAvatar,
+  AccountProvider,
+  Blobbie,
+  useActiveAccount,
+} from "thirdweb/react";
 
 import type { TokensResponse } from "@/app/api/tokens/route";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import { PickemEntryAction } from "@/components/pickem/PickemEntryAction";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -17,11 +23,15 @@ import {
   chainlinkGasLimit,
   chainlinkJobId,
   chainlinkSubscriptionId,
+  featuredPickemContestOfWeekId,
   usdc,
 } from "@/constants";
 import { usePickemContract } from "@/hooks/usePickemContract";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMultipleWeekResultsFinalized } from "@/hooks/useWeekResultsFinalized";
 import { visiblePickemContests } from "@/lib/hidden-contests";
+import { cn, resolveAvatarUrl } from "@/lib/utils";
+import { client } from "@/providers/Thirdweb";
 
 interface PickemContest {
   id: number;
@@ -54,6 +64,46 @@ const PAYOUT_TYPE_LABELS: Record<number, string> = {
   1: "Top 3",
   2: "Top 5",
 };
+
+function ContestCreator({ creator }: { creator: string }) {
+  const { profile, isLoading } = useUserProfile(creator);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
+
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      {avatarUrl ? (
+        <Avatar className="h-5 w-5 shrink-0">
+          <AvatarImage
+            alt={profile?.name || "Creator avatar"}
+            src={avatarUrl}
+          />
+          <AvatarFallback className="bg-transparent p-0">
+            <Blobbie address={creator} className="size-5 rounded-full" />
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <AccountProvider address={creator} client={client}>
+          <AccountAvatar
+            fallbackComponent={
+              <Blobbie address={creator} className="size-5 rounded-full" />
+            }
+            style={{
+              width: "20px",
+              height: "20px",
+              borderRadius: "100%",
+              flexShrink: 0,
+            }}
+          />
+        </AccountProvider>
+      )}
+      <span className="truncate text-xs text-muted-foreground">
+        {isLoading
+          ? "Loading…"
+          : profile?.name || `${creator.slice(0, 6)}…${creator.slice(-4)}`}
+      </span>
+    </div>
+  );
+}
 
 export default function PickemContestList({
   management = false,
@@ -521,129 +571,155 @@ export default function PickemContestList({
     );
   }
 
-  const renderContestCard = (contest: PickemContest) => (
-    <Card key={contest.id} className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-semibold">
-              {SEASON_TYPE_LABELS[contest.seasonType]} Week {contest.weekNumber}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {contest.year} Season • {contest.gameIds.length} Games
-            </p>
-          </div>
-          <Badge
-            variant={contest.submissionDeadline > now ? "default" : "secondary"}
-          >
-            <Clock className="h-3 w-3 mr-1" />
-            {getTimeRemaining(contest.submissionDeadline)}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ContestStatsCard
-          className="mb-4"
-          currency={contest.currency}
-          entryFee={contest.entryFee}
-          entryFeeUsd={contest.entryFeeUsd}
-          payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
-          showCard={false}
-          totalEntries={contest.totalEntries}
-          totalPrizePool={contest.totalPrizePool}
-        />
+  const renderContestCard = (contest: PickemContest) => {
+    const featured = contest.id === featuredPickemContestOfWeekId;
 
-        <PickemEntryAction contest={contest} />
-
-        {management && !contest.payoutComplete && (
-          <details className="mt-3 border-t pt-3">
-            <summary className="cursor-pointer text-sm text-muted-foreground">
-              Contest settlement
-            </summary>
-            <div className="mt-3">
-              {/* Show these buttons when games are not yet finalized */}
-              {!contest.gamesFinalized && (
-                <>
-                  {/* Only show Fetch Week Results button if results are not already finalized in oracle */}
-                  {!weekResultsFinalized[contest.id] && (
-                    <Button
-                      className="w-full mb-2"
-                      disabled={fetchingResults[contest.id] || !account}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleFetchWeekResults(contest)}
-                    >
-                      {fetchingResults[contest.id]
-                        ? "Recording scores..."
-                        : "Record scores onchain"}
-                    </Button>
-                  )}
-                  {/* Only show Finalize Games button if oracle has finalized the week's results */}
-                  {weekResultsFinalized[contest.id] && (
-                    <Button
-                      className="w-full mb-2"
-                      disabled={finalizingGames[contest.id] || !account}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleFinalizeGames(contest.id)}
-                    >
-                      {finalizingGames[contest.id]
-                        ? "Syncing scores..."
-                        : "Sync onchain scores"}
-                    </Button>
-                  )}
-                </>
-              )}
-
-              {contest.gamesFinalized && !contest.payoutComplete && (
-                <div className="flex gap-2 items-center w-full">
-                  <Button
-                    className="w-full mb-2"
-                    disabled={calculatingScores[contest.id] || !account}
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCalculateScores(contest.id)}
-                  >
-                    {calculatingScores[contest.id]
-                      ? "Calculating..."
-                      : `Calculate Winner${contest.payoutType === 0 ? "" : "s"}`}
-                  </Button>
-                </div>
-              )}
-
-              {contest.gamesFinalized && !contest.payoutComplete && (
-                <div className="flex gap-2 items-center w-full">
-                  <Button
-                    className="flex-1"
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      claimingPrizes[contest.id] ||
-                      !account ||
-                      now < contest.payoutDeadline
-                    }
-                    onClick={() => handleClaimAllPrizes(contest.id)}
-                  >
-                    {claimingPrizes[contest.id]
-                      ? "Distributing..."
-                      : "Distribute All Prizes"}
-                  </Button>
-                </div>
-              )}
+    return (
+      <Card
+        key={contest.id}
+        className={cn(
+          "relative overflow-hidden transition-shadow hover:shadow-lg",
+          featured &&
+            "border-primary/60 bg-primary/[0.04] shadow-md ring-1 ring-primary/30",
+        )}
+      >
+        {featured && (
+          <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
+        )}
+        <CardHeader>
+          {featured && (
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary">
+              <Star className="h-3.5 w-3.5 fill-primary" />
+              Featured contest of the week
             </div>
-          </details>
-        )}
-
-        {contest.gamesFinalized && contest.payoutComplete && (
-          <div className="text-center py-3 px-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground font-medium">
-              ✓ All prizes have been distributed
-            </p>
+          )}
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-semibold">
+                {SEASON_TYPE_LABELS[contest.seasonType]} Week{" "}
+                {contest.weekNumber}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {contest.year} Season • {contest.gameIds.length} Games
+              </p>
+              <div className="mt-2">
+                <ContestCreator creator={contest.creator} />
+              </div>
+            </div>
+            <Badge
+              variant={
+                contest.submissionDeadline > now ? "default" : "secondary"
+              }
+            >
+              <Clock className="h-3 w-3 mr-1" />
+              {getTimeRemaining(contest.submissionDeadline)}
+            </Badge>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+        </CardHeader>
+        <CardContent>
+          <ContestStatsCard
+            className="mb-4"
+            currency={contest.currency}
+            entryFee={contest.entryFee}
+            entryFeeUsd={contest.entryFeeUsd}
+            payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
+            showCard={false}
+            totalEntries={contest.totalEntries}
+            totalPrizePool={contest.totalPrizePool}
+          />
+
+          <PickemEntryAction contest={contest} />
+
+          {management && !contest.payoutComplete && (
+            <details className="mt-3 border-t pt-3">
+              <summary className="cursor-pointer text-sm text-muted-foreground">
+                Contest settlement
+              </summary>
+              <div className="mt-3">
+                {/* Show these buttons when games are not yet finalized */}
+                {!contest.gamesFinalized && (
+                  <>
+                    {/* Only show Fetch Week Results button if results are not already finalized in oracle */}
+                    {!weekResultsFinalized[contest.id] && (
+                      <Button
+                        className="w-full mb-2"
+                        disabled={fetchingResults[contest.id] || !account}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleFetchWeekResults(contest)}
+                      >
+                        {fetchingResults[contest.id]
+                          ? "Recording scores..."
+                          : "Record scores onchain"}
+                      </Button>
+                    )}
+                    {/* Only show Finalize Games button if oracle has finalized the week's results */}
+                    {weekResultsFinalized[contest.id] && (
+                      <Button
+                        className="w-full mb-2"
+                        disabled={finalizingGames[contest.id] || !account}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleFinalizeGames(contest.id)}
+                      >
+                        {finalizingGames[contest.id]
+                          ? "Syncing scores..."
+                          : "Sync onchain scores"}
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                {contest.gamesFinalized && !contest.payoutComplete && (
+                  <div className="flex gap-2 items-center w-full">
+                    <Button
+                      className="w-full mb-2"
+                      disabled={calculatingScores[contest.id] || !account}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCalculateScores(contest.id)}
+                    >
+                      {calculatingScores[contest.id]
+                        ? "Calculating..."
+                        : `Calculate Winner${contest.payoutType === 0 ? "" : "s"}`}
+                    </Button>
+                  </div>
+                )}
+
+                {contest.gamesFinalized && !contest.payoutComplete && (
+                  <div className="flex gap-2 items-center w-full">
+                    <Button
+                      className="flex-1"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        claimingPrizes[contest.id] ||
+                        !account ||
+                        now < contest.payoutDeadline
+                      }
+                      onClick={() => handleClaimAllPrizes(contest.id)}
+                    >
+                      {claimingPrizes[contest.id]
+                        ? "Distributing..."
+                        : "Distribute All Prizes"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
+
+          {contest.gamesFinalized && contest.payoutComplete && (
+            <div className="text-center py-3 px-4 bg-muted rounded-lg">
+              <p className="text-sm text-muted-foreground font-medium">
+                ✓ All prizes have been distributed
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Helper function to determine if a contest is completed
   const isContestCompleted = (contest: PickemContest) => {
@@ -667,6 +743,14 @@ export default function PickemContestList({
         : isContestCompleted(contest),
   );
 
+  // Pin the featured contest of the week to the top, ahead of everything else.
+  const featuredContests = visibleContests.filter(
+    contest => contest.id === featuredPickemContestOfWeekId,
+  );
+  const otherContests = visibleContests.filter(
+    contest => contest.id !== featuredPickemContestOfWeekId,
+  );
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -687,11 +771,16 @@ export default function PickemContestList({
           </select>
         </label>
       </div>
-      {visibleContests.length ? (
-        <div className="grid items-start gap-4 md:grid-cols-2">
-          {visibleContests.map(renderContestCard)}
+      {featuredContests.length > 0 && (
+        <div className="space-y-4">
+          {featuredContests.map(renderContestCard)}
         </div>
-      ) : (
+      )}
+      {otherContests.length ? (
+        <div className="grid items-start gap-4 md:grid-cols-2">
+          {otherContests.map(renderContestCard)}
+        </div>
+      ) : featuredContests.length === 0 ? (
         <div className="rounded-2xl border border-dashed py-12 text-center">
           <Trophy className="mx-auto mb-4 size-8 text-muted-foreground" />
           <h3 className="font-semibold">
@@ -712,7 +801,7 @@ export default function PickemContestList({
             </Button>
           )}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
