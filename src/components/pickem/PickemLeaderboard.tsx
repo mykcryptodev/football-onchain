@@ -17,6 +17,15 @@ import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
 
+const PERCENT_DENOMINATOR = 1000;
+const PLACE_LABELS = [
+  "1st Place",
+  "2nd Place",
+  "3rd Place",
+  "4th Place",
+  "5th Place",
+];
+
 interface LeaderboardEntry {
   tokenId: number;
   address: string;
@@ -66,6 +75,9 @@ export default function PickemLeaderboard({
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
   const [currency, setCurrency] = useState<string>("");
+  const [payoutPercentages, setPayoutPercentages] = useState<
+    readonly bigint[]
+  >([]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -78,13 +90,13 @@ export default function PickemLeaderboard({
       const contest = await getContest(contestId);
       setPrizePool(contest.totalPrizePool);
       setCurrency(contest.currency);
+      setPayoutPercentages(contest.payoutStructure.payoutPercentages ?? []);
 
       // Fetch leaderboard entries
       const leaderboard = await getContestLeaderboard(contestId);
 
       // Calculate prize pool after treasury fee (2%)
       const TREASURY_FEE = 20; // 2%
-      const PERCENT_DENOMINATOR = 1000;
       const treasuryFee =
         (contest.totalPrizePool * BigInt(TREASURY_FEE)) /
         BigInt(PERCENT_DENOMINATOR);
@@ -170,7 +182,7 @@ export default function PickemLeaderboard({
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5" />
@@ -178,7 +190,7 @@ export default function PickemLeaderboard({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Prize Pool Info */}
           <Card className="p-4 bg-accent/50">
             <div className="flex justify-between items-center">
@@ -209,22 +221,22 @@ export default function PickemLeaderboard({
                   key={entry.tokenId}
                   className={`p-4 ${entry.address === account?.address ? "border-primary" : ""}`}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     {/* Rank */}
-                    <div className="w-12 text-center">
+                    <div className="w-12 shrink-0 text-center">
                       {getRankIcon(entry.rank)}
                     </div>
 
                     {/* User Info */}
-                    <div className="flex items-center gap-3 flex-1">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Avatar className="h-8 w-8 shrink-0">
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-medium">
                             {formatAddress(entry.address)}
                           </p>
                           {entry.address === account?.address && (
@@ -238,7 +250,7 @@ export default function PickemLeaderboard({
                           <p>NFT #{entry.tokenId}</p>
                           {entry.address.toLowerCase() !==
                             entry.originalPredictor.toLowerCase() && (
-                            <p className="text-xs text-orange-500 dark:text-orange-400">
+                            <p className="truncate text-xs text-orange-500 dark:text-orange-400">
                               Transferred from{" "}
                               {entry.originalPredictor.slice(0, 6)}...
                               {entry.originalPredictor.slice(-4)}
@@ -249,7 +261,7 @@ export default function PickemLeaderboard({
                     </div>
 
                     {/* Score */}
-                    <div className="text-center">
+                    <div className="shrink-0 text-center">
                       <p className="font-bold text-lg">
                         {entry.correctPicks}/{entry.totalGames}
                       </p>
@@ -263,7 +275,7 @@ export default function PickemLeaderboard({
                     </div>
 
                     {/* Tiebreaker */}
-                    <div className="text-center">
+                    <div className="shrink-0 text-center">
                       <p className="text-sm text-muted-foreground">
                         Tiebreaker
                       </p>
@@ -274,7 +286,7 @@ export default function PickemLeaderboard({
 
                     {/* Prize */}
                     {entry.prize > 0 && currency && (
-                      <div className="text-right">
+                      <div className="shrink-0 text-right">
                         <p className="text-sm text-muted-foreground">Prize</p>
                         <PrizeDisplay currency={currency} prize={entry.prize} />
                       </div>
@@ -289,18 +301,15 @@ export default function PickemLeaderboard({
           <Card className="p-4 bg-accent/30">
             <p className="text-sm font-medium mb-2">Payout Structure</p>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>1st Place</span>
-                <span className="font-medium">70% of pool</span>
-              </div>
-              <div className="flex justify-between">
-                <span>2nd Place</span>
-                <span className="font-medium">20% of pool</span>
-              </div>
-              <div className="flex justify-between">
-                <span>3rd Place</span>
-                <span className="font-medium">10% of pool</span>
-              </div>
+              {payoutPercentages.map((percentage, index) => (
+                <div key={index} className="flex justify-between">
+                  <span>{PLACE_LABELS[index] ?? `${index + 1}th Place`}</span>
+                  <span className="font-medium">
+                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of
+                    pool
+                  </span>
+                </div>
+              ))}
             </div>
           </Card>
         </div>
