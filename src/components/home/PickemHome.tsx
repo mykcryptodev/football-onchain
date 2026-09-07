@@ -7,6 +7,7 @@ import MyPickems from "@/components/pickem/MyPickems";
 import { PickemContestCard } from "@/components/pickem/PickemContestCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { featuredPickemContestOfWeekId } from "@/constants";
 import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
 import { useNow } from "@/hooks/useNow";
 import { useOwnedPickemEntries } from "@/hooks/useOwnedPickemEntries";
@@ -69,6 +70,8 @@ export function PickemHome() {
           c.weekNumber === currentWeek.week,
         );
       return (
+        Number(b.id === featuredPickemContestOfWeekId) -
+          Number(a.id === featuredPickemContestOfWeekId) ||
         Number(isCurrent(b)) - Number(isCurrent(a)) ||
         a.submissionDeadline - b.submissionDeadline
       );
@@ -130,7 +133,9 @@ export function PickemHome() {
             ) : open[0] ? (
               <div className="max-w-xl">
                 <h2 className="mb-3 text-xl font-semibold">
-                  Featured open pool
+                  {open[0].id === featuredPickemContestOfWeekId
+                    ? "Featured contest of the week"
+                    : "Open pool"}
                 </h2>
                 <PickemContestCard contest={open[0]} />
               </div>

@@ -12,7 +12,12 @@ import {
 } from "viem";
 import { base } from "viem/chains";
 
-import { chain, featuredPickemContestIds, pickem } from "@/constants";
+import {
+  chain,
+  featuredPickemContestIds,
+  featuredPickemContestOfWeekId,
+  pickem,
+} from "@/constants";
 import { abi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
 import { isPickemContestHidden } from "@/lib/hidden-contests";
@@ -90,12 +95,10 @@ async function fetchMatchup(gameId: string): Promise<Matchup> {
     team?: { abbreviation?: string };
     score?: string;
   };
-  const away = game?.competitors?.find(
-    (t: Team) => t.homeAway === "away",
-  ) as Team | undefined;
-  const home = game?.competitors?.find(
-    (t: Team) => t.homeAway === "home",
-  ) as Team | undefined;
+  const away = game?.competitors?.find((t: Team) => t.homeAway === "away") as
+    Team | undefined;
+  const home = game?.competitors?.find((t: Team) => t.homeAway === "home") as
+    Team | undefined;
   if (!away?.team?.abbreviation || !home?.team?.abbreviation || !game.date)
     throw new Error("Matchup unavailable; do not guess teams.");
   return {
@@ -125,7 +128,10 @@ export async function matchups(c: Contest): Promise<Matchup[]> {
       const cacheKey = getPickemMatchupCacheKey(id);
 
       if (redis) {
-        const cached = await safeRedisOperation(() => redis!.get(cacheKey), null);
+        const cached = await safeRedisOperation(
+          () => redis!.get(cacheKey),
+          null,
+        );
         if (cached) {
           return (
             typeof cached === "string" ? JSON.parse(cached) : cached
@@ -611,6 +617,44 @@ export async function settlement(id: bigint, account?: Address) {
     retryAfterSeconds: step === "oracle" ? 60 : undefined,
   };
 }
+/** Resolve once, then use the returned numeric ID for the entire workflow. */
+export async function featuredContest(intent: string = "enter") {
+  if (!["enter", "view", "settle"].includes(intent))
+    throw new Error("Invalid intent. Use enter, view, or settle.");
+  const unavailable = {
+    contest: null,
+    contestId: null,
+    reason: "No available featured contest. Ask the user to choose a contest.",
+  };
+  if (
+    featuredPickemContestOfWeekId === null ||
+    isPickemContestHidden(featuredPickemContestOfWeekId)
+  )
+    return unavailable;
+  const id = BigInt(featuredPickemContestOfWeekId);
+  const nextId = await rpc.readContract({
+    address,
+    abi,
+    functionName: "nextContestId",
+  });
+  if (id >= nextId) return unavailable;
+  // Let RPC errors surface: an outage must not silently select another pool.
+  const c = await contest(id);
+  const now = (await rpc.getBlock()).timestamp;
+  const open =
+    !c.gamesFinalized && !c.payoutComplete && c.submissionDeadline > now;
+  if (intent === "enter" && !open) return unavailable;
+  return {
+    contestId: c.id,
+    contest: c,
+    open,
+    url: contestUrl(c.id),
+    entriesCloseAt: new Date(Number(c.submissionDeadline) * 1000).toISOString(),
+    reason:
+      "Featured contest of the week. Use only when no contest has already been selected and this contest matches the user's request.",
+  };
+}
+
 export async function browse(cursor: number) {
   const nextId = await rpc.readContract({
     address,
@@ -635,13 +679,16 @@ export async function browse(cursor: number) {
         !!c &&
         !isPickemContestHidden(c.id) &&
         !c.gamesFinalized &&
+        !c.payoutComplete &&
         c.submissionDeadline > now,
     )
     .map(c => ({
       ...c,
       featured: featuredPickemContestIds.includes(Number(c.id)),
       url: contestUrl(c.id),
-      entriesCloseAt: new Date(Number(c.submissionDeadline) * 1000).toISOString(),
+      entriesCloseAt: new Date(
+        Number(c.submissionDeadline) * 1000,
+      ).toISOString(),
     }));
   rows.sort(
     (a, b) =>
@@ -652,7 +699,7 @@ export async function browse(cursor: number) {
     contests: rows,
     nextCursor: start > BigInt(0) ? cursor + 25 : null,
     preference:
-      "Recommend featured contests first, then larger existing fields. Never create a contest.",
+      "When no contest is selected, resolve GET /api/bankr/contests/featured?intent=enter and default to it if available. Otherwise ask the user to choose. Respect explicit contest choices and constraints. Never create a contest.",
   };
 }
 export { parsePicks };

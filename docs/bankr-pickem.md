@@ -95,3 +95,14 @@ The skill now makes image delivery a separate required post-confirmation step: w
 After merging/deploying, reinstall the hosted skill in Bankr with `install the skill from https://bankrball.com/skills/pickem/SKILL.md`. Installed skills must be refreshed; repository edits alone do not prove the account loaded the new instructions. Bankr documents that repeating the install overwrites the previous version: https://docs.bankr.bot/skills/in-bankr/skill-format/.
 
 Validate through Bankr using an existing confirmed entry first: ask to resend that entry's picks image without making a new entry. Check the X reply contains actual attached media for the matching token ID. App response tests cannot verify Bankr's hosted reply transport; no documented native @bankrbot media tool schema was found, so the skill uses only capabilities actually exposed at runtime and reports their absence honestly.
+
+
+### Featured contest of the week
+
+Set `featuredPickemContestOfWeekId` in `src/constants/index.ts` to the desired contest ID and deploy. Set it to `null` to disable the default. The initial value preserves the existing featured contest (#3); rotate it each week. There is one designation, shared by the homepage, featured list, and Bankr. No contract migration or admin wallet transaction is needed.
+
+`GET /api/bankr/contests/featured?intent=enter` returns `contestId`, `contest`, `open`, `url`, and `entriesCloseAt`, or a null contest/ID when no eligible feature exists. `enter` is the default and excludes closed, finalized, paid, hidden, and nonexistent contests. `intent=view` and `intent=settle` allow the designated contest after entries close so users can check results and distribute prizes. Rotate or clear the setting when that week's contest is no longer the intended default. RPC failures return an error, not an alternative contest. Responses are uncached.
+
+Bankr uses this resolver only when no contest has already been selected and the featured contest satisfies the user's constraints. It announces the selection and continues without an extra contest-choice prompt. Explicit IDs and existing conversation/job selections always win. All subsequent calls use the resolved numeric ID, including delayed settlement; changing the feature never redirects an in-progress entry or payout. Paid-entry authorization and existing duplicate-entry protections still apply.
+
+After deploying, refresh the installed Bankr skill with `install the skill from https://bankrball.com/skills/pickem/SKILL.md`. Verify “I want to make picks” selects the feature, an explicit different ID stays selected, and a closed feature asks for a contest for entry but remains selectable for standings and settlement.
