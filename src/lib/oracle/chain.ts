@@ -19,6 +19,7 @@ import { redis } from "@/lib/redis";
 
 import { CRE_ORACLE_ABI } from "./abi";
 import { weekIdToParams } from "./espn";
+import { reconcileTransactionReceipt } from "./transaction-confirmation";
 
 export const oracleAddress = gameScoreOracle[
   appChain.id as keyof typeof gameScoreOracle
@@ -27,19 +28,29 @@ export const oracleAddress = gameScoreOracle[
 // Default to the thirdweb RPC keyed by our client ID — the public Base RPC
 // rate-limits aggressively. ORACLE_RPC_URL overrides (e.g. a dedicated
 // Alchemy/QuickNode endpoint) when set.
-const rpcUrl =
-  process.env.ORACLE_RPC_URL ||
-  (process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
-    ? `https://${base.id}.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
-    : undefined);
+const thirdwebRpcUrl = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
+  ? `https://${base.id}.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
+  : undefined;
+const rpcUrl = process.env.ORACLE_RPC_URL || thirdwebRpcUrl;
 
 // Back off instead of failing the sync on transient RPC errors.
-const transport = () =>
-  http(rpcUrl, { retryCount: 5, retryDelay: 2000, timeout: 30_000 });
+const transport = (url = rpcUrl) =>
+  http(url, { retryCount: 5, retryDelay: 2000, timeout: 30_000 });
 
 export const publicClient = createPublicClient({
   chain: base,
   transport: transport(),
+});
+
+// If writes use a dedicated endpoint, thirdweb provides an independent view
+// for receipt reconciliation. Otherwise Base's public RPC is the fallback.
+const receiptFallbackClient = createPublicClient({
+  chain: base,
+  transport: transport(
+    rpcUrl !== thirdwebRpcUrl && thirdwebRpcUrl
+      ? thirdwebRpcUrl
+      : "https://mainnet.base.org",
+  ),
 });
 
 export function getReporterAccount() {
@@ -196,11 +207,33 @@ async function submitReport(report: Hex): Promise<Hex> {
   // consistent). We control the nonce ourselves under a Redis lock and never
   // speed up/cancel from a wallet, so replacement detection has nothing to
   // detect here — disable it and let the normal poll/timeout loop retry.
-  await publicClient.waitForTransactionReceipt({
-    hash,
-    checkReplacement: false,
-  });
-  return hash;
+  try {
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash,
+      checkReplacement: false,
+    });
+    if (receipt.status === "reverted") {
+      throw new Error(`oracle transaction ${hash} reverted`);
+    }
+    return hash;
+  } catch (waitError) {
+    // The transaction has already been broadcast. A timeout or lagging RPC is
+    // not evidence that it failed, and resubmitting could duplicate the write.
+    const confirmation = await reconcileTransactionReceipt(hash, [
+      publicClient,
+      receiptFallbackClient,
+    ]);
+    if (confirmation.status === "success") return hash;
+    if (confirmation.status === "reverted") {
+      throw new Error(`oracle transaction ${hash} reverted`, {
+        cause: waitError,
+      });
+    }
+    throw new Error(
+      `oracle transaction ${hash} was broadcast but confirmation is unknown; do not resubmit until its receipt or onchain state is reconciled`,
+      { cause: waitError },
+    );
+  }
 }
 
 export async function writeReport(report: Hex): Promise<Hex> {
