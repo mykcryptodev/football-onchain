@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import PickemEntryOwner from "@/components/pickem/PickemEntryOwner";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
 import {
   contest,
@@ -89,9 +90,7 @@ export default async function EntryPage({ params }: Props) {
         tokenId={token.toString()}
       />
 
-      <p className="break-all text-sm text-muted-foreground">
-        Current owner: {entry.owner}
-      </p>
+      <PickemEntryOwner owner={entry.owner} />
       <ol className="divide-y rounded-2xl border px-4">
         {games.map((g, i) => (
           <li
