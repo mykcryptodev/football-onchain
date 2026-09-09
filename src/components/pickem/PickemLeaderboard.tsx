@@ -1,17 +1,11 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Trophy } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  AccountAddress,
-  AccountAvatar,
-  AccountName,
-  AccountProvider,
-  Blobbie,
-  useActiveAccount,
-} from "thirdweb/react";
+import { Blobbie, useActiveAccount } from "thirdweb/react";
 import { shortenAddress } from "thirdweb/utils";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
@@ -32,9 +26,10 @@ import {
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { calculateEntryPrize } from "@/lib/pickem-prize";
 import { rankEntries, type ScoredGame } from "@/lib/pickem-scoring";
-import { client } from "@/providers/Thirdweb";
+import { resolveAvatarUrl } from "@/lib/utils";
 
 const PERCENT_DENOMINATOR = 1000;
 const PLACE_LABELS = [
@@ -56,6 +51,20 @@ interface LeaderboardEntry {
   rank: number;
   prize: bigint;
 }
+
+interface LeaderboardData {
+  entries: LeaderboardEntry[];
+  prizePool: bigint;
+  currency: string;
+  payoutPercentages: readonly bigint[];
+}
+
+const EMPTY_DATA: LeaderboardData = {
+  entries: [],
+  prizePool: BigInt(0),
+  currency: "",
+  payoutPercentages: [],
+};
 
 interface PickemLeaderboardProps {
   contestId: number;
@@ -96,6 +105,67 @@ function PrizeDisplay({
   );
 }
 
+/**
+ * One entrant's avatar and display name.
+ *
+ * This used to be thirdweb's `AccountName` + `AccountAvatar`. Those are two
+ * independent `useQuery`s with different query keys, so each row resolved the
+ * *same* address twice — two `getSocialProfiles` calls plus two mainnet ENS
+ * reverse lookups, none of them cached on our side. `useUserProfile` is the
+ * same resolution behind `/api/user-profile`, which is Redis-cached, and it's
+ * already what `PickemEntryOwner` uses.
+ */
+function Entrant({
+  entry,
+  isYou,
+}: {
+  entry: LeaderboardEntry;
+  isYou: boolean;
+}) {
+  const { profile, isLoading } = useUserProfile(entry.address);
+  const avatarUrl = resolveAvatarUrl(profile?.avatar);
+  const name = profile?.name?.trim();
+  const fallbackAvatar = (
+    <Blobbie address={entry.address} className="size-8 rounded-full" />
+  );
+  const transferred =
+    entry.address.toLowerCase() !== entry.originalPredictor.toLowerCase();
+
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <Avatar className="size-8 shrink-0">
+        {avatarUrl ? (
+          <AvatarImage alt={name || entry.address} src={avatarUrl} />
+        ) : null}
+        <AvatarFallback className="bg-transparent p-0">
+          {fallbackAvatar}
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">
+            {name || (isLoading ? "Loading..." : shortenAddress(entry.address))}
+          </span>
+          {isYou && (
+            <Badge className="text-xs" variant="secondary">
+              You
+            </Badge>
+          )}
+        </div>
+        <p className="truncate text-xs text-muted-foreground">
+          NFT #{entry.tokenId}
+        </p>
+        {transferred && (
+          <p className="truncate text-xs text-orange-500 dark:text-orange-400">
+            Transferred from {entry.originalPredictor.slice(0, 6)}...
+            {entry.originalPredictor.slice(-4)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function rankBadgeVariant(rank: number): "default" | "secondary" | "outline" {
   if (rank === 1) return "default";
   if (rank <= 3) return "secondary";
@@ -116,51 +186,42 @@ export default function PickemLeaderboard({
     getNFTPrediction,
   } = usePickemContract();
   const { getNFTOwner } = usePickemNFT();
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
-  const [currency, setCurrency] = useState<string>("");
-  const [payoutPercentages, setPayoutPercentages] = useState<
-    readonly bigint[]
-  >([]);
 
-  useEffect(() => {
-    fetchLeaderboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contestId]);
+  const fetchLeaderboard = async (): Promise<LeaderboardData> => {
+    // None of these four depend on each other. Awaiting the contest first and
+    // the payout rules last cost two extra network round trips before any row
+    // could render; thirdweb coalesces same-tick reads into one batched
+    // request, so asking for all of them together is a single trip.
+    const [contest, tokenIds, winners, payoutRules] = await Promise.all([
+      getContest(contestId),
+      // Every entry in the contest, not just the on-chain top-N leaderboard
+      // cache (which stays empty until scores are calculated via
+      // calculateScoresBatch/calculateScore).
+      getContestTokenIds(contestId),
+      getContestWinners(contestId),
+      getPayoutRules(),
+    ]);
 
-  const fetchLeaderboard = async () => {
-    try {
-      // Fetch contest data
-      const contest = await getContest(contestId);
-      setPrizePool(contest.totalPrizePool);
-      setCurrency(contest.currency);
-      setPayoutPercentages(contest.payoutStructure.payoutPercentages ?? []);
+    const meta = {
+      prizePool: contest.totalPrizePool,
+      currency: contest.currency,
+      payoutPercentages: contest.payoutStructure.payoutPercentages ?? [],
+    };
 
-      const gameIds = contest.gameIds.map(id => id.toString());
-      const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
+    if (tokenIds.length === 0) return { ...meta, entries: [] };
 
-      // Fetch every entry in the contest, not just the on-chain top-N
-      // leaderboard cache (which stays empty until scores are calculated
-      // via calculateScoresBatch/calculateScore).
-      const [tokenIds, winners, games] = await Promise.all([
-        getContestTokenIds(contestId),
-        getContestWinners(contestId),
-        fetchWeekGames(
-          Number(contest.year),
-          Number(contest.seasonType),
-          Number(contest.weekNumber),
-        ),
-      ]);
+    const gameIds = contest.gameIds.map(id => id.toString());
+    const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
 
-      if (tokenIds.length === 0) {
-        setEntries([]);
-        return;
-      }
-
-      const payoutRules = await getPayoutRules();
-
-      const rawEntries = await Promise.all(
+    // The week's scores and the per-entry reads both only need the contest,
+    // so they overlap rather than queue behind one another.
+    const [games, rawEntries] = await Promise.all([
+      fetchWeekGames(
+        Number(contest.year),
+        Number(contest.seasonType),
+        Number(contest.weekNumber),
+      ),
+      Promise.all(
         tokenIds.map(async tokenId => {
           const [owner, prediction, picks] = await Promise.all([
             getNFTOwner(tokenId),
@@ -177,57 +238,64 @@ export default function PickemLeaderboard({
             picks: picks.map(pick => Number(pick)),
           };
         }),
-      );
+      ),
+    ]);
 
-      // Rank entries client-side from live/final game results, since the
-      // on-chain leaderboard/winners are only populated after scoring runs.
-      const ranked = rankEntries(
-        rawEntries.map(entry => ({
+    // Rank entries client-side from live/final game results, since the
+    // on-chain leaderboard/winners are only populated after scoring runs.
+    const ranked = rankEntries(
+      rawEntries.map(entry => ({
+        tokenId: entry.tokenId,
+        picks: entry.picks,
+        tiebreakerPoints: entry.tiebreakerPoints,
+      })),
+      gameIds,
+      games,
+      contest.tiebreakerGameId.toString(),
+    );
+    const rankByToken = new Map(ranked.map(entry => [entry.tokenId, entry]));
+
+    const entries: LeaderboardEntry[] = rawEntries
+      .map(entry => {
+        const rankedEntry = rankByToken.get(entry.tokenId);
+        const winnerIndex = winners.findIndex(
+          id => Number(id) === entry.tokenId,
+        );
+        const prize = calculateEntryPrize(
+          contest.totalPrizePool,
+          payoutRules.fee,
+          payoutRules.denominator,
+          contest.payoutStructure.payoutPercentages,
+          winnerIndex,
+        );
+
+        return {
           tokenId: entry.tokenId,
-          picks: entry.picks,
+          address: entry.address,
+          originalPredictor: entry.originalPredictor,
+          correctPicks: rankedEntry?.correctPicks ?? 0,
+          totalGames: gameIds.length,
           tiebreakerPoints: entry.tiebreakerPoints,
-        })),
-        gameIds,
-        games,
-        contest.tiebreakerGameId.toString(),
-      );
-      const rankByToken = new Map(ranked.map(entry => [entry.tokenId, entry]));
+          submissionTime: entry.submissionTime,
+          rank: rankedEntry?.rank ?? 0,
+          prize,
+        };
+      })
+      .sort((a, b) => a.rank - b.rank);
 
-      const processedEntries: LeaderboardEntry[] = rawEntries
-        .map(entry => {
-          const rankedEntry = rankByToken.get(entry.tokenId);
-          const winnerIndex = winners.findIndex(
-            id => Number(id) === entry.tokenId,
-          );
-          const prize = calculateEntryPrize(
-            contest.totalPrizePool,
-            payoutRules.fee,
-            payoutRules.denominator,
-            contest.payoutStructure.payoutPercentages,
-            winnerIndex,
-          );
-
-          return {
-            tokenId: entry.tokenId,
-            address: entry.address,
-            originalPredictor: entry.originalPredictor,
-            correctPicks: rankedEntry?.correctPicks ?? 0,
-            totalGames: gameIds.length,
-            tiebreakerPoints: entry.tiebreakerPoints,
-            submissionTime: entry.submissionTime,
-            rank: rankedEntry?.rank ?? 0,
-            prize,
-          };
-        })
-        .sort((a, b) => a.rank - b.rank);
-
-      setEntries(processedEntries);
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-    } finally {
-      setLoading(false);
-    }
+    return { ...meta, entries };
   };
+
+  // Held by react-query rather than component state, so reopening the dialog
+  // within the client's stale window paints from cache instead of redoing
+  // every read.
+  const { data, isPending } = useQuery({
+    queryKey: ["pickem-leaderboard", contestId],
+    queryFn: fetchLeaderboard,
+  });
+  const { entries, prizePool, currency, payoutPercentages } =
+    data ?? EMPTY_DATA;
+  const loading = isPending;
 
   const isYou = (address: string) =>
     Boolean(account?.address) &&
@@ -312,60 +380,7 @@ export default function PickemLeaderboard({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <AccountProvider address={entry.address} client={client}>
-                          <div className="flex min-w-0 items-center gap-2">
-                            <AccountAvatar
-                              className="shrink-0"
-                              fallbackComponent={
-                                <Blobbie
-                                  address={entry.address}
-                                  className="size-8 rounded-full"
-                                />
-                              }
-                              loadingComponent={
-                                <div className="size-8 rounded-full bg-muted animate-pulse" />
-                              }
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "100%",
-                              }}
-                            />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <AccountName
-                                  className="truncate text-sm font-medium"
-                                  fallbackComponent={
-                                    <AccountAddress
-                                      formatFn={addr => shortenAddress(addr)}
-                                    />
-                                  }
-                                  loadingComponent={
-                                    <span className="text-sm text-muted-foreground">
-                                      Loading...
-                                    </span>
-                                  }
-                                />
-                                {isYou(entry.address) && (
-                                  <Badge className="text-xs" variant="secondary">
-                                    You
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="truncate text-xs text-muted-foreground">
-                                NFT #{entry.tokenId}
-                              </p>
-                              {entry.address.toLowerCase() !==
-                                entry.originalPredictor.toLowerCase() && (
-                                <p className="truncate text-xs text-orange-500 dark:text-orange-400">
-                                  Transferred from{" "}
-                                  {entry.originalPredictor.slice(0, 6)}...
-                                  {entry.originalPredictor.slice(-4)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </AccountProvider>
+                        <Entrant entry={entry} isYou={isYou(entry.address)} />
                       </TableCell>
                       <TableCell className="text-right">
                         <p className="font-semibold tabular-nums">
@@ -407,8 +422,7 @@ export default function PickemLeaderboard({
                 <div key={index} className="flex justify-between">
                   <span>{PLACE_LABELS[index] ?? `${index + 1}th Place`}</span>
                   <span className="font-medium">
-                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of
-                    pool
+                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of pool
                   </span>
                 </div>
               ))}
