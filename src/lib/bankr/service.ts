@@ -93,7 +93,7 @@ async function fetchMatchup(gameId: string): Promise<Matchup> {
   const game = data.header?.competitions?.[0];
   type Team = {
     homeAway: string;
-    team?: { abbreviation?: string };
+    team?: { abbreviation?: string; logo?: string };
     score?: string;
   };
   const away = game?.competitors?.find((t: Team) => t.homeAway === "away") as
@@ -106,6 +106,8 @@ async function fetchMatchup(gameId: string): Promise<Matchup> {
     gameId,
     away: away.team.abbreviation,
     home: home.team.abbreviation,
+    awayLogo: away.team.logo,
+    homeLogo: home.team.logo,
     kickoff: game.date,
     awayScore: away.score === undefined ? undefined : Number(away.score),
     homeScore: home.score === undefined ? undefined : Number(home.score),

@@ -2,6 +2,10 @@ export interface Matchup {
   gameId: string;
   away: string;
   home: string;
+  /** ESPN team mark, when ESPN supplied one. Same source every other
+   * route uses; absent on older cached matchups, so always optional. */
+  awayLogo?: string;
+  homeLogo?: string;
   kickoff: string;
   awayScore?: number;
   homeScore?: number;

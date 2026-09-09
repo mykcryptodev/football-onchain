@@ -7,6 +7,7 @@ import { useActiveAccount } from "thirdweb/react";
 
 import PickemLeaderboard from "@/components/pickem/PickemLeaderboard";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
+import TeamMark from "@/components/pickem/TeamMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -87,34 +88,6 @@ function gameStatusLabel(game: CurrentWeekGamePick) {
         timeOptions: { hour: "numeric", minute: "2-digit" },
       })
     : "Schedule unavailable";
-}
-
-function TeamMark({
-  name,
-  abbreviation,
-  logo,
-  picked,
-}: {
-  name: string;
-  abbreviation?: string;
-  logo?: string;
-  picked: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 items-center gap-2",
-        picked ? "font-semibold" : "opacity-35 grayscale",
-      )}
-    >
-      {logo ? (
-        // ESPN team marks are remote SVGs/PNGs without next/image config.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img alt={name} className="size-7 shrink-0" src={logo} />
-      ) : null}
-      <span className="truncate">{abbreviation || name}</span>
-    </div>
-  );
 }
 
 function GamePickRow({ game }: { game: CurrentWeekGamePick }) {

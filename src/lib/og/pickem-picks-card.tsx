@@ -54,8 +54,36 @@ const RESULT_STYLE: Record<
 };
 
 const PAD_X = 64;
-const GAP = 14;
+const PAD_TOP = 36;
+const GAP = 12;
+const HEADER_HEIGHT = 48;
+const TITLE_MARGIN_TOP = 10;
+const TITLE_FONT_SIZE = 56;
+/** The title sets `lineHeight: 1`, so its row is exactly the font size tall. */
+const TITLE_HEIGHT = TITLE_FONT_SIZE;
+const GRID_MARGIN_TOP = 20;
+
+/**
+ * X draws the link-card title in a rounded pill anchored to the bottom-left
+ * of the image — measured at roughly y 555–609 on a 1200×630 card — so
+ * anything rendered down there is covered up in a timeline. The grid stops
+ * short of that band instead. It's reserved across the full width because
+ * the pill grows with the title, not just at a fixed left-hand size.
+ */
+const X_OVERLAY_SAFE_HEIGHT = 100;
+
 const CONTENT_WIDTH = PICKEM_OG_SIZES.og.width - PAD_X * 2;
+const GRID_HEIGHT =
+  PICKEM_OG_SIZES.og.height -
+  PAD_TOP -
+  HEADER_HEIGHT -
+  TITLE_MARGIN_TOP -
+  TITLE_HEIGHT -
+  GRID_MARGIN_TOP -
+  X_OVERLAY_SAFE_HEIGHT;
+
+/** Keeps a two- or three-pick slate from ballooning into the whole grid. */
+const MAX_CELL_HEIGHT = 100;
 
 function columnsFor(count: number): number {
   if (count > 12) return 4;
@@ -63,15 +91,41 @@ function columnsFor(count: number): number {
   return Math.max(1, Math.min(count, 2));
 }
 
-function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
+/**
+ * The team abbreviation is the biggest thing in a cell, and every other size
+ * in it is a fixed ratio of that, so one number drives the cell's height. The
+ * inverse — height back to type size — is what lets a 16-game slate shrink to
+ * fit above the safe band while a 6-game one keeps full-size type. The 3.05
+ * multiplier and 12px constant come from measuring a rendered cell: padding,
+ * borders, the two smaller lines and the gaps between them all scale with it.
+ */
+function teamFontSizeFor(cellHeight: number): number {
+  return Math.max(18, Math.min(30, Math.floor((cellHeight - 12) / 3.05)));
+}
+
+function PickCell({
+  entry,
+  width,
+  height,
+  teamFontSize,
+}: {
+  entry: PickCardEntry;
+  width: number;
+  height: number;
+  teamFontSize: number;
+}) {
   const style = RESULT_STYLE[entry.result];
+  const padY = Math.round(teamFontSize * 0.4);
+  const dotSize = Math.max(6, Math.round(teamFontSize * 0.27));
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
+        justifyContent: "center",
         width,
-        padding: "12px 16px",
+        height,
+        padding: `${padY}px 16px`,
         borderRadius: 14,
         border: `1.5px solid ${style.border}`,
         backgroundColor: style.bg,
@@ -81,7 +135,7 @@ function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
         <span
           style={{
             fontFamily: "Geist Mono",
-            fontSize: 13,
+            fontSize: Math.round(teamFontSize * 0.44),
             color: SAGE,
             letterSpacing: "0.05em",
           }}
@@ -92,9 +146,9 @@ function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
           style={{
             display: "flex",
             marginLeft: 8,
-            width: 8,
-            height: 8,
-            borderRadius: 8,
+            width: dotSize,
+            height: dotSize,
+            borderRadius: dotSize,
             backgroundColor: style.dot,
           }}
         />
@@ -102,7 +156,7 @@ function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
       <div
         style={{
           marginTop: 4,
-          fontSize: 30,
+          fontSize: teamFontSize,
           fontWeight: 800,
           letterSpacing: "-0.03em",
           color: CREAM,
@@ -111,7 +165,13 @@ function PickCell({ entry, width }: { entry: PickCardEntry; width: number }) {
       >
         {entry.team}
       </div>
-      <div style={{ marginTop: 4, fontSize: 14, color: MIST }}>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: Math.round(teamFontSize * 0.47),
+          color: MIST,
+        }}
+      >
         {`vs ${entry.opponent}`}
       </div>
     </div>
@@ -173,6 +233,12 @@ export function renderPickemPicksOgCard({
       : "Picks locked in";
   const columns = columnsFor(picks.length);
   const cellWidth = Math.floor((CONTENT_WIDTH - (columns - 1) * GAP) / columns);
+  const rows = Math.max(1, Math.ceil(picks.length / columns));
+  const cellHeight = Math.min(
+    MAX_CELL_HEIGHT,
+    Math.floor((GRID_HEIGHT - (rows - 1) * GAP) / rows),
+  );
+  const teamFontSize = teamFontSizeFor(cellHeight);
 
   return (
     <div
@@ -199,7 +265,7 @@ export function renderPickemPicksOgCard({
           flexDirection: "column",
           width: "100%",
           height: "100%",
-          padding: `40px ${PAD_X}px 32px`,
+          padding: `${PAD_TOP}px ${PAD_X}px ${X_OVERLAY_SAFE_HEIGHT}px`,
         }}
       >
         <div
@@ -207,7 +273,7 @@ export function renderPickemPicksOgCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            height: 48,
+            height: HEADER_HEIGHT,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -270,12 +336,13 @@ export function renderPickemPicksOgCard({
           style={{
             display: "flex",
             alignItems: "baseline",
-            marginTop: 14,
+            height: TITLE_HEIGHT,
+            marginTop: TITLE_MARGIN_TOP,
           }}
         >
           <div
             style={{
-              fontSize: 56,
+              fontSize: TITLE_FONT_SIZE,
               fontWeight: 800,
               letterSpacing: "-0.04em",
               lineHeight: 1,
@@ -294,13 +361,19 @@ export function renderPickemPicksOgCard({
             display: "flex",
             flexWrap: "wrap",
             gap: GAP,
-            marginTop: 26,
-            flex: 1,
+            marginTop: GRID_MARGIN_TOP,
+            height: GRID_HEIGHT,
             alignContent: "center",
           }}
         >
           {picks.map(entry => (
-            <PickCell key={entry.number} entry={entry} width={cellWidth} />
+            <PickCell
+              key={entry.number}
+              entry={entry}
+              height={cellHeight}
+              teamFontSize={teamFontSize}
+              width={cellWidth}
+            />
           ))}
         </div>
       </div>

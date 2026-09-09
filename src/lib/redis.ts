@@ -58,7 +58,9 @@ export const getCancelledOrdersKey = (chainId?: number) => {
  * needs a fast response to render a card, so every one of these is cached.
  */
 export const getPickemMatchupCacheKey = (gameId: string) => {
-  return `pickem:matchup:${gameId}`;
+  // v2 added the team logo fields; a v1 object would serve a logo-less
+  // matchup for up to the six-hour final-game TTL.
+  return `pickem:matchup:v2:${gameId}`;
 };
 
 export const CACHE_TTL = {
