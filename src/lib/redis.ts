@@ -63,6 +63,32 @@ export const getPickemMatchupCacheKey = (gameId: string) => {
   return `pickem:matchup:v2:${gameId}`;
 };
 
+/**
+ * An assembled Pick'em leaderboard for one contest. Shared across every viewer
+ * of that contest, so it must not outlive the data it is derived from — see
+ * `pickemLeaderboardTtl` for the tiering.
+ */
+export const getPickemLeaderboardCacheKey = (
+  contestId: string,
+  chainId?: number,
+) => {
+  return `pickem:leaderboard:v1:${chainId || chain.id}:${contestId}`;
+};
+
+/**
+ * How long an assembled leaderboard may be served.
+ *
+ * Live games move ranks every few seconds, so while any game is outstanding
+ * this is deliberately short — the same reasoning as PICKEM_MATCHUP_LIVE. Once
+ * every game is final the ranks are fixed, but prizes are not: `winners` stays
+ * empty until scoring runs, so a board that is final-but-unsettled would pin
+ * "no prize" for hours. Only a settled board gets the long TTL.
+ */
+export const pickemLeaderboardTtl = (settled: boolean, allGamesFinal: boolean) =>
+  settled && allGamesFinal
+    ? CACHE_TTL.PICKEM_LEADERBOARD_SETTLED
+    : CACHE_TTL.PICKEM_LEADERBOARD_LIVE;
+
 export const CACHE_TTL = {
   CONTEST: 3600,
   CONTESTS_LIST: 300,
@@ -71,6 +97,9 @@ export const CACHE_TTL = {
   // never will, so it's safe to cache far longer once ESPN marks it final.
   PICKEM_MATCHUP_LIVE: 20,
   PICKEM_MATCHUP_FINAL: 21600,
+  // Ranks shift on every scoring play while games are outstanding.
+  PICKEM_LEADERBOARD_LIVE: 20,
+  PICKEM_LEADERBOARD_SETTLED: 21600,
   USER_BIO: 86400,
   GAME_DETAILS: 300,
   OPENSEA_LISTINGS: 300,

@@ -24,11 +24,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
-import { usePickemContract } from "@/hooks/usePickemContract";
-import { usePickemNFT } from "@/hooks/usePickemNFT";
 import { useUserProfile } from "@/hooks/useUserProfile";
-import { calculateEntryPrize } from "@/lib/pickem-prize";
-import { rankEntries, type ScoredGame } from "@/lib/pickem-scoring";
+import type { LeaderboardDto } from "@/lib/pickem-leaderboard";
 import { resolveAvatarUrl } from "@/lib/utils";
 
 const PERCENT_DENOMINATOR = 1000;
@@ -71,18 +68,19 @@ interface PickemLeaderboardProps {
   onClose: () => void;
 }
 
-async function fetchWeekGames(
-  year: number,
-  seasonType: number,
-  weekNumber: number,
-): Promise<ScoredGame[]> {
-  const response = await fetch(
-    `/api/week-games?year=${year}&seasonType=${seasonType}&week=${weekNumber}`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch week games");
-  }
-  return response.json() as Promise<ScoredGame[]>;
+async function fetchLeaderboard(contestId: number): Promise<LeaderboardData> {
+  const response = await fetch(`/api/contest/${contestId}/leaderboard`);
+  if (!response.ok) throw new Error("Failed to load leaderboard");
+  const dto = (await response.json()) as LeaderboardDto;
+  return {
+    entries: dto.entries.map(entry => ({
+      ...entry,
+      prize: BigInt(entry.prize),
+    })),
+    prizePool: BigInt(dto.prizePool),
+    currency: dto.currency,
+    payoutPercentages: dto.payoutPercentages.map(BigInt),
+  };
 }
 
 // Helper component to display formatted prize
@@ -177,121 +175,13 @@ export default function PickemLeaderboard({
   onClose,
 }: PickemLeaderboardProps) {
   const account = useActiveAccount();
-  const {
-    getContest,
-    getContestTokenIds,
-    getContestWinners,
-    getUserPicks,
-    getPayoutRules,
-    getNFTPrediction,
-  } = usePickemContract();
-  const { getNFTOwner } = usePickemNFT();
 
-  const fetchLeaderboard = async (): Promise<LeaderboardData> => {
-    // None of these four depend on each other. Awaiting the contest first and
-    // the payout rules last cost two extra network round trips before any row
-    // could render; thirdweb coalesces same-tick reads into one batched
-    // request, so asking for all of them together is a single trip.
-    const [contest, tokenIds, winners, payoutRules] = await Promise.all([
-      getContest(contestId),
-      // Every entry in the contest, not just the on-chain top-N leaderboard
-      // cache (which stays empty until scores are calculated via
-      // calculateScoresBatch/calculateScore).
-      getContestTokenIds(contestId),
-      getContestWinners(contestId),
-      getPayoutRules(),
-    ]);
-
-    const meta = {
-      prizePool: contest.totalPrizePool,
-      currency: contest.currency,
-      payoutPercentages: contest.payoutStructure.payoutPercentages ?? [],
-    };
-
-    if (tokenIds.length === 0) return { ...meta, entries: [] };
-
-    const gameIds = contest.gameIds.map(id => id.toString());
-    const gameIdsBigInt = contest.gameIds.map(id => BigInt(id));
-
-    // The week's scores and the per-entry reads both only need the contest,
-    // so they overlap rather than queue behind one another.
-    const [games, rawEntries] = await Promise.all([
-      fetchWeekGames(
-        Number(contest.year),
-        Number(contest.seasonType),
-        Number(contest.weekNumber),
-      ),
-      Promise.all(
-        tokenIds.map(async tokenId => {
-          const [owner, prediction, picks] = await Promise.all([
-            getNFTOwner(tokenId),
-            getNFTPrediction(tokenId),
-            getUserPicks(tokenId, gameIdsBigInt),
-          ]);
-
-          return {
-            tokenId,
-            address: owner,
-            originalPredictor: prediction[1] as string, // predictor is second element
-            submissionTime: Number(prediction[2]) * 1000,
-            tiebreakerPoints: Number(prediction[3]),
-            picks: picks.map(pick => Number(pick)),
-          };
-        }),
-      ),
-    ]);
-
-    // Rank entries client-side from live/final game results, since the
-    // on-chain leaderboard/winners are only populated after scoring runs.
-    const ranked = rankEntries(
-      rawEntries.map(entry => ({
-        tokenId: entry.tokenId,
-        picks: entry.picks,
-        tiebreakerPoints: entry.tiebreakerPoints,
-      })),
-      gameIds,
-      games,
-      contest.tiebreakerGameId.toString(),
-    );
-    const rankByToken = new Map(ranked.map(entry => [entry.tokenId, entry]));
-
-    const entries: LeaderboardEntry[] = rawEntries
-      .map(entry => {
-        const rankedEntry = rankByToken.get(entry.tokenId);
-        const winnerIndex = winners.findIndex(
-          id => Number(id) === entry.tokenId,
-        );
-        const prize = calculateEntryPrize(
-          contest.totalPrizePool,
-          payoutRules.fee,
-          payoutRules.denominator,
-          contest.payoutStructure.payoutPercentages,
-          winnerIndex,
-        );
-
-        return {
-          tokenId: entry.tokenId,
-          address: entry.address,
-          originalPredictor: entry.originalPredictor,
-          correctPicks: rankedEntry?.correctPicks ?? 0,
-          totalGames: gameIds.length,
-          tiebreakerPoints: entry.tiebreakerPoints,
-          submissionTime: entry.submissionTime,
-          rank: rankedEntry?.rank ?? 0,
-          prize,
-        };
-      })
-      .sort((a, b) => a.rank - b.rank);
-
-    return { ...meta, entries };
-  };
-
-  // Held by react-query rather than component state, so reopening the dialog
-  // within the client's stale window paints from cache instead of redoing
-  // every read.
+  // One request, served from Redis and shared by every viewer of this contest.
+  // This used to be the contract reads themselves, run in each browser, so N
+  // viewers cost N full read sets and there was no server hop for a cache.
   const { data, isPending } = useQuery({
     queryKey: ["pickem-leaderboard", contestId],
-    queryFn: fetchLeaderboard,
+    queryFn: () => fetchLeaderboard(contestId),
   });
   const { entries, prizePool, currency, payoutPercentages } =
     data ?? EMPTY_DATA;
