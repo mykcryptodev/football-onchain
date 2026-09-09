@@ -361,6 +361,18 @@ export default function PickemContestClient({
       void queryClient.invalidateQueries({ queryKey: ["ownedPickemEntries"] });
       void queryClient.invalidateQueries({ queryKey: ["myCurrentWeekPicks"] });
       void queryClient.invalidateQueries({ queryKey: ["pickemContests"] });
+      // The leaderboard is cached server-side and shared by every viewer, so a
+      // brand new entry would otherwise be missing from its own author's board
+      // until the TTL lapsed. Drop the server copy before refetching, or the
+      // refetch just re-reads the stale one.
+      void (async () => {
+        await fetch(`/api/contest/${contest.id}/leaderboard`, {
+          method: "DELETE",
+        }).catch(() => undefined);
+        await queryClient.invalidateQueries({
+          queryKey: ["pickem-leaderboard"],
+        });
+      })();
       setShareModalOpen(true);
     } catch (error) {
       if (identityRef.current !== activeIdentity) return;
