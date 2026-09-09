@@ -35,12 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const pathname = headersList.get("x-pathname") || "/";
   const baseUrl = getBaseUrl();
   const fullUrl = `${baseUrl}${pathname}`;
-  const ogImageUrl = `${baseUrl}/og.png`;
+  const ogImageUrl = `${baseUrl}/bankrball-og-v2.png`;
 
-  const title =
-    "BankrBall - Ultimate Football Squares and Pick'em Experience";
+  const title = "BankrBall — Football, Onchain";
   const description =
-    "Create and join football squares contests with blockchain-powered fair play and instant payouts. The ultimate football boxes experience.";
+    "Pick the winners. Follow every game. Play NFL Pick’em and football squares with friends on Base.";
 
   return {
     title,
@@ -52,7 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
         {
           url: ogImageUrl,
           width: 1200,
-          height: 800,
+          height: 630,
           alt: title,
         },
       ],
