@@ -53,12 +53,23 @@ function member(contestId: bigint, tokenId: bigint): string {
   return `${contestId}:${tokenId}`;
 }
 
+/**
+ * Bumped whenever the rendered card's layout changes. It is part of both the
+ * blob pathname and the Redis status key, so a bump makes every already-
+ * rendered entry look unrendered: it re-renders on its next visit and lands
+ * at a URL no CDN or X image cache has seen. Reusing the pathname would not
+ * work — these blobs are written with a one-year `cacheControlMaxAge`, so an
+ * overwrite in place keeps serving the old bytes. Blobs from an earlier
+ * version are left behind; retention cleanup only knows the current path.
+ */
+export const PICKEM_IMAGE_VERSION = "v2";
+
 export function imagePathname(contestId: bigint, tokenId: bigint): string {
-  return `pickem/${contestId}/${tokenId}.png`;
+  return `pickem/${contestId}/${tokenId}-${PICKEM_IMAGE_VERSION}.png`;
 }
 
 function statusKey(contestId: bigint, tokenId: bigint): string {
-  return `pickem:image:status:${member(contestId, tokenId)}`;
+  return `pickem:image:status:${PICKEM_IMAGE_VERSION}:${member(contestId, tokenId)}`;
 }
 
 function parseRecord(raw: unknown): PickemImageRecord | null {

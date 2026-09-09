@@ -26,7 +26,8 @@ fixes both.
    status is known (usually `"pending"` on the very first call).
 2. **Render.** `attemptImmediateRender()` (`src/lib/pickem-image-render.ts`)
    draws the card with `next/og`'s `ImageResponse` and uploads the PNG to
-   Vercel Blob at a deterministic path, `pickem/{contestId}/{tokenId}.png`
+   Vercel Blob at a deterministic path,
+   `pickem/{contestId}/{tokenId}-{version}.png`
    (`addRandomSuffix: false`, `allowOverwrite: true` — a re-render always
    replaces the same object). On success it writes `status: "ready"` plus the
    blob URL to Redis. On failure it schedules a retry instead of throwing.
@@ -62,6 +63,23 @@ fixes both.
    (`pickem:image:retention`, scored by expiry time) and deletes the blob
    plus its Redis status record once an entry's image has been `"ready"` or
    `"failed"` for `PICKEM_IMAGE_RETENTION_DAYS` (default 30).
+
+## Changing the card's layout
+
+Bump `PICKEM_IMAGE_VERSION` in `src/lib/pickem-image-status.ts`. It is part of
+both the blob pathname and the Redis status key, so a bump makes every
+already-rendered entry look unrendered: it re-renders on its next visit and
+lands at a URL no CDN or X image cache has seen. Editing the card alone
+changes nothing for existing entries — their status records still say
+`"ready"` and still point at the old blob, and those blobs are written with a
+one-year `cacheControlMaxAge`, so even overwriting the same path keeps serving
+the old bytes. Blobs from an earlier version are left behind; retention
+cleanup only knows the current path.
+
+The card must also keep its bottom band clear — see `X_OVERLAY_SAFE_HEIGHT` in
+`src/lib/og/pickem-picks-card.tsx`. X draws the link-card title in a pill
+anchored to the bottom-left of the image, so anything drawn there is covered
+up in a timeline.
 
 ## Module map
 

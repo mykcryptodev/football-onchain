@@ -82,6 +82,24 @@ export async function contest(id: bigint) {
   return c;
 }
 type Contest = Awaited<ReturnType<typeof contest>>;
+interface EspnLogo {
+  href?: string;
+  rel?: string[];
+}
+
+/**
+ * The summary endpoint this function uses reports team marks as a `logos`
+ * array — one entry per variant — unlike the scoreboard endpoint the rest of
+ * the app reads, which flattens it to a single `team.logo`. Prefer the
+ * light-background "default" variant and fall back to whatever is first,
+ * since the entry page renders these on a light surface.
+ */
+function teamLogo(logos: EspnLogo[] | undefined): string | undefined {
+  if (!logos?.length) return undefined;
+  const preferred = logos.find(l => l.rel?.includes("default")) ?? logos[0];
+  return preferred.href;
+}
+
 async function fetchMatchup(gameId: string): Promise<Matchup> {
   const response = await fetch(
     `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${gameId}`,
@@ -93,7 +111,7 @@ async function fetchMatchup(gameId: string): Promise<Matchup> {
   const game = data.header?.competitions?.[0];
   type Team = {
     homeAway: string;
-    team?: { abbreviation?: string };
+    team?: { abbreviation?: string; logos?: EspnLogo[] };
     score?: string;
   };
   const away = game?.competitors?.find((t: Team) => t.homeAway === "away") as
@@ -106,6 +124,8 @@ async function fetchMatchup(gameId: string): Promise<Matchup> {
     gameId,
     away: away.team.abbreviation,
     home: home.team.abbreviation,
+    awayLogo: teamLogo(away.team.logos),
+    homeLogo: teamLogo(home.team.logos),
     kickoff: game.date,
     awayScore: away.score === undefined ? undefined : Number(away.score),
     homeScore: home.score === undefined ? undefined : Number(home.score),

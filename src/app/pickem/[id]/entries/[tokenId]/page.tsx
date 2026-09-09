@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import PickemEntryOwner from "@/components/pickem/PickemEntryOwner";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
+import TeamMark from "@/components/pickem/TeamMark";
 import {
   contest,
   entries,
@@ -93,14 +94,21 @@ export default async function EntryPage({ params }: Props) {
       <PickemEntryOwner owner={entry.owner} />
       <ol className="divide-y rounded-2xl border px-4">
         {games.map((g, i) => (
-          <li
-            key={g.gameId}
-            className="flex items-center justify-between gap-3 py-4"
-          >
-            <span>
-              {i + 1}. {g.away} vs {g.home}
+          <li key={g.gameId} className="flex items-center gap-3 py-4">
+            <span className="w-6 shrink-0 font-mono text-sm text-muted-foreground">
+              {i + 1}
             </span>
-            <strong>{entry.picks[i] === 1 ? g.home : g.away}</strong>
+            <TeamMark
+              logo={g.awayLogo}
+              name={g.away}
+              picked={entry.picks[i] === 0}
+            />
+            <span className="text-xs text-muted-foreground">@</span>
+            <TeamMark
+              logo={g.homeLogo}
+              name={g.home}
+              picked={entry.picks[i] === 1}
+            />
           </li>
         ))}
       </ol>
