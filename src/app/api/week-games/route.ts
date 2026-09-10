@@ -15,6 +15,9 @@ interface GameInfo {
   awayScore?: number;
   status?: string;
   completed?: boolean;
+  displayClock?: string;
+  period?: number;
+  shortDetail?: string;
   odds?: {
     details?: string;
     overUnder?: number;
@@ -187,7 +190,7 @@ export async function GET(request: NextRequest) {
     // Use the format from the result.json example
     const espnResponse = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${year}&seasontype=${seasonType}&week=${weekNumber}`,
-      { next: { revalidate: 300 } }, // Cache for 5 minutes
+      { next: { revalidate: 60 } }, // Cache for 1 minute so live scores stay fresh
     );
 
     console.log(`ESPN response status: ${espnResponse.status}`);
@@ -273,6 +276,9 @@ export async function GET(request: NextRequest) {
         awayScore: awayTeam.score ? parseInt(awayTeam.score) : undefined,
         status: competition.status.type.name,
         completed: competition.status.type.completed,
+        displayClock: competition.status.displayClock || undefined,
+        period: competition.status.period || undefined,
+        shortDetail: competition.status.type.shortDetail || undefined,
         odds: oddsData,
       };
     });

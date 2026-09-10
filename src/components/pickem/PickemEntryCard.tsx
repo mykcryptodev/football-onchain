@@ -20,6 +20,7 @@ import { useNow } from "@/hooks/useNow";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { formatKickoffTime } from "@/lib/date";
 import {
+  formatLiveGameStatus,
   isGameComplete,
   isGameInProgress,
   SEASON_TYPE_LABELS,
@@ -36,6 +37,8 @@ function resultStyles(result: CurrentWeekGamePick["result"]) {
       return "border-green-500/25 bg-green-500/8";
     case "live-losing":
       return "border-red-500/25 bg-red-500/8";
+    case "live-tied":
+      return "border-primary/30 bg-primary/10";
     default:
       return "bg-background";
   }
@@ -48,7 +51,11 @@ function ResultIcon({ result }: { result: CurrentWeekGamePick["result"] }) {
   if (result === "wrong") {
     return <X className="size-4 text-red-600 dark:text-red-400" />;
   }
-  if (result === "live-winning" || result === "live-losing") {
+  if (
+    result === "live-winning" ||
+    result === "live-losing" ||
+    result === "live-tied"
+  ) {
     return <CircleDot className="size-4 text-primary" />;
   }
   return <Minus className="size-4 text-muted-foreground" />;
@@ -64,6 +71,8 @@ function resultLabel(result: CurrentWeekGamePick["result"]) {
       return "Winning";
     case "live-losing":
       return "Losing";
+    case "live-tied":
+      return "Tied";
     default:
       return "Not started";
   }
@@ -79,8 +88,9 @@ function gameStatusLabel(game: CurrentWeekGamePick) {
   ) {
     return "Final";
   }
-  if (isGameInProgress(game.status, game.homeScore, game.awayScore)) {
-    return "Live";
+  const liveStatus = formatLiveGameStatus(game);
+  if (liveStatus) {
+    return liveStatus;
   }
   return game.kickoff
     ? formatKickoffTime(game.kickoff, {
@@ -88,6 +98,14 @@ function gameStatusLabel(game: CurrentWeekGamePick) {
         timeOptions: { hour: "numeric", minute: "2-digit" },
       })
     : "Schedule unavailable";
+}
+
+function isLiveResult(result: CurrentWeekGamePick["result"]) {
+  return (
+    result === "live-winning" ||
+    result === "live-losing" ||
+    result === "live-tied"
+  );
 }
 
 function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
@@ -98,8 +116,7 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
     hasScore &&
     (game.result === "correct" ||
       game.result === "wrong" ||
-      game.result === "live-winning" ||
-      game.result === "live-losing" ||
+      isLiveResult(game.result) ||
       isGameInProgress(game.status, game.homeScore, game.awayScore));
 
   return (
@@ -114,13 +131,18 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-          <span>
-            {game.result === "pending" &&
-            isGameInProgress(game.status, game.homeScore, game.awayScore)
-              ? "Tied live"
-              : resultLabel(game.result)}
-          </span>
-          <span>{gameStatusLabel(game)}</span>
+          {isLiveResult(game.result) ? (
+            <span className="flex items-center gap-1.5 font-semibold text-red-500">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+              </span>
+              LIVE · {resultLabel(game.result)}
+            </span>
+          ) : (
+            <span>{resultLabel(game.result)}</span>
+          )}
+          <span className="tabular-nums">{gameStatusLabel(game)}</span>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <TeamMark
