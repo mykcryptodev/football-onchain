@@ -65,9 +65,9 @@ export function PickemHome() {
       const isCurrent = (c: PickemContestListItem) =>
         Boolean(
           currentWeek &&
-          c.year === currentWeek.seasonYear &&
-          c.seasonType === currentWeek.seasonType &&
-          c.weekNumber === currentWeek.week,
+            c.year === currentWeek.seasonYear &&
+            c.seasonType === currentWeek.seasonType &&
+            c.weekNumber === currentWeek.week,
         );
       return (
         Number(b.id === featuredPickemContestOfWeekId) -
@@ -102,7 +102,9 @@ export function PickemHome() {
                 <Link href="/pickem">Find a contest</Link>
               </Button>
             </div>
-            <FeaturedPickemHero contestId={open[0]?.id} />
+            <FeaturedPickemHero
+              contestId={featuredPickemContestOfWeekId ?? open[0]?.id}
+            />
           </div>
           {contests.map(contest => (
             <ResumeDraft key={contest.id} contest={contest} />
