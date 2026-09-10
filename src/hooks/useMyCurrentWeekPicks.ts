@@ -29,6 +29,9 @@ export interface CurrentWeekGamePick {
   awayScore?: number;
   status?: string;
   completed?: boolean;
+  displayClock?: string;
+  period?: number;
+  shortDetail?: string;
   pick: number;
   result: PickResult;
 }
@@ -70,6 +73,9 @@ interface WeekGameApi {
   awayScore?: number;
   status?: string;
   completed?: boolean;
+  displayClock?: string;
+  period?: number;
+  shortDetail?: string;
 }
 
 interface UseMyCurrentWeekPicksReturn {
@@ -115,7 +121,7 @@ export function useMyCurrentWeekPicks(
       account?.address && owned.data && (scope !== "current" || currentWeek),
     ),
     staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    refetchInterval: 30 * 1000,
     queryFn: async (): Promise<CurrentWeekPickemEntry[]> => {
       if (
         !account?.address ||
@@ -244,6 +250,9 @@ export function useMyCurrentWeekPicks(
                   awayScore: game.awayScore,
                   status: game.status,
                   completed: game.completed,
+                  displayClock: game.displayClock,
+                  period: game.period,
+                  shortDetail: game.shortDetail,
                   pick,
                   result: getPickResult(game, pick),
                 };

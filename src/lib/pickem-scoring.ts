@@ -3,6 +3,7 @@ export type PickResult =
   | "wrong"
   | "live-winning"
   | "live-losing"
+  | "live-tied"
   | "pending";
 
 export interface ScoredGame {
@@ -11,6 +12,9 @@ export interface ScoredGame {
   awayScore?: number;
   status?: string;
   completed?: boolean;
+  displayClock?: string;
+  period?: number;
+  shortDetail?: string;
 }
 
 export interface RankableEntry {
@@ -59,6 +63,39 @@ export function isGameInProgress(
   return (homeScore ?? 0) > 0 || (awayScore ?? 0) > 0;
 }
 
+const NFL_PERIODS = 4;
+
+/**
+ * Format a live status line like "Q2 7:41" or "Halftime".
+ * Returns null for games that are not in progress.
+ */
+export function formatLiveGameStatus(game: ScoredGame): string | null {
+  if (!isGameInProgress(game.status, game.homeScore, game.awayScore)) {
+    return null;
+  }
+
+  const detail = game.shortDetail?.trim();
+  if (detail) {
+    return detail;
+  }
+
+  const normalized = (game.status ?? "").toLowerCase();
+  if (normalized.includes("halftime")) {
+    return "Halftime";
+  }
+
+  if (game.period && game.period > 0) {
+    const label =
+      game.period <= NFL_PERIODS
+        ? `Q${game.period}`
+        : `OT${game.period - NFL_PERIODS > 1 ? game.period - NFL_PERIODS : ""}`;
+    const clock = game.displayClock?.trim();
+    return clock ? `${label} ${clock}` : label;
+  }
+
+  return "Live";
+}
+
 export function isFinishedTie(game: ScoredGame): boolean {
   return (
     isGameComplete(game.status, game.completed) &&
@@ -95,7 +132,7 @@ export function getPickResult(game: ScoredGame, pick: number): PickResult {
   }
 
   if (inProgress) {
-    if (winner === null) return "pending";
+    if (winner === null) return "live-tied";
     return pick === winner ? "live-winning" : "live-losing";
   }
 
