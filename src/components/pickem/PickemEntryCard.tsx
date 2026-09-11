@@ -108,16 +108,25 @@ function isLiveResult(result: CurrentWeekGamePick["result"]) {
   );
 }
 
+// Bold the side that's ahead, dim the side that's behind, leave ties neutral.
+// Independent of the pick, which TeamMark already highlights.
+function scoreClass(score: number, opponentScore: number) {
+  if (score === opponentScore) return undefined;
+  return score > opponentScore ? "font-bold" : "text-muted-foreground";
+}
+
 function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
   const pickedAway = game.pick === 0;
   const pickedHome = game.pick === 1;
-  const hasScore = game.homeScore !== undefined && game.awayScore !== undefined;
+  const awayScore = game.awayScore;
+  const homeScore = game.homeScore;
+  const hasScore = homeScore !== undefined && awayScore !== undefined;
   const showScore =
     hasScore &&
     (game.result === "correct" ||
       game.result === "wrong" ||
       isLiveResult(game.result) ||
-      isGameInProgress(game.status, game.homeScore, game.awayScore));
+      isGameInProgress(game.status, homeScore, awayScore));
 
   return (
     <div
@@ -144,32 +153,46 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
           )}
           <span className="tabular-nums">{gameStatusLabel(game)}</span>
         </div>
-        <div className="mt-1.5 flex items-center gap-2">
-          <TeamMark
-            abbreviation={game.awayAbbreviation}
-            logo={game.awayLogo}
-            name={game.awayTeam}
-            picked={pickedAway}
-          />
-          <span className="text-[10px] text-muted-foreground">@</span>
-          <TeamMark
-            abbreviation={game.homeAbbreviation}
-            logo={game.homeLogo}
-            name={game.homeTeam}
-            picked={pickedHome}
-          />
+        {/* Scoreboard rows: away on top, home below, each score on its team's line. */}
+        <div className="mt-1.5 space-y-1">
+          <div className="flex items-center justify-between gap-3">
+            <TeamMark
+              abbreviation={game.awayAbbreviation}
+              logo={game.awayLogo}
+              name={game.awayTeam}
+              picked={pickedAway}
+            />
+            {showScore ? (
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-sm tabular-nums",
+                  scoreClass(awayScore, homeScore),
+                )}
+              >
+                {awayScore}
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <TeamMark
+              abbreviation={game.homeAbbreviation}
+              logo={game.homeLogo}
+              name={game.homeTeam}
+              picked={pickedHome}
+            />
+            {showScore ? (
+              <span
+                className={cn(
+                  "shrink-0 font-mono text-sm tabular-nums",
+                  scoreClass(homeScore, awayScore),
+                )}
+              >
+                {homeScore}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
-      {showScore ? (
-        <div className="shrink-0 text-right font-mono text-sm tabular-nums">
-          <p className={pickedAway ? "font-bold" : "text-muted-foreground"}>
-            {game.awayScore}
-          </p>
-          <p className={pickedHome ? "font-bold" : "text-muted-foreground"}>
-            {game.homeScore}
-          </p>
-        </div>
-      ) : null}
     </div>
   );
 }
