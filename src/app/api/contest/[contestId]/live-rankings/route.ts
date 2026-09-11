@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isGameComplete, isGameInProgress } from "@/lib/pickem-scoring";
+
 const ESPN_BASE_URL =
   "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
 
@@ -126,11 +128,15 @@ export async function POST(request: NextRequest) {
         const liveScore = gameScoresMap.get(gameId);
 
         if (liveScore) {
-          // Count game if it has started (has any score or is completed/in progress)
+          // Count game if it has started. ESPN reports STATUS_SCHEDULED, so
+          // use the shared helpers rather than matching a bare "SCHEDULED".
           const hasStarted =
-            liveScore.homeScore > 0 ||
-            liveScore.awayScore > 0 ||
-            liveScore.status !== "SCHEDULED";
+            isGameComplete(liveScore.status, liveScore.completed) ||
+            isGameInProgress(
+              liveScore.status,
+              liveScore.homeScore,
+              liveScore.awayScore,
+            );
 
           if (hasStarted) {
             totalScoredGames++;
