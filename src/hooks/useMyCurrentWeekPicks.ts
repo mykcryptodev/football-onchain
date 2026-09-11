@@ -34,6 +34,9 @@ export interface CurrentWeekGamePick {
   shortDetail?: string;
   pick: number;
   result: PickResult;
+  /** Other wallets in the contest that picked each side (deduped, viewer excluded). */
+  awayPickers: string[];
+  homePickers: string[];
 }
 
 export interface CurrentWeekPickemEntry {
@@ -105,6 +108,7 @@ export function useMyCurrentWeekPicks(
     getContestTokenIds,
     getUserPicks,
     getNFTPrediction,
+    getNFTOwner,
   } = usePickemContract();
 
   const weekKey = currentWeek
@@ -187,12 +191,14 @@ export function useMyCurrentWeekPicks(
 
           const contestEntries = await Promise.all(
             contestTokenIds.map(async tokenId => {
-              const [picks, prediction] = await Promise.all([
+              const [picks, prediction, owner] = await Promise.all([
                 getUserPicks(tokenId, gameIdsBigInt),
                 getNFTPrediction(tokenId),
+                getNFTOwner(tokenId),
               ]);
               return {
                 tokenId,
+                owner: owner.toLowerCase(),
                 picks: picks.map(pick => Number(pick)),
                 tiebreakerPoints: Number(prediction[3]),
                 claimed: Boolean(prediction[5]),
@@ -208,6 +214,22 @@ export function useMyCurrentWeekPicks(
           );
           const rankByToken = new Map(
             ranked.map(entry => [entry.tokenId, entry]),
+          );
+
+          // getUserPicks returns picks in the order of gameIds, so index i is
+          // gameIds[i]. Dedupe by wallet and leave out the viewer's own wallet.
+          const viewer = account.address.toLowerCase();
+          const pickersByGameId = new Map(
+            gameIds.map((gameId, index) => {
+              const away = new Set<string>();
+              const home = new Set<string>();
+              for (const entry of contestEntries) {
+                if (entry.owner === viewer) continue;
+                if (entry.picks[index] === 0) away.add(entry.owner);
+                if (entry.picks[index] === 1) home.add(entry.owner);
+              }
+              return [gameId, { away: [...away], home: [...home] }];
+            }),
           );
 
           return tokenIds.map(tokenId => {
@@ -227,6 +249,9 @@ export function useMyCurrentWeekPicks(
               .map(gameId => {
                 const game = gamesById.get(gameId);
                 const pick = pickByGameId.get(gameId) ?? -1;
+                const pickers = pickersByGameId.get(gameId);
+                const awayPickers = pickers?.away ?? [];
+                const homePickers = pickers?.home ?? [];
                 if (!game) {
                   return {
                     gameId,
@@ -235,6 +260,8 @@ export function useMyCurrentWeekPicks(
                     kickoff: "",
                     pick,
                     result: "pending" as const,
+                    awayPickers,
+                    homePickers,
                   };
                 }
                 return {
@@ -255,6 +282,8 @@ export function useMyCurrentWeekPicks(
                   shortDetail: game.shortDetail,
                   pick,
                   result: getPickResult(game, pick),
+                  awayPickers,
+                  homePickers,
                 };
               })
               .sort((a, b) => {
