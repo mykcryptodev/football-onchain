@@ -7,6 +7,7 @@ import { useActiveAccount } from "thirdweb/react";
 
 import PickemLeaderboard from "@/components/pickem/PickemLeaderboard";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
+import PickerAvatars from "@/components/pickem/PickerAvatars";
 import TeamMark from "@/components/pickem/TeamMark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -162,16 +163,19 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
               name={game.awayTeam}
               picked={pickedAway}
             />
-            {showScore ? (
-              <span
-                className={cn(
-                  "shrink-0 font-mono text-sm tabular-nums",
-                  scoreClass(awayScore, homeScore),
-                )}
-              >
-                {awayScore}
-              </span>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-3">
+              <PickerAvatars addresses={game.awayPickers} />
+              {showScore ? (
+                <span
+                  className={cn(
+                    "w-6 text-right font-mono text-sm tabular-nums",
+                    scoreClass(awayScore, homeScore),
+                  )}
+                >
+                  {awayScore}
+                </span>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center justify-between gap-3">
             <TeamMark
@@ -180,16 +184,19 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
               name={game.homeTeam}
               picked={pickedHome}
             />
-            {showScore ? (
-              <span
-                className={cn(
-                  "shrink-0 font-mono text-sm tabular-nums",
-                  scoreClass(homeScore, awayScore),
-                )}
-              >
-                {homeScore}
-              </span>
-            ) : null}
+            <div className="flex shrink-0 items-center gap-3">
+              <PickerAvatars addresses={game.homePickers} />
+              {showScore ? (
+                <span
+                  className={cn(
+                    "w-6 text-right font-mono text-sm tabular-nums",
+                    scoreClass(homeScore, awayScore),
+                  )}
+                >
+                  {homeScore}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
