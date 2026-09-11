@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActiveAccount } from "thirdweb/react";
 
 import { PickerAvatar, shortAddress } from "@/components/pickem/PickerAvatars";
@@ -20,12 +21,19 @@ function PickerRow({ address, isYou }: { address: string; isYou: boolean }) {
   const name = profile?.name?.trim() || shortAddress(address);
 
   return (
-    <li className="flex min-w-0 items-center gap-2">
-      <PickerAvatar address={address} className="size-7" />
-      <span className="truncate text-sm">{name}</span>
-      {isYou ? (
-        <span className="shrink-0 text-[11px] text-muted-foreground">You</span>
-      ) : null}
+    <li>
+      <Link
+        className="-mx-1 flex min-w-0 items-center gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-muted"
+        href={`/profile/${address}`}
+      >
+        <PickerAvatar address={address} className="size-7" />
+        <span className="truncate text-sm">{name}</span>
+        {isYou ? (
+          <span className="shrink-0 text-[11px] text-muted-foreground">
+            You
+          </span>
+        ) : null}
+      </Link>
     </li>
   );
 }
