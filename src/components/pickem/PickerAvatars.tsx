@@ -22,7 +22,7 @@ function PickerAvatar({ address }: { address: string }) {
 
   return (
     <span
-      className="block size-5 shrink-0 overflow-hidden rounded-full ring-2 ring-background"
+      className="relative isolate block size-5 shrink-0 overflow-hidden rounded-full ring-2 ring-background"
       title={label}
     >
       {avatarUrl ? (
