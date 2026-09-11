@@ -48,6 +48,7 @@ export interface CurrentWeekPickemEntry {
   totalEntries: number;
   gamesFinalized: boolean;
   currency: string;
+  entryFee: bigint;
   prizeWon: bigint;
   claimed: boolean;
   payoutComplete: boolean;
@@ -92,14 +93,17 @@ interface UseMyCurrentWeekPicksReturn {
 
 export function useMyCurrentWeekPicks(
   scope: "current" | "all" | number = "current",
+  /** Whose entries to load. Defaults to the connected wallet. */
+  ownerAddress?: string,
 ): UseMyCurrentWeekPicksReturn {
   const account = useActiveAccount();
+  const owner = ownerAddress ?? account?.address;
   const {
     currentWeek,
     isLoading: isWeekLoading,
     error: weekError,
   } = useCurrentNFLWeek();
-  const owned = useOwnedPickemEntries();
+  const owned = useOwnedPickemEntries(owner);
   const {
     getPayoutRules,
     getContestWinners,
@@ -117,21 +121,18 @@ export function useMyCurrentWeekPicks(
 
   const query = useQuery({
     queryKey: [
-      ...queryKeys.myCurrentWeekPicks(account?.address, weekKey),
+      ...queryKeys.myCurrentWeekPicks(owner, weekKey),
       scope,
       owned.data,
     ],
     enabled: Boolean(
-      account?.address && owned.data && (scope !== "current" || currentWeek),
+      owner && owned.data && (scope !== "current" || currentWeek),
     ),
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
+    // Someone else's profile doesn't need live polling.
+    staleTime: ownerAddress ? 5 * 60 * 1000 : 30 * 1000,
+    refetchInterval: ownerAddress ? false : 30 * 1000,
     queryFn: async (): Promise<CurrentWeekPickemEntry[]> => {
-      if (
-        !account?.address ||
-        !owned.data ||
-        (scope === "current" && !currentWeek)
-      )
+      if (!owner || !owned.data || (scope === "current" && !currentWeek))
         return [];
 
       const contestIds = [...new Set(owned.data.map(entry => entry.contestId))];
@@ -217,8 +218,8 @@ export function useMyCurrentWeekPicks(
           );
 
           // getUserPicks returns picks in the order of gameIds, so index i is
-          // gameIds[i]. Dedupe by wallet and leave out the viewer's own wallet.
-          const viewer = account.address.toLowerCase();
+          // gameIds[i]. Dedupe by wallet and leave out the owner's own wallet.
+          const viewer = owner.toLowerCase();
           const pickersByGameId = new Map(
             gameIds.map((gameId, index) => {
               const away = new Set<string>();
@@ -303,6 +304,7 @@ export function useMyCurrentWeekPicks(
               totalEntries: Number(contest.totalEntries),
               gamesFinalized: contest.gamesFinalized,
               currency: contest.currency,
+              entryFee: contest.entryFee,
               payoutComplete: contest.payoutComplete,
               payoutDeadline: Number(contest.payoutDeadline) * 1000,
               claimed: userEntry?.claimed ?? false,
@@ -343,7 +345,7 @@ export function useMyCurrentWeekPicks(
   return {
     isConnected: Boolean(account?.address),
     isLoading:
-      Boolean(account) &&
+      Boolean(owner) &&
       ((scope === "current" && isWeekLoading) ||
         owned.isLoading ||
         query.isLoading),
