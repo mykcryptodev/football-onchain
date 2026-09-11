@@ -1,4 +1,5 @@
 "use client";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useActiveAccount } from "thirdweb/react";
 
@@ -6,13 +7,12 @@ import { PickerAvatar, shortAddress } from "@/components/pickem/PickerAvatars";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBoxesContests } from "@/hooks/useBoxesContests";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
-import {
-  type CurrentWeekPickemEntry,
-  useMyCurrentWeekPicks,
-} from "@/hooks/useMyCurrentWeekPicks";
-import { useOwnedBoxes } from "@/hooks/useOwnedBoxes";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
+import type {
+  PlayerProfileData,
+  ProfilePickemEntry,
+} from "@/lib/player-profile";
 import { cn } from "@/lib/utils";
 
 function Amount({
@@ -52,7 +52,7 @@ function Amount({
  * Pick'em P&L per currency, settled contests only: prizes won minus entry
  * fees. Entries in contests that haven't finalized are counted separately.
  */
-function PickemPnl({ entries }: { entries: CurrentWeekPickemEntry[] }) {
+function PickemPnl({ entries }: { entries: ProfilePickemEntry[] }) {
   const byCurrency = new Map<
     string,
     { spent: bigint; won: bigint; settled: number; open: number }
@@ -66,8 +66,8 @@ function PickemPnl({ entries }: { entries: CurrentWeekPickemEntry[] }) {
       open: 0,
     };
     if (entry.gamesFinalized) {
-      row.spent += entry.entryFee;
-      row.won += entry.prizeWon;
+      row.spent += BigInt(entry.entryFee);
+      row.won += BigInt(entry.prizeWon);
       row.settled += 1;
     } else {
       row.open += 1;
@@ -106,7 +106,7 @@ function PickemPnl({ entries }: { entries: CurrentWeekPickemEntry[] }) {
   );
 }
 
-function PickemEntryRow({ entry }: { entry: CurrentWeekPickemEntry }) {
+function PickemEntryRow({ entry }: { entry: ProfilePickemEntry }) {
   return (
     <li>
       <Link
@@ -127,11 +127,11 @@ function PickemEntryRow({ entry }: { entry: CurrentWeekPickemEntry }) {
           <p className="tabular-nums">
             {entry.correctPicks}/{entry.scoredGames || entry.totalGames}
           </p>
-          {entry.prizeWon > 0n ? (
+          {BigInt(entry.prizeWon) > 0n ? (
             <p className="text-xs">
               <Amount
                 signed
-                amount={entry.prizeWon}
+                amount={BigInt(entry.prizeWon)}
                 currency={entry.currency}
               />
             </p>
@@ -142,22 +142,20 @@ function PickemEntryRow({ entry }: { entry: CurrentWeekPickemEntry }) {
   );
 }
 
-function SquaresSection({ address }: { address: string }) {
-  const owned = useOwnedBoxes(address);
+function SquaresSection({
+  squares,
+}: {
+  squares: PlayerProfileData["squares"];
+}) {
   const { contests } = useBoxesContests();
   const titles = new Map(contests.map(c => [c.id, c.title]));
 
-  if (owned.isLoading) return <Skeleton className="h-16 w-full" />;
-  if (owned.error)
-    return (
-      <p className="text-sm text-muted-foreground">Couldn’t load boxes.</p>
-    );
-  if (!owned.data?.length)
+  if (squares.length === 0)
     return <p className="text-sm text-muted-foreground">No boxes held.</p>;
 
   return (
     <ul className="space-y-2">
-      {owned.data.map(({ contestId, boxTokenIds }) => (
+      {squares.map(({ contestId, boxCount }) => (
         <li key={contestId}>
           <Link
             className="flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors hover:border-primary/40"
@@ -172,7 +170,7 @@ function SquaresSection({ address }: { address: string }) {
               </p>
             </div>
             <p className="shrink-0 text-sm tabular-nums">
-              {boxTokenIds.length} {boxTokenIds.length === 1 ? "box" : "boxes"}
+              {boxCount} {boxCount === 1 ? "box" : "boxes"}
             </p>
           </Link>
         </li>
@@ -186,7 +184,17 @@ export default function PlayerProfile({ address }: { address: string }) {
   const isYou = account?.address.toLowerCase() === address;
   const { profile } = useUserProfile(address);
   const name = profile?.name?.trim();
-  const { entries, isLoading, error } = useMyCurrentWeekPicks("all", address);
+  // Built and cached server-side (see lib/player-profile).
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["playerProfile", address],
+    staleTime: 60 * 1000,
+    queryFn: async (): Promise<PlayerProfileData> => {
+      const response = await fetch(`/api/profile/${address}`);
+      if (!response.ok) throw new Error("Failed to load profile");
+      return response.json();
+    },
+  });
+  const entries = data?.pickem ?? [];
 
   return (
     <main className="mx-auto max-w-2xl space-y-8 px-4 py-8">
@@ -240,7 +248,13 @@ export default function PlayerProfile({ address }: { address: string }) {
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Squares</h2>
-        <SquaresSection address={address} />
+        {isLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : error ? (
+          <p className="text-sm text-muted-foreground">Couldn’t load boxes.</p>
+        ) : (
+          <SquaresSection squares={data?.squares ?? []} />
+        )}
       </section>
 
       <p className="text-xs text-muted-foreground">
