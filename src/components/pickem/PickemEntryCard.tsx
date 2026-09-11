@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
+import PickemGameDialog from "@/components/pickem/PickemGameDialog";
 import PickemLeaderboard from "@/components/pickem/PickemLeaderboard";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
 import PickerAvatars from "@/components/pickem/PickerAvatars";
@@ -128,79 +129,92 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
       game.result === "wrong" ||
       isLiveResult(game.result) ||
       isGameInProgress(game.status, homeScore, awayScore));
+  const statusLabel = gameStatusLabel(game);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-2xl border px-3 py-3 sm:px-4",
-        resultStyles(game.result),
-      )}
-    >
-      <div className="grid size-8 shrink-0 place-items-center rounded-full bg-background/80">
-        <ResultIcon result={game.result} />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-          {isLiveResult(game.result) ? (
-            <span className="flex items-center gap-1.5 font-semibold text-red-500">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+    <>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-4",
+          resultStyles(game.result),
+        )}
+        onClick={() => setDetailsOpen(true)}
+      >
+        <div className="grid size-8 shrink-0 place-items-center rounded-full bg-background/80">
+          <ResultIcon result={game.result} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+            {isLiveResult(game.result) ? (
+              <span className="flex items-center gap-1.5 font-semibold text-red-500">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+                </span>
+                LIVE · {resultLabel(game.result)}
               </span>
-              LIVE · {resultLabel(game.result)}
-            </span>
-          ) : (
-            <span>{resultLabel(game.result)}</span>
-          )}
-          <span className="tabular-nums">{gameStatusLabel(game)}</span>
-        </div>
-        {/* Scoreboard rows: away on top, home below, each score on its team's line. */}
-        <div className="mt-1.5 space-y-1">
-          <div className="flex items-center justify-between gap-3">
-            <TeamMark
-              abbreviation={game.awayAbbreviation}
-              logo={game.awayLogo}
-              name={game.awayTeam}
-              picked={pickedAway}
-            />
-            <div className="flex shrink-0 items-center gap-3">
-              <PickerAvatars addresses={game.awayPickers} />
-              {showScore ? (
-                <span
-                  className={cn(
-                    "w-6 text-right font-mono text-sm tabular-nums",
-                    scoreClass(awayScore, homeScore),
-                  )}
-                >
-                  {awayScore}
-                </span>
-              ) : null}
+            ) : (
+              <span>{resultLabel(game.result)}</span>
+            )}
+            <span className="tabular-nums">{statusLabel}</span>
+          </div>
+          {/* Scoreboard rows: away on top, home below, each score on its team's line. */}
+          <div className="mt-1.5 space-y-1">
+            <div className="flex items-center justify-between gap-3">
+              <TeamMark
+                abbreviation={game.awayAbbreviation}
+                logo={game.awayLogo}
+                name={game.awayTeam}
+                picked={pickedAway}
+              />
+              <div className="flex shrink-0 items-center gap-3">
+                <PickerAvatars addresses={game.awayPickers} />
+                {showScore ? (
+                  <span
+                    className={cn(
+                      "w-6 text-right font-mono text-sm tabular-nums",
+                      scoreClass(awayScore, homeScore),
+                    )}
+                  >
+                    {awayScore}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <TeamMark
+                abbreviation={game.homeAbbreviation}
+                logo={game.homeLogo}
+                name={game.homeTeam}
+                picked={pickedHome}
+              />
+              <div className="flex shrink-0 items-center gap-3">
+                <PickerAvatars addresses={game.homePickers} />
+                {showScore ? (
+                  <span
+                    className={cn(
+                      "w-6 text-right font-mono text-sm tabular-nums",
+                      scoreClass(homeScore, awayScore),
+                    )}
+                  >
+                    {homeScore}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <TeamMark
-              abbreviation={game.homeAbbreviation}
-              logo={game.homeLogo}
-              name={game.homeTeam}
-              picked={pickedHome}
-            />
-            <div className="flex shrink-0 items-center gap-3">
-              <PickerAvatars addresses={game.homePickers} />
-              {showScore ? (
-                <span
-                  className={cn(
-                    "w-6 text-right font-mono text-sm tabular-nums",
-                    scoreClass(homeScore, awayScore),
-                  )}
-                >
-                  {homeScore}
-                </span>
-              ) : null}
-            </div>
-          </div>
         </div>
-      </div>
-    </div>
+      </button>
+      <PickemGameDialog
+        game={game}
+        open={detailsOpen}
+        showScore={showScore}
+        statusLabel={statusLabel}
+        onOpenChange={setDetailsOpen}
+      />
+    </>
   );
 }
 
