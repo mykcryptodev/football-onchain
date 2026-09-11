@@ -11,7 +11,7 @@ import {
 } from "@/lib/bankr/service";
 import { calculateEntryPrize } from "@/lib/pickem-prize";
 import { formatPlace, rankEntries } from "@/lib/pickem-scoring";
-import { redis, safeRedisOperation } from "@/lib/redis";
+import { withRedisCache } from "@/lib/redis";
 
 const erc721Abi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
@@ -73,19 +73,6 @@ export function isContestSettled(
   return gamesFinalized && scoreCalculated.every(Boolean);
 }
 
-async function cached<T>(
-  key: string,
-  load: () => Promise<{ value: T; ttl: number | null }>,
-) {
-  const hit = await safeRedisOperation(() => redis!.get<T>(key));
-  if (hit) return hit;
-  const { value, ttl } = await load();
-  await safeRedisOperation(() =>
-    ttl === null ? redis!.set(key, value) : redis!.set(key, value, { ex: ttl }),
-  );
-  return value;
-}
-
 async function heldTokenIds(nft: Address, owner: Address) {
   const count = await rpc.readContract({
     address: nft,
@@ -110,7 +97,7 @@ async function heldTokenIds(nft: Address, owner: Address) {
  * holds an entry in it, and cached forever once the contest is settled.
  */
 function pickemContestSummary(contestId: bigint) {
-  return cached<ContestSummary>(
+  return withRedisCache<ContestSummary>(
     `profile:pickem-contest:v1:${chain.id}:${contestId}`,
     async () => {
       const c = await contest(contestId);
@@ -214,7 +201,7 @@ function pickemContestSummary(contestId: bigint) {
 
 /** Pick'em entries and squares boxes a wallet currently holds. */
 export function playerProfile(owner: Address) {
-  return cached<PlayerProfileData>(
+  return withRedisCache<PlayerProfileData>(
     `profile:player:v1:${chain.id}:${owner.toLowerCase()}`,
     async () => {
       const [entryIds, boxIds] = await Promise.all([
