@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import EntryLiveGames from "@/components/pickem/EntryLiveGames";
 import PickemEntryOwner from "@/components/pickem/PickemEntryOwner";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
-import TeamMark from "@/components/pickem/TeamMark";
 import {
   contest,
   entries,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/bankr/service";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
 import { buildPickCardEntries } from "@/lib/og/pickem-picks-card";
+import { contestEntrySnapshots } from "@/lib/pickem-contest-entries";
 import { ensureEntryImage } from "@/lib/pickem-image";
 import { getImageStatus } from "@/lib/pickem-image-status";
 import { SEASON_TYPE_LABELS } from "@/lib/pickem-scoring";
@@ -52,10 +53,12 @@ export default async function EntryPage({ params }: Props) {
   const contestId = uint(id),
     token = uint(tokenId);
   const c = await contest(contestId);
-  if (!(await tokenIds(contestId)).includes(token)) notFound();
-  const [[entry], games] = await Promise.all([
+  const ids = await tokenIds(contestId);
+  if (!ids.includes(token)) notFound();
+  const [[entry], games, allEntries] = await Promise.all([
     entries(c, [token]),
     matchups(c),
+    contestEntrySnapshots(c.gameIds, ids),
   ]);
   const picks = buildPickCardEntries(games, entry.picks);
   await ensureEntryImage(contestId, token, {
@@ -92,26 +95,16 @@ export default async function EntryPage({ params }: Props) {
       />
 
       <PickemEntryOwner owner={entry.owner} />
-      <ol className="divide-y rounded-2xl border px-4">
-        {games.map((g, i) => (
-          <li key={g.gameId} className="flex items-center gap-3 py-4">
-            <span className="w-6 shrink-0 font-mono text-sm text-muted-foreground">
-              {i + 1}
-            </span>
-            <TeamMark
-              logo={g.awayLogo}
-              name={g.away}
-              picked={entry.picks[i] === 0}
-            />
-            <span className="text-xs text-muted-foreground">@</span>
-            <TeamMark
-              logo={g.homeLogo}
-              name={g.home}
-              picked={entry.picks[i] === 1}
-            />
-          </li>
-        ))}
-      </ol>
+      <EntryLiveGames
+        entries={allEntries}
+        gameIds={c.gameIds.map(id => id.toString())}
+        owner={entry.owner.toLowerCase()}
+        seasonType={c.seasonType}
+        tiebreakerGameId={c.tiebreakerGameId.toString()}
+        tokenId={Number(token)}
+        weekNumber={c.weekNumber}
+        year={Number(c.year)}
+      />
       <p>
         Tiebreaker:{" "}
         <strong>{entry.tiebreakerPoints.toString()} combined points</strong>

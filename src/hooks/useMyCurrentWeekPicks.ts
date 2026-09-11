@@ -61,7 +61,7 @@ export interface CurrentWeekPickemEntry {
   games: CurrentWeekGamePick[];
 }
 
-interface WeekGameApi {
+export interface WeekGameApi {
   gameId: string;
   homeTeam: string;
   awayTeam: string;
@@ -216,81 +216,18 @@ export function useMyCurrentWeekPicks(
             ranked.map(entry => [entry.tokenId, entry]),
           );
 
-          // getUserPicks returns picks in the order of gameIds, so index i is
-          // gameIds[i]. Dedupe by wallet and leave out the viewer's own wallet.
-          const viewer = account.address.toLowerCase();
-          const pickersByGameId = new Map(
-            gameIds.map((gameId, index) => {
-              const away = new Set<string>();
-              const home = new Set<string>();
-              for (const entry of contestEntries) {
-                if (entry.owner === viewer) continue;
-                if (entry.picks[index] === 0) away.add(entry.owner);
-                if (entry.picks[index] === 1) home.add(entry.owner);
-              }
-              return [gameId, { away: [...away], home: [...home] }];
-            }),
-          );
-
           return tokenIds.map(tokenId => {
             const userEntry = contestEntries.find(
               entry => entry.tokenId === tokenId,
             );
             const rankedEntry = rankByToken.get(tokenId);
-            const pickByGameId = new Map(
-              gameIds.map((gameId, index) => [
-                gameId,
-                userEntry?.picks[index] ?? -1,
-              ]),
+            const gamePicks = buildGamePicks(
+              gameIds,
+              games,
+              userEntry?.picks ?? [],
+              contestEntries,
+              account.address,
             );
-
-            const gamesById = new Map(games.map(game => [game.gameId, game]));
-            const gamePicks: CurrentWeekGamePick[] = gameIds
-              .map(gameId => {
-                const game = gamesById.get(gameId);
-                const pick = pickByGameId.get(gameId) ?? -1;
-                const pickers = pickersByGameId.get(gameId);
-                const awayPickers = pickers?.away ?? [];
-                const homePickers = pickers?.home ?? [];
-                if (!game) {
-                  return {
-                    gameId,
-                    homeTeam: "Home",
-                    awayTeam: "Away",
-                    kickoff: "",
-                    pick,
-                    result: "pending" as const,
-                    awayPickers,
-                    homePickers,
-                  };
-                }
-                return {
-                  gameId: game.gameId,
-                  homeTeam: game.homeTeam,
-                  awayTeam: game.awayTeam,
-                  homeAbbreviation: game.homeAbbreviation,
-                  awayAbbreviation: game.awayAbbreviation,
-                  homeLogo: game.homeLogo,
-                  awayLogo: game.awayLogo,
-                  kickoff: game.kickoff,
-                  homeScore: game.homeScore,
-                  awayScore: game.awayScore,
-                  status: game.status,
-                  completed: game.completed,
-                  displayClock: game.displayClock,
-                  period: game.period,
-                  shortDetail: game.shortDetail,
-                  pick,
-                  result: getPickResult(game, pick),
-                  awayPickers,
-                  homePickers,
-                };
-              })
-              .sort((a, b) => {
-                const aTime = a.kickoff ? new Date(a.kickoff).getTime() : 0;
-                const bTime = b.kickoff ? new Date(b.kickoff).getTime() : 0;
-                return aTime - bTime;
-              });
 
             const scoredGames = rankedEntry?.scoredGames ?? 0;
 
@@ -357,6 +294,76 @@ export function useMyCurrentWeekPicks(
       void query.refetch();
     },
   };
+}
+
+/**
+ * One entry's picks joined with live game data, sorted by kickoff. `picks` and
+ * every entry's picks are in `gameIds` order (getUserPicks returns them that
+ * way). Pickers are deduped by wallet and leave out `owner`, whose pick is
+ * already highlighted on the row.
+ */
+export function buildGamePicks(
+  gameIds: string[],
+  games: WeekGameApi[],
+  picks: number[],
+  contestEntries: { owner: string; picks: number[] }[],
+  owner: string,
+): CurrentWeekGamePick[] {
+  const gamesById = new Map(games.map(game => [game.gameId, game]));
+  const ownerKey = owner.toLowerCase();
+  return gameIds
+    .map((gameId, index) => {
+      const away = new Set<string>();
+      const home = new Set<string>();
+      for (const entry of contestEntries) {
+        const entryOwner = entry.owner.toLowerCase();
+        if (entryOwner === ownerKey) continue;
+        if (entry.picks[index] === 0) away.add(entryOwner);
+        if (entry.picks[index] === 1) home.add(entryOwner);
+      }
+      const awayPickers = [...away];
+      const homePickers = [...home];
+      const game = gamesById.get(gameId);
+      const pick = picks[index] ?? -1;
+      if (!game) {
+        return {
+          gameId,
+          homeTeam: "Home",
+          awayTeam: "Away",
+          kickoff: "",
+          pick,
+          result: "pending" as const,
+          awayPickers,
+          homePickers,
+        };
+      }
+      return {
+        gameId: game.gameId,
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam,
+        homeAbbreviation: game.homeAbbreviation,
+        awayAbbreviation: game.awayAbbreviation,
+        homeLogo: game.homeLogo,
+        awayLogo: game.awayLogo,
+        kickoff: game.kickoff,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        status: game.status,
+        completed: game.completed,
+        displayClock: game.displayClock,
+        period: game.period,
+        shortDetail: game.shortDetail,
+        pick,
+        result: getPickResult(game, pick),
+        awayPickers,
+        homePickers,
+      };
+    })
+    .sort((a, b) => {
+      const aTime = a.kickoff ? new Date(a.kickoff).getTime() : 0;
+      const bTime = b.kickoff ? new Date(b.kickoff).getTime() : 0;
+      return aTime - bTime;
+    });
 }
 
 async function fetchWeekGames(

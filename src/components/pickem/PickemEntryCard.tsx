@@ -117,7 +117,14 @@ function scoreClass(score: number, opponentScore: number) {
   return score > opponentScore ? "font-bold" : "text-muted-foreground";
 }
 
-function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
+export function GamePickRow({
+  game,
+  owner,
+}: {
+  game: CurrentWeekGamePick;
+  /** Wallet that owns this entry; defaults to the connected wallet. */
+  owner?: string;
+}) {
   const pickedAway = game.pick === 0;
   const pickedHome = game.pick === 1;
   const awayScore = game.awayScore;
@@ -210,6 +217,7 @@ function GamePickRow({ game }: { game: CurrentWeekGamePick }) {
       <PickemGameDialog
         game={game}
         open={detailsOpen}
+        owner={owner}
         showScore={showScore}
         statusLabel={statusLabel}
         onOpenChange={setDetailsOpen}

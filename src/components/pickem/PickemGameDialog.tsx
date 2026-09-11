@@ -40,12 +40,15 @@ function PickerRow({ address, isYou }: { address: string; isYou: boolean }) {
 
 export default function PickemGameDialog({
   game,
+  owner,
   statusLabel,
   showScore,
   open,
   onOpenChange,
 }: {
   game: CurrentWeekGamePick;
+  /** Wallet that owns this entry; defaults to the connected wallet. */
+  owner?: string;
   statusLabel: string;
   showScore: boolean;
   open: boolean;
@@ -53,6 +56,7 @@ export default function PickemGameDialog({
 }) {
   const account = useActiveAccount();
   const viewer = account?.address.toLowerCase();
+  const entrant = (owner ?? account?.address)?.toLowerCase();
   // Only hit ESPN's summary endpoint once the dialog is actually opened.
   const { data: details } = useGameDetails(open ? game.gameId : null);
   // ESPN often leaves broadcast type blank, so list every network it gives us.
@@ -73,7 +77,7 @@ export default function PickemGameDialog({
       logo: game.awayLogo,
       score: awayScore,
       leading: awayScore > homeScore,
-      youPicked: game.pick === 0,
+      entrantPicked: game.pick === 0,
       pickers: game.awayPickers,
     },
     {
@@ -83,7 +87,7 @@ export default function PickemGameDialog({
       logo: game.homeLogo,
       score: homeScore,
       leading: homeScore > awayScore,
-      youPicked: game.pick === 1,
+      entrantPicked: game.pick === 1,
       pickers: game.homePickers,
     },
   ];
@@ -101,8 +105,8 @@ export default function PickemGameDialog({
         <div className="grid grid-cols-2 gap-4">
           {sides.map(side => {
             const pickers =
-              side.youPicked && viewer
-                ? [viewer, ...side.pickers]
+              side.entrantPicked && entrant
+                ? [entrant, ...side.pickers]
                 : side.pickers;
             return (
               <section key={side.key} className="min-w-0 space-y-3">
