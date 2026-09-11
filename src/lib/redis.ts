@@ -124,3 +124,20 @@ export async function safeRedisOperation<T>(
     return fallback;
   }
 }
+
+/**
+ * Read-through cache: returns the cached value, or runs `load` and stores its
+ * result. `ttl: null` stores without expiry. Without Redis it just loads.
+ */
+export async function withRedisCache<T>(
+  key: string,
+  load: () => Promise<{ value: T; ttl: number | null }>,
+): Promise<T> {
+  const hit = await safeRedisOperation(() => redis!.get<T>(key));
+  if (hit) return hit;
+  const { value, ttl } = await load();
+  await safeRedisOperation(() =>
+    ttl === null ? redis!.set(key, value) : redis!.set(key, value, { ex: ttl }),
+  );
+  return value;
+}

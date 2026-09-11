@@ -15,6 +15,8 @@ export interface ContestEntrySnapshot {
   /** In the contest's gameIds order (getUserPicks returns them that way). */
   picks: number[];
   tiebreakerPoints: number;
+  /** Onchain score; only meaningful once the entry's score is calculated. */
+  correctPicks: number;
 }
 
 /**
@@ -60,5 +62,6 @@ export async function contestEntrySnapshots(
     owner: owners[i].toLowerCase(),
     picks: picks[i].map(Number),
     tiebreakerPoints: Number(predictions[i][3]),
+    correctPicks: Number(predictions[i][4]),
   }));
 }

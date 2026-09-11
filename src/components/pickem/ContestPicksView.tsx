@@ -32,7 +32,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePickemContract } from "@/hooks/usePickemContract";
 
 // Create Thirdweb client for AccountProvider
 const client = createThirdwebClient({
@@ -81,13 +80,6 @@ export default function ContestPicksView({
   tiebreakerGameId,
 }: ContestPicksViewProps) {
   const account = useActiveAccount();
-  const {
-    getTotalNFTSupply,
-    getTokenByIndex,
-    getNFTPrediction,
-    getUserPicks,
-    getNFTOwner,
-  } = usePickemContract();
 
   const [mounted, setMounted] = useState(false);
   const [allPicks, setAllPicks] = useState<ContestPick[]>([]);
@@ -114,12 +106,13 @@ export default function ContestPicksView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, seasonType, weekNumber, mounted]);
 
+  // Entries come from the server in one request; no need to wait for games.
   useEffect(() => {
-    if (games.length > 0) {
+    if (mounted) {
       fetchAllPicks();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contestId, games]);
+  }, [contestId, mounted]);
 
   // Fetch live rankings and game results (initial load only)
   useEffect(() => {
@@ -182,35 +175,20 @@ export default function ContestPicksView({
   const fetchAllPicks = async () => {
     setLoading(true);
     try {
-      const totalSupply = await getTotalNFTSupply();
-      const picks: ContestPick[] = [];
-
-      // Convert string gameIds to bigint for contract call
-      const gameIdsBigInt = gameIds.map(id => BigInt(id));
-
-      // Iterate through all NFTs
-      for (let i = 0; i < totalSupply; i++) {
-        try {
-          const tokenId = await getTokenByIndex(i);
-          const prediction = await getNFTPrediction(tokenId);
-
-          // Check if this NFT belongs to this contest
-          if (Number(prediction[0]) === contestId) {
-            const owner = await getNFTOwner(tokenId);
-            const userPicks = await getUserPicks(tokenId, gameIdsBigInt);
-
-            picks.push({
-              tokenId,
-              owner,
-              picks: userPicks.map((p: number) => Number(p)),
-              correctPicks: Number(prediction[4]),
-              tiebreakerPoints: Number(prediction[3]),
-            });
-          }
-        } catch (err) {
-          console.log(`Error fetching token ${i}:`, err);
-        }
+      const response = await fetch(`/api/pickem/${contestId}/entries`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch entries");
       }
+      const { entries } = (await response.json()) as {
+        entries: ContestPick[];
+      };
+      const picks: ContestPick[] = entries.map(entry => ({
+        tokenId: entry.tokenId,
+        owner: entry.owner,
+        picks: entry.picks,
+        correctPicks: entry.correctPicks,
+        tiebreakerPoints: entry.tiebreakerPoints,
+      }));
 
       // Sort by correct picks (highest first) when finalized
       if (gamesFinalized) {
