@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe("current entry owner identity", () => {
-  test("renders resolved name and avatar for the owner, with an explorer link", () => {
+  test("renders resolved name and avatar for the owner, linking to their profile and the explorer", () => {
     profile = { name: "  myk.eth  ", avatar: "https://example.com/avatar.png" };
     const html = renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
     expect(lookedUpAddress).toBe(owner);
@@ -51,6 +51,8 @@ describe("current entry owner identity", () => {
     expect(html).toContain('data-avatar-src="https://example.com/avatar.png"');
     expect(html).toContain(`href="https://basescan.org/address/${owner}"`);
     expect(html).toContain(`title="${owner}"`);
+    // Avatar and name both link to the player profile page.
+    expect(html.split(`href="/profile/${owner}"`).length - 1).toBe(2);
     expect(html).toContain("0x1234…7890");
   });
 
@@ -65,7 +67,7 @@ describe("current entry owner identity", () => {
     profile = { name: "   ", avatar: "https://example.com/avatar.png" };
     const html = renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
     expect(html).toContain('data-avatar-alt="0x1234…7890"');
-    expect(html).toContain('class="font-medium">0x1234…7890</span>');
+    expect(html).toMatch(/font-medium[^>]*>0x1234…7890<\/a>/);
   });
 
   test("ownership changes use the new address rather than the original entrant", () => {
@@ -75,6 +77,7 @@ describe("current entry owner identity", () => {
     expect(lookedUpAddress).toBe(nextOwner);
     expect(html).toContain("New owner");
     expect(html).toContain(`href="https://basescan.org/address/${nextOwner}"`);
+    expect(html).toContain(`href="/profile/${nextOwner}"`);
     expect(html).not.toContain(owner);
   });
 });
