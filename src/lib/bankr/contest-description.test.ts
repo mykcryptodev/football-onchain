@@ -5,6 +5,7 @@ import {
   contestDescription,
   creatorIdentity,
   resolveCreator,
+  resolveIdentities,
 } from "./contest-description";
 
 const address = "0x1111111111111111111111111111111111111111";
@@ -146,5 +147,30 @@ test("provider failures and stalled lookups do not block contest details", async
     if (previous === undefined)
       delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
     else process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("batched identities keep input order, casing, and duplicates with wallet fallbacks", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  const other = "0xAbCdEf0000000000000000000000000000000002";
+  try {
+    const identities = await resolveIdentities([
+      other,
+      address,
+      other.toLowerCase(),
+    ]);
+    assert.deepEqual(
+      identities.map(i => [i.address, i.displayName, i.source]),
+      [
+        [other, "0xAbCd…0002", "wallet"],
+        [address, "0x1111…1111", "wallet"],
+        [other.toLowerCase(), "0xabcd…0002", "wallet"],
+      ],
+    );
+    assert.deepEqual(await resolveIdentities([]), []);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
   }
 });

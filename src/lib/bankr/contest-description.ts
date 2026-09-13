@@ -94,41 +94,75 @@ export function contestDescription(
 export async function resolveCreator(
   address: string,
 ): Promise<CreatorIdentity> {
-  const fallback = creatorIdentity(address, []);
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  return (await resolveIdentities([address]))[0];
+}
+
+const identityKey = (address: string) =>
+  `bankr:creator:v1:${address.toLowerCase()}`;
+
+/**
+ * Names for a page of wallets in one Redis round trip, looking up only cache
+ * misses from thirdweb. Anything unresolved within the budget falls back to a
+ * shortened wallet so a slow provider never blocks the response.
+ */
+export async function resolveIdentities(
+  addresses: readonly string[],
+): Promise<CreatorIdentity[]> {
+  const unique = [
+    ...new Map(addresses.map(a => [a.toLowerCase(), a])).values(),
+  ];
+  const resolved = new Map<string, CreatorIdentity>();
   const lookup = async () => {
-    const key = `bankr:creator:v1:${address.toLowerCase()}`;
-    const cached = await redis?.get<Profile[]>(key);
-    if (Array.isArray(cached)) return creatorIdentity(address, cached);
-    const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
-    if (!clientId) return fallback;
-    const profiles = await getSocialProfiles({
-      address,
-      client: createThirdwebClient({ clientId }),
+    const cached = redis
+      ? await redis.mget<(Profile[] | null)[]>(...unique.map(identityKey))
+      : [];
+    const misses = unique.filter((address, i) => {
+      if (!Array.isArray(cached[i])) return true;
+      resolved.set(address.toLowerCase(), creatorIdentity(address, cached[i]));
+      return false;
     });
-    const identity = creatorIdentity(address, profiles);
-    // Cache only the identity fields used here, never profile bios or contact data.
-    const minimal = profiles.map(({ type, name, metadata }) => ({
-      type,
-      name,
-      metadata: metadata && {
-        address: "address" in metadata ? metadata.address : undefined,
-        username: "username" in metadata ? metadata.username : undefined,
-      },
-    }));
-    await redis
-      ?.setex(key, identity.source === "wallet" ? 60 : 900, minimal)
-      .catch(() => undefined);
-    return identity;
+    const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+    if (!clientId || misses.length === 0) return;
+    const client = createThirdwebClient({ clientId });
+    await Promise.all(
+      misses
+        .map(async address => {
+          const profiles = await getSocialProfiles({ address, client });
+          const identity = creatorIdentity(address, profiles);
+          resolved.set(address.toLowerCase(), identity);
+          // Cache only the identity fields used here, never profile bios or contact data.
+          const minimal = profiles.map(({ type, name, metadata }) => ({
+            type,
+            name,
+            metadata: metadata && {
+              address: "address" in metadata ? metadata.address : undefined,
+              username: "username" in metadata ? metadata.username : undefined,
+            },
+          }));
+          await redis
+            ?.setex(
+              identityKey(address),
+              identity.source === "wallet" ? 60 : 900,
+              minimal,
+            )
+            .catch(() => undefined);
+        })
+        .map(p => p.catch(() => undefined)),
+    );
   };
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([
-      lookup().catch(() => fallback),
-      new Promise<CreatorIdentity>(resolve => {
-        timer = setTimeout(() => resolve(fallback), 1500);
+    await Promise.race([
+      lookup().catch(() => undefined),
+      new Promise(resolve => {
+        timer = setTimeout(resolve, 1500);
       }),
     ]);
   } finally {
     clearTimeout(timer);
   }
+  return addresses.map(
+    address =>
+      resolved.get(address.toLowerCase()) ?? creatorIdentity(address, []),
+  );
 }
