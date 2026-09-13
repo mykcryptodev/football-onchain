@@ -28,7 +28,11 @@ import {
   safeRedisOperation,
 } from "@/lib/redis";
 
-import { contestDescription, resolveCreator } from "./contest-description";
+import {
+  contestDescription,
+  resolveCreator,
+  resolveIdentities,
+} from "./contest-description";
 import { entryShare } from "./entry-share";
 import {
   type Matchup,
@@ -343,6 +347,17 @@ export async function leaderboard(id: bigint, limit = 10, cursor = 0) {
       Number(a.submissionTime - b.submissionTime) ||
       Number(a.tokenId - b.tokenId),
   );
+  const page = ranked
+    .map((r, i) => ({
+      ...r,
+      rank:
+        ranked.findIndex(
+          x => x.liveCorrectPicks === ranked[i].liveCorrectPicks,
+        ) + 1,
+    }))
+    .slice(cursor, cursor + limit);
+  // Only this page's owners, so a large field doesn't mean many name lookups.
+  const identities = await resolveIdentities(page.map(r => r.owner));
   return {
     source:
       "ESPN completed games; provisional, tied scores share a rank. Contract leaderboard determines prizes after all entries are scored.",
@@ -350,15 +365,7 @@ export async function leaderboard(id: bigint, limit = 10, cursor = 0) {
     totalGames: games.length,
     totalEntries: ranked.length,
     nextCursor: cursor + limit < ranked.length ? cursor + limit : null,
-    entries: ranked
-      .map((r, i) => ({
-        ...r,
-        rank:
-          ranked.findIndex(
-            x => x.liveCorrectPicks === ranked[i].liveCorrectPicks,
-          ) + 1,
-      }))
-      .slice(cursor, cursor + limit),
+    entries: page.map((r, i) => ({ ...r, ownerIdentity: identities[i] })),
     officialPrizePositions: finalBoard,
     allScoresCalculated: rows.every(r => r.scoreCalculated),
     payoutComplete: c.payoutComplete,

@@ -5,8 +5,10 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
-        disallow: ["/api/", "!/api/og/"],
+        // Longest match wins: link-preview crawlers (Twitterbot) honor robots,
+        // so OG images must be explicitly allowed under the /api/ block.
+        allow: ["/", "/api/og/"],
+        disallow: "/api/",
       },
     ],
   };
