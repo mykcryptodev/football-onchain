@@ -268,6 +268,11 @@ export async function syncWeekResults(
     scoreboard,
     fetchGameSummary,
   );
+  if (!built.ok && built.incomplete) {
+    // Expected every run until the week's last game is final — not an error.
+    result.skips.push(`weekResults:${weekId}:${built.reason}`);
+    return;
+  }
   if (!built.ok) {
     // Never write a partially-understood week: Pickem matches winner bits to
     // game ids positionally, so a wrong list pays the wrong people.
