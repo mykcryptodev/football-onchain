@@ -198,6 +198,24 @@ describe("buildWeekResultsPayload", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("returns incomplete without a payload until every game is final", async () => {
+    const sb = makeScoreboard(["401671830", "401671831"]);
+    sb.events![1].status = { type: { completed: false } };
+    const result = await buildWeekResultsPayload(
+      weekId,
+      [401671830n, 401671831n],
+      sb,
+      async () => {
+        throw new Error("should not fetch the tiebreaker for a partial week");
+      },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.incomplete).toBe(true);
+      expect(result.reason).toBe("incomplete:1/2");
+    }
+  });
+
   it("returns ok:false when fetchSummary fails for a missing game", async () => {
     const sb = makeScoreboard(["401671830"]);
     const onchainIds = [401671830n, 401671831n];

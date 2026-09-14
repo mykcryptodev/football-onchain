@@ -244,7 +244,7 @@ interface ResolvedGame {
 
 export type WeekResultsBuild =
   | { ok: true; payload: `0x${string}` }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; incomplete?: true };
 
 const resolveFromEvent = (v: EspnScoreboardEvent): ResolvedGame | null => {
   const competitors = v.competitions?.[0]?.competitors || [];
@@ -341,6 +341,15 @@ export const buildWeekResultsPayload = async (
     }
   }
 
+  // The oracle stores nothing for a partial week (onReport returns early when
+  // allCompleted == 0), so writing before every game is final only burns gas.
+  if (completed < games.length)
+    return {
+      ok: false,
+      reason: `incomplete:${completed}/${games.length}`,
+      incomplete: true,
+    };
+
   let totalPoints = 0n;
   let tiebreakerGameId = 0n;
   if (latestGame) {
@@ -350,13 +359,12 @@ export const buildWeekResultsPayload = async (
     for (const c of comp) totalPoints += BigInt(parseInt(c.score || "0"));
   }
 
-  const allCompleted = completed === games.length ? 1n : 0n;
   return {
     ok: true,
     payload: encodeAbiParameters(WEEK_RESULTS_PARAMS, [
       3,
       weekId,
-      allCompleted,
+      1n,
       games.length,
       packedResults,
       totalPoints,
