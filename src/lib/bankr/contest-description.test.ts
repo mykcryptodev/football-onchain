@@ -265,3 +265,56 @@ test("override does not pollute non-override in a mixed batch", async () => {
       process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
   }
 });
+
+// ── Prototype-pollution guard + no-network-guarantee tests ──────────────────
+
+test("OVERRIDES Map rejects inherited Object keys (__proto__, constructor, toString)", async () => {
+  // A plain-object lookup would find these via the prototype chain; a Map
+  // returns undefined for anything not explicitly inserted.
+  const previousClient = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    // Import the function under test directly — no mock.method needed.
+    const { getIdentityOverride } = await import("../identity-overrides");
+    for (const key of [
+      "__proto__",
+      "constructor",
+      "toString",
+      "hasOwnProperty",
+    ]) {
+      const result = getIdentityOverride(key);
+      assert.equal(
+        result,
+        undefined,
+        `getIdentityOverride("${key}") must be undefined; Map must not traverse prototype`,
+      );
+    }
+  } finally {
+    if (previousClient !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previousClient;
+  }
+});
+
+test("override-only batch resolves without thirdweb client (no network required)", async () => {
+  // With NEXT_PUBLIC_THIRDWEB_CLIENT_ID absent, the thirdweb path is skipped.
+  // needsLookup is empty for an all-override batch so the Redis path is also
+  // skipped. The test asserts correct names without any network mock.
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const results = await resolveIdentities([
+      OVERRIDE_ADDR,
+      OVERRIDE_ADDR.toLowerCase(),
+      OVERRIDE_ADDR.toUpperCase(),
+    ]);
+    assert.ok(
+      results.every(
+        r => r.displayName === "0xDeployer" && r.source === "manual",
+      ),
+      "all three casing variants must resolve to manual override without any provider",
+    );
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});

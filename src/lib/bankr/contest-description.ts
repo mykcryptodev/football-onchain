@@ -133,6 +133,7 @@ export async function resolveIdentities(
   // Addresses already resolved via manual override skip all network lookups.
   const needsLookup = unique.filter(a => !resolved.has(a.toLowerCase()));
   const lookup = async () => {
+    if (needsLookup.length === 0) return;
     const cached = redis
       ? await redis.mget<(Profile[] | null)[]>(...needsLookup.map(identityKey))
       : [];

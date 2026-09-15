@@ -15,13 +15,16 @@ export interface IdentityOverride {
   avatar: string;
 }
 
-const OVERRIDES: Record<string, IdentityOverride> = {
-  "0xce370ebcbc655f845df7dfb8c079e75b5ea17d93": {
-    name: "0xDeployer",
-    avatar:
-      "https://pbs.twimg.com/profile_images/2080340429426565120/NSSkGo98_400x400.jpg",
-  },
-};
+const OVERRIDES = new Map<string, IdentityOverride>([
+  [
+    "0xce370ebcbc655f845df7dfb8c079e75b5ea17d93",
+    {
+      name: "0xDeployer",
+      avatar:
+        "https://pbs.twimg.com/profile_images/2080340429426565120/NSSkGo98_400x400.jpg",
+    },
+  ],
+]);
 
 /**
  * Returns the override for `address`, or `undefined` if none exists.
@@ -30,5 +33,5 @@ const OVERRIDES: Record<string, IdentityOverride> = {
 export function getIdentityOverride(
   address: string,
 ): IdentityOverride | undefined {
-  return OVERRIDES[address.toLowerCase()];
+  return OVERRIDES.get(address.toLowerCase());
 }
