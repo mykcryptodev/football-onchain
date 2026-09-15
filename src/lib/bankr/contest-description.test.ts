@@ -174,3 +174,147 @@ test("batched identities keep input order, casing, and duplicates with wallet fa
       process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
   }
 });
+
+// ── Manual identity override (Bankr leaderboard + all consumers) ──────────────
+const OVERRIDE_ADDR = "0xCe370EbCBC655F845DF7DFb8C079E75B5EA17D93";
+const OVERRIDE_AVATAR =
+  "https://pbs.twimg.com/profile_images/2080340429426565120/NSSkGo98_400x400.jpg";
+
+test("override address resolves display name exactly", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const [id] = await resolveIdentities([OVERRIDE_ADDR]);
+    assert.equal(id.displayName, "0xDeployer");
+    assert.equal(id.source, "manual");
+    assert.equal(id.avatar, OVERRIDE_AVATAR);
+    assert.equal(id.address, OVERRIDE_ADDR);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("override address is case-insensitive — lowercase input resolves", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const [id] = await resolveIdentities([OVERRIDE_ADDR.toLowerCase()]);
+    assert.equal(id.displayName, "0xDeployer");
+    assert.equal(id.source, "manual");
+    assert.equal(id.avatar, OVERRIDE_AVATAR);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("override address is case-insensitive — uppercase input resolves", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const [id] = await resolveIdentities([OVERRIDE_ADDR.toUpperCase()]);
+    assert.equal(id.displayName, "0xDeployer");
+    assert.equal(id.source, "manual");
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("non-override address is not affected by override table", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const [id] = await resolveIdentities([address]);
+    assert.equal(id.source, "wallet");
+    assert.equal(id.avatar, undefined);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("override resolves even when thirdweb is unavailable (no provider configured)", async () => {
+  // Override must resolve to the manual identity even with no thirdweb client
+  // configured — i.e. the pre-network short-circuit works regardless of env.
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const [id] = await resolveIdentities([OVERRIDE_ADDR]);
+    assert.equal(id.displayName, "0xDeployer");
+    assert.equal(id.source, "manual");
+    assert.equal(id.avatar, OVERRIDE_AVATAR);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+test("override does not pollute non-override in a mixed batch", async () => {
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const identities = await resolveIdentities([OVERRIDE_ADDR, address]);
+    assert.equal(identities[0].displayName, "0xDeployer");
+    assert.equal(identities[0].source, "manual");
+    assert.equal(identities[1].source, "wallet");
+    assert.equal(identities[1].avatar, undefined);
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});
+
+// ── Prototype-pollution guard + no-network-guarantee tests ──────────────────
+
+test("OVERRIDES Map rejects inherited Object keys (__proto__, constructor, toString)", async () => {
+  // A plain-object lookup would find these via the prototype chain; a Map
+  // returns undefined for anything not explicitly inserted.
+  const previousClient = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    // Import the function under test directly — no mock.method needed.
+    const { getIdentityOverride } = await import("../identity-overrides");
+    for (const key of [
+      "__proto__",
+      "constructor",
+      "toString",
+      "hasOwnProperty",
+    ]) {
+      const result = getIdentityOverride(key);
+      assert.equal(
+        result,
+        undefined,
+        `getIdentityOverride("${key}") must be undefined; Map must not traverse prototype`,
+      );
+    }
+  } finally {
+    if (previousClient !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previousClient;
+  }
+});
+
+test("override-only batch resolves without thirdweb client (no network required)", async () => {
+  // With NEXT_PUBLIC_THIRDWEB_CLIENT_ID absent, the thirdweb path is skipped.
+  // needsLookup is empty for an all-override batch so the Redis path is also
+  // skipped. The test asserts correct names without any network mock.
+  const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
+  try {
+    const results = await resolveIdentities([
+      OVERRIDE_ADDR,
+      OVERRIDE_ADDR.toLowerCase(),
+      OVERRIDE_ADDR.toUpperCase(),
+    ]);
+    assert.ok(
+      results.every(
+        r => r.displayName === "0xDeployer" && r.source === "manual",
+      ),
+      "all three casing variants must resolve to manual override without any provider",
+    );
+  } finally {
+    if (previous !== undefined)
+      process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
+  }
+});

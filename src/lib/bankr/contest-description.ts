@@ -1,13 +1,17 @@
 import { createThirdwebClient } from "thirdweb";
 import { getSocialProfiles } from "thirdweb/social";
 
+import { getIdentityOverride } from "@/lib/identity-overrides";
 import { redis } from "@/lib/redis";
 
 type Profile = Awaited<ReturnType<typeof getSocialProfiles>>[number];
 export type CreatorIdentity = {
   address: string;
   displayName: string;
-  source: "ens" | "farcaster" | "lens" | "wallet";
+  /** "manual" = display-only override; not verified onchain or via social. */
+  source: "ens" | "farcaster" | "lens" | "wallet" | "manual";
+  /** Avatar URL; present only for manual overrides. */
+  avatar?: string;
 };
 
 const clean = (value: unknown): string | null =>
@@ -112,11 +116,28 @@ export async function resolveIdentities(
     ...new Map(addresses.map(a => [a.toLowerCase(), a])).values(),
   ];
   const resolved = new Map<string, CreatorIdentity>();
+
+  // Apply display-only overrides before any cache or network lookup.
+  // These are not ENS/Farcaster records and carry no auth or ownership meaning.
+  for (const address of unique) {
+    const override = getIdentityOverride(address);
+    if (override) {
+      resolved.set(address.toLowerCase(), {
+        address,
+        displayName: override.name,
+        source: "manual",
+        avatar: override.avatar,
+      });
+    }
+  }
+  // Addresses already resolved via manual override skip all network lookups.
+  const needsLookup = unique.filter(a => !resolved.has(a.toLowerCase()));
   const lookup = async () => {
+    if (needsLookup.length === 0) return;
     const cached = redis
-      ? await redis.mget<(Profile[] | null)[]>(...unique.map(identityKey))
+      ? await redis.mget<(Profile[] | null)[]>(...needsLookup.map(identityKey))
       : [];
-    const misses = unique.filter((address, i) => {
+    const misses = needsLookup.filter((address, i) => {
       if (!Array.isArray(cached[i])) return true;
       resolved.set(address.toLowerCase(), creatorIdentity(address, cached[i]));
       return false;

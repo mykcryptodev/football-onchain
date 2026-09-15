@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSocialProfiles } from "thirdweb/social";
 
+import { getIdentityOverride } from "@/lib/identity-overrides";
 import { fetchFarcasterBioByAddress } from "@/lib/neynar";
 import {
   CACHE_TTL,
@@ -29,6 +30,23 @@ export async function GET(
 
   if (!address) {
     return NextResponse.json({ error: "Address is required" }, { status: 400 });
+  }
+
+  // Display-only override: short-circuit before any social lookup or cache.
+  const override = getIdentityOverride(address);
+  if (override) {
+    const responseBody: UserProfileResponse = {
+      address,
+      name: override.name,
+      avatar: override.avatar,
+    };
+    const response = NextResponse.json(responseBody);
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    response.headers.set("Pragma", "no-cache");
+    return response;
   }
 
   const cacheKey = getUserProfileCacheKey(address);
