@@ -6,7 +6,14 @@
  * Once the name reads back correctly this marks itself done in Redis and
  * stops touching L1.
  */
-import { createPublicClient, createWalletClient, http, parseAbi } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  namehash,
+  parseAbi,
+  zeroAddress,
+} from "viem";
 import { mainnet } from "viem/chains";
 
 import { redis } from "@/lib/redis";
@@ -34,20 +41,55 @@ const transport = () =>
     timeout: 30_000,
   });
 
+const ENS_REGISTRY = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
+const registryAbi = parseAbi([
+  "function resolver(bytes32 node) view returns (address)",
+]);
+const resolverAbi = parseAbi([
+  "function name(bytes32 node) view returns (string)",
+  "function addr(bytes32 node) view returns (address)",
+]);
+
+// Read records straight from the registry + resolver rather than through the
+// Universal Resolver, which reverts (instead of returning null) for an
+// address with no reverse record.
+async function readRecord(
+  l1: ReturnType<typeof createPublicClient>,
+  node: `0x${string}`,
+  functionName: "name" | "addr",
+): Promise<string | null> {
+  const resolver = await l1.readContract({
+    address: ENS_REGISTRY,
+    abi: registryAbi,
+    functionName: "resolver",
+    args: [node],
+  });
+  if (resolver === zeroAddress) return null;
+  return (await l1.readContract({
+    address: resolver,
+    abi: resolverAbi,
+    functionName,
+    args: [node],
+  })) as string;
+}
+
 export async function syncEnsPrimaryName(result: SyncResult): Promise<void> {
   if (!redis) return;
   if (await redis.get(DONE_KEY)) return;
 
   const account = getReporterAccount();
   const l1 = createPublicClient({ chain: mainnet, transport: transport() });
+  const reverseNode = namehash(
+    `${account.address.slice(2).toLowerCase()}.addr.reverse`,
+  );
 
-  if ((await l1.getEnsName({ address: account.address })) === PRIMARY_NAME) {
+  if ((await readRecord(l1, reverseNode, "name")) === PRIMARY_NAME) {
     await redis.set(DONE_KEY, "1");
     result.skips.push(`ensPrimary:${PRIMARY_NAME}:set`);
     return;
   }
   // Never claim a name that doesn't point back at us.
-  const forward = await l1.getEnsAddress({ name: PRIMARY_NAME });
+  const forward = await readRecord(l1, namehash(PRIMARY_NAME), "addr");
   if (forward?.toLowerCase() !== account.address.toLowerCase()) {
     result.skips.push(`ensPrimary:${PRIMARY_NAME}:forward-mismatch`);
     return;
@@ -63,19 +105,26 @@ export async function syncEnsPrimaryName(result: SyncResult): Promise<void> {
     return;
   }
 
-  const wallet = createWalletClient({
-    account,
-    chain: mainnet,
-    transport: transport(),
-  });
-  const { request } = await l1.simulateContract({
-    address: REVERSE_REGISTRAR,
-    abi: parseAbi(["function setName(string name) returns (bytes32)"]),
-    functionName: "setName",
-    args: [PRIMARY_NAME],
-    account,
-  });
-  const tx = await wallet.writeContract(request);
+  let tx: `0x${string}`;
+  try {
+    const wallet = createWalletClient({
+      account,
+      chain: mainnet,
+      transport: transport(),
+    });
+    const { request } = await l1.simulateContract({
+      address: REVERSE_REGISTRAR,
+      abi: parseAbi(["function setName(string name) returns (bytes32)"]),
+      functionName: "setName",
+      args: [PRIMARY_NAME],
+      account,
+    });
+    tx = await wallet.writeContract(request);
+  } catch (e) {
+    // Nothing was broadcast, so the next run may try again.
+    await redis.del(LOCK_KEY);
+    throw e;
+  }
   result.writes.push({ kind: "ensPrimaryName", ref: PRIMARY_NAME, tx });
   const receipt = await l1.waitForTransactionReceipt({ hash: tx });
   if (receipt.status === "success") await redis.set(DONE_KEY, "1");
