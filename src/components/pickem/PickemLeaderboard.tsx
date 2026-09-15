@@ -32,6 +32,7 @@ import {
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemNFT } from "@/hooks/usePickemNFT";
+import { getIdentityOverride } from "@/lib/identity-overrides";
 import { calculateEntryPrize } from "@/lib/pickem-prize";
 import { rankEntries, type ScoredGame } from "@/lib/pickem-scoring";
 import { client } from "@/providers/Thirdweb";
@@ -120,9 +121,9 @@ export default function PickemLeaderboard({
   const [loading, setLoading] = useState(true);
   const [prizePool, setPrizePool] = useState<bigint>(BigInt(0));
   const [currency, setCurrency] = useState<string>("");
-  const [payoutPercentages, setPayoutPercentages] = useState<
-    readonly bigint[]
-  >([]);
+  const [payoutPercentages, setPayoutPercentages] = useState<readonly bigint[]>(
+    [],
+  );
 
   useEffect(() => {
     fetchLeaderboard();
@@ -301,99 +302,128 @@ export default function PickemLeaderboard({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  entries.map(entry => (
-                    <TableRow
-                      key={entry.tokenId}
-                      className={isYou(entry.address) ? "bg-accent/50" : ""}
-                    >
-                      <TableCell>
-                        <Badge variant={rankBadgeVariant(entry.rank)}>
-                          #{entry.rank}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <AccountProvider address={entry.address} client={client}>
-                          <div className="flex min-w-0 items-center gap-2">
-                            <AccountAvatar
-                              className="shrink-0"
-                              fallbackComponent={
-                                <Blobbie
-                                  address={entry.address}
-                                  className="size-8 rounded-full"
+                  entries.map(entry => {
+                    const identity = getIdentityOverride(entry.address);
+                    return (
+                      <TableRow
+                        key={entry.tokenId}
+                        className={isYou(entry.address) ? "bg-accent/50" : ""}
+                      >
+                        <TableCell>
+                          <Badge variant={rankBadgeVariant(entry.rank)}>
+                            #{entry.rank}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <AccountProvider
+                            address={entry.address}
+                            client={client}
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              {identity ? (
+                                // Manual display metadata, not a verified on-chain identity.
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  alt={identity.name}
+                                  className="size-8 shrink-0 rounded-full object-cover"
+                                  height={32}
+                                  src={identity.avatar}
+                                  width={32}
                                 />
-                              }
-                              loadingComponent={
-                                <div className="size-8 rounded-full bg-muted animate-pulse" />
-                              }
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "100%",
-                              }}
-                            />
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <AccountName
-                                  className="truncate text-sm font-medium"
+                              ) : (
+                                <AccountAvatar
+                                  className="shrink-0"
                                   fallbackComponent={
-                                    <AccountAddress
-                                      formatFn={addr => shortenAddress(addr)}
+                                    <Blobbie
+                                      address={entry.address}
+                                      className="size-8 rounded-full"
                                     />
                                   }
                                   loadingComponent={
-                                    <span className="text-sm text-muted-foreground">
-                                      Loading...
-                                    </span>
+                                    <div className="size-8 rounded-full bg-muted animate-pulse" />
                                   }
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "100%",
+                                  }}
                                 />
-                                {isYou(entry.address) && (
-                                  <Badge className="text-xs" variant="secondary">
-                                    You
-                                  </Badge>
+                              )}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  {identity ? (
+                                    <span className="truncate text-sm font-medium">
+                                      {identity.name}
+                                    </span>
+                                  ) : (
+                                    <AccountName
+                                      className="truncate text-sm font-medium"
+                                      fallbackComponent={
+                                        <AccountAddress
+                                          formatFn={addr =>
+                                            shortenAddress(addr)
+                                          }
+                                        />
+                                      }
+                                      loadingComponent={
+                                        <span className="text-sm text-muted-foreground">
+                                          Loading...
+                                        </span>
+                                      }
+                                    />
+                                  )}
+                                  {isYou(entry.address) && (
+                                    <Badge
+                                      className="text-xs"
+                                      variant="secondary"
+                                    >
+                                      You
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  NFT #{entry.tokenId}
+                                </p>
+                                {entry.address.toLowerCase() !==
+                                  entry.originalPredictor.toLowerCase() && (
+                                  <p className="truncate text-xs text-orange-500 dark:text-orange-400">
+                                    Transferred from{" "}
+                                    {entry.originalPredictor.slice(0, 6)}...
+                                    {entry.originalPredictor.slice(-4)}
+                                  </p>
                                 )}
                               </div>
-                              <p className="truncate text-xs text-muted-foreground">
-                                NFT #{entry.tokenId}
-                              </p>
-                              {entry.address.toLowerCase() !==
-                                entry.originalPredictor.toLowerCase() && (
-                                <p className="truncate text-xs text-orange-500 dark:text-orange-400">
-                                  Transferred from{" "}
-                                  {entry.originalPredictor.slice(0, 6)}...
-                                  {entry.originalPredictor.slice(-4)}
-                                </p>
-                              )}
                             </div>
-                          </div>
-                        </AccountProvider>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <p className="font-semibold tabular-nums">
-                          {entry.correctPicks}/{entry.totalGames}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(
-                            (entry.correctPicks / entry.totalGames) *
-                            100
-                          ).toFixed(0)}
-                          %
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {entry.tiebreakerPoints} pts
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {entry.prize > 0 && currency ? (
-                          <PrizeDisplay
-                            currency={currency}
-                            prize={entry.prize}
-                          />
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          </AccountProvider>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="font-semibold tabular-nums">
+                            {entry.correctPicks}/{entry.totalGames}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(
+                              (entry.correctPicks / entry.totalGames) *
+                              100
+                            ).toFixed(0)}
+                            %
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {entry.tiebreakerPoints} pts
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {entry.prize > 0 && currency ? (
+                            <PrizeDisplay
+                              currency={currency}
+                              prize={entry.prize}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -407,8 +437,7 @@ export default function PickemLeaderboard({
                 <div key={index} className="flex justify-between">
                   <span>{PLACE_LABELS[index] ?? `${index + 1}th Place`}</span>
                   <span className="font-medium">
-                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of
-                    pool
+                    {(Number(percentage) / PERCENT_DENOMINATOR) * 100}% of pool
                   </span>
                 </div>
               ))}
