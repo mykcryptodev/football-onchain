@@ -19,8 +19,16 @@ const REVERSE_REGISTRAR = "0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb";
 const DONE_KEY = `ens-primary:done:${PRIMARY_NAME}`;
 const LOCK_KEY = `ens-primary:lock:${PRIMARY_NAME}`;
 
+// Same keyed thirdweb RPC the Base client uses; viem's default public
+// mainnet endpoint isn't reliable from serverless.
+const l1RpcUrl =
+  process.env.ORACLE_L1_RPC_URL ||
+  (process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
+    ? `https://${mainnet.id}.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
+    : undefined);
+
 const transport = () =>
-  http(process.env.ORACLE_L1_RPC_URL || undefined, {
+  http(l1RpcUrl, {
     retryCount: 3,
     retryDelay: 2000,
     timeout: 30_000,
