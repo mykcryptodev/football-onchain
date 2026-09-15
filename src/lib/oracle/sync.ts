@@ -32,6 +32,7 @@ import {
   fetchWeekScoreboard,
   weekGamesMismatched,
 } from "./espn";
+import { syncFeaturedPickem } from "./featured-pickem";
 
 const contestsAddress = contests[
   appChain.id as keyof typeof contests
@@ -344,6 +345,15 @@ export async function runFullSync(): Promise<SyncResult> {
       result.errors.push(msg);
       await notifyError(msg);
     }
+  }
+
+  // Featured Pick'em: settle it, then create next week's.
+  try {
+    await syncFeaturedPickem(result, syncWeekGames);
+  } catch (e) {
+    const msg = `featured pickem sync failed: ${(e as Error).message}`;
+    result.errors.push(msg);
+    await notifyError(msg);
   }
 
   return result;

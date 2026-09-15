@@ -3,6 +3,7 @@
  * Reads use a public client; writes use the reporter wallet (ORACLE_REPORTER_PRIVATE_KEY).
  */
 import {
+  type Abi,
   type Address,
   createPublicClient,
   createWalletClient,
@@ -183,7 +184,15 @@ function isNonceTooLow(error: unknown): boolean {
   );
 }
 
-async function submitReport(report: Hex): Promise<Hex> {
+/** A contract call sent from the reporter wallet under the shared write lock. */
+export interface ReporterWrite {
+  address: Address;
+  abi: Abi;
+  functionName: string;
+  args: readonly unknown[];
+}
+
+async function submitWrite(call: ReporterWrite): Promise<Hex> {
   await assertGasPriceUnderCap();
   const { account, client } = getWriterClient();
   const nonce = await publicClient.getTransactionCount({
@@ -191,13 +200,10 @@ async function submitReport(report: Hex): Promise<Hex> {
     blockTag: "pending",
   });
   const { request } = await publicClient.simulateContract({
-    address: oracleAddress,
-    abi: CRE_ORACLE_ABI,
-    functionName: "onReport",
-    args: ["0x", report],
+    ...call,
     account,
     nonce,
-  });
+  } as Parameters<typeof publicClient.simulateContract>[0]);
   const hash = await client.writeContract(request);
   // checkReplacement's replacement-detection path re-fetches the receipt by
   // hash after a transient "not found" and can rethrow that raw
@@ -236,7 +242,20 @@ async function submitReport(report: Hex): Promise<Hex> {
   }
 }
 
-export async function writeReport(report: Hex): Promise<Hex> {
+export function writeReport(report: Hex): Promise<Hex> {
+  return writeAsReporter({
+    address: oracleAddress,
+    abi: CRE_ORACLE_ABI,
+    functionName: "onReport",
+    args: ["0x", report],
+  });
+}
+
+/**
+ * Every reporter-wallet transaction goes through here, not just oracle
+ * reports: they share one account nonce, so they must share one lock.
+ */
+export async function writeAsReporter(call: ReporterWrite): Promise<Hex> {
   if (!redis) {
     throw new Error(
       "Redis is required for oracle writes so concurrent serverless invocations cannot reuse a nonce",
@@ -256,10 +275,10 @@ export async function writeReport(report: Hex): Promise<Hex> {
 
   try {
     try {
-      return await submitReport(report);
+      return await submitWrite(call);
     } catch (error) {
       if (!isNonceTooLow(error)) throw error;
-      return await submitReport(report);
+      return await submitWrite(call);
     }
   } finally {
     try {
