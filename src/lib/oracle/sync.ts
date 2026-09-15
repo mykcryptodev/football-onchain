@@ -20,6 +20,7 @@ import {
   writeReport,
 } from "./chain";
 import { notifyError } from "./discord";
+import { syncEnsPrimaryName } from "./ens-primary-name";
 import {
   buildGameScoresPayload,
   buildScoreChangesPayload,
@@ -352,6 +353,14 @@ export async function runFullSync(): Promise<SyncResult> {
     await syncFeaturedPickem(result, syncWeekGames);
   } catch (e) {
     const msg = `featured pickem sync failed: ${(e as Error).message}`;
+    result.errors.push(msg);
+    await notifyError(msg);
+  }
+
+  try {
+    await syncEnsPrimaryName(result);
+  } catch (e) {
+    const msg = `ens primary name sync failed: ${(e as Error).message}`;
     result.errors.push(msg);
     await notifyError(msg);
   }
