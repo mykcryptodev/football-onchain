@@ -1,5 +1,6 @@
 /**
- * Settles the featured Pick'em contest and creates the next week's one.
+ * Settles the featured Pick'em contest (and any earlier ones the reporter
+ * created) and creates the next week's one.
  *
  * Runs inside the oracle sync cron. Every step reads chain state first and is
  * a no-op once done, so running every 5 minutes is safe:
@@ -334,6 +335,57 @@ async function step(
   }
 }
 
+/**
+ * Contests the cron settles: the featured one plus every unpaid contest the
+ * reporter wallet created. Rotating the featured id to next week's contest
+ * must not strand the previous week's payout.
+ */
+async function contestsToSettle(featuredId: bigint): Promise<Contest[]> {
+  const reporter = getReporterAccount().address.toLowerCase();
+  const nextContestId = (await publicClient.readContract({
+    address: pickemAddress,
+    abi: pickemAbi,
+    functionName: "nextContestId",
+  })) as bigint;
+  const ids: bigint[] = [];
+  for (let id = 1n; id < nextContestId; id++) ids.push(id);
+  const results = await publicClient.multicall({
+    contracts: ids.map(
+      id =>
+        ({
+          address: pickemAddress,
+          abi: pickemAbi,
+          functionName: "getContest",
+          args: [id],
+        }) as const,
+    ),
+    allowFailure: false,
+  });
+  return (results as unknown as Contest[]).filter(
+    c =>
+      c.id === featuredId ||
+      (c.creator.toLowerCase() === reporter && !c.payoutComplete),
+  );
+}
+
+async function settle(c: Contest, result: SyncResult): Promise<void> {
+  if (!c.gamesFinalized) {
+    // Scoring and payout wait for a finalized week; the next run picks them
+    // up once this write is visible.
+    await step(`finalize ${c.id}`, result, () => finalizeResults(c, result));
+    return;
+  }
+  let unscored = -1; // stays -1 if scoring failed, which blocks payout
+  await step(`scores ${c.id}`, result, async () => {
+    unscored = await scoreEntries(c, result);
+  });
+  // Pay out only once a run has seen every entry already scored, so the
+  // leaderboard is complete.
+  if (unscored === 0) {
+    await step(`payout ${c.id}`, result, () => payout(c, result));
+  }
+}
+
 export async function syncFeaturedPickem(
   result: SyncResult,
   syncWeekGames: SyncWeekGames,
@@ -342,26 +394,14 @@ export async function syncFeaturedPickem(
     result.skips.push("featured:none");
     return;
   }
-  const id = BigInt(featuredPickemContestOfWeekId);
-  const contest = await readContest(id);
+  const featuredId = BigInt(featuredPickemContestOfWeekId);
+  const contests = await contestsToSettle(featuredId);
+  for (const c of contests) await settle(c, result);
 
-  if (!contest.gamesFinalized) {
-    await step("finalize", result, () => finalizeResults(contest, result));
-    // Scoring, payout and the next contest all wait for a finalized week;
-    // the next run picks them up once this write is visible.
-    return;
-  }
-
-  let unscored = -1; // stays -1 if scoring failed, which blocks payout
-  await step("scores", result, async () => {
-    unscored = await scoreEntries(contest, result);
-  });
-  // Pay out only once a run has seen every entry already scored, so the
-  // leaderboard is complete.
-  if (unscored === 0) {
-    await step("payout", result, () => payout(contest, result));
-  }
+  // Next week's contest is created only once the featured week is finalized.
+  const featured = contests.find(c => c.id === featuredId);
+  if (!featured?.gamesFinalized) return;
   await step("create next", result, () =>
-    createNext(contest, result, syncWeekGames),
+    createNext(featured, result, syncWeekGames),
   );
 }
