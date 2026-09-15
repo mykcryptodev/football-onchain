@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 
 import {
   getIdentityOverride,
@@ -17,55 +18,55 @@ const EXPECTED_AVATAR =
 describe("getIdentityOverride", () => {
   test("returns override for the exact canonical address", () => {
     const result = getIdentityOverride(DEPLOYER_ADDRESS);
-    expect(result).toBeDefined();
-    expect(result!.name).toBe(EXPECTED_NAME);
-    expect(result!.avatar).toBe(EXPECTED_AVATAR);
+    assert.notEqual(result, undefined);
+    assert.equal(result!.name, EXPECTED_NAME);
+    assert.equal(result!.avatar, EXPECTED_AVATAR);
   });
 
   test("returns override for a fully-lowercased address (case-insensitive)", () => {
     const result = getIdentityOverride(DEPLOYER_LOWER);
-    expect(result).toBeDefined();
-    expect(result!.name).toBe(EXPECTED_NAME);
-    expect(result!.avatar).toBe(EXPECTED_AVATAR);
+    assert.notEqual(result, undefined);
+    assert.equal(result!.name, EXPECTED_NAME);
+    assert.equal(result!.avatar, EXPECTED_AVATAR);
   });
 
   test("returns override for a fully-uppercased address (case-insensitive)", () => {
     const result = getIdentityOverride(DEPLOYER_UPPER);
-    expect(result).toBeDefined();
-    expect(result!.name).toBe(EXPECTED_NAME);
-    expect(result!.avatar).toBe(EXPECTED_AVATAR);
+    assert.notEqual(result, undefined);
+    assert.equal(result!.name, EXPECTED_NAME);
+    assert.equal(result!.avatar, EXPECTED_AVATAR);
   });
 
   test("returns override for a mixed-case address (case-insensitive)", () => {
     const result = getIdentityOverride(DEPLOYER_MIXED);
-    expect(result).toBeDefined();
-    expect(result!.name).toBe(EXPECTED_NAME);
-    expect(result!.avatar).toBe(EXPECTED_AVATAR);
+    assert.notEqual(result, undefined);
+    assert.equal(result!.name, EXPECTED_NAME);
+    assert.equal(result!.avatar, EXPECTED_AVATAR);
   });
 
   test("exact name value is '0xDeployer' (no trimming needed, no ENS/Farcaster suffix)", () => {
     const result = getIdentityOverride(DEPLOYER_ADDRESS);
-    expect(result!.name).toStrictEqual("0xDeployer");
+    assert.equal(result!.name, "0xDeployer");
   });
 
   test("avatar URL is the exact pbs.twimg.com HTTPS URL", () => {
     const result = getIdentityOverride(DEPLOYER_ADDRESS);
-    expect(result!.avatar).toMatch(/^https:\/\/pbs\.twimg\.com\//);
-    expect(result!.avatar).toBe(EXPECTED_AVATAR);
+    assert.match(result!.avatar, /^https:\/\/pbs\.twimg\.com\//);
+    assert.equal(result!.avatar, EXPECTED_AVATAR);
   });
 
   test("returns undefined for a non-overridden address", () => {
     const result = getIdentityOverride(
       "0x0000000000000000000000000000000000000001",
     );
-    expect(result).toBeUndefined();
+    assert.equal(result, undefined);
   });
 
   test("returns undefined for the zero address", () => {
     const result = getIdentityOverride(
       "0x0000000000000000000000000000000000000000",
     );
-    expect(result).toBeUndefined();
+    assert.equal(result, undefined);
   });
 
   test("returns undefined for an address that shares the deployer prefix but differs", () => {
@@ -73,7 +74,7 @@ describe("getIdentityOverride", () => {
     const result = getIdentityOverride(
       "0xCe370EbCBC655F845DF7DFb8C079E75B5EA17D94",
     );
-    expect(result).toBeUndefined();
+    assert.equal(result, undefined);
   });
 
   test("override result has no fid, farcasterUsername, or bio properties", () => {
@@ -82,8 +83,8 @@ describe("getIdentityOverride", () => {
       farcasterUsername?: unknown;
       bio?: unknown;
     };
-    expect(result!.fid).toBeUndefined();
-    expect(result!.farcasterUsername).toBeUndefined();
-    expect(result!.bio).toBeUndefined();
+    assert.equal(result!.fid, undefined);
+    assert.equal(result!.farcasterUsername, undefined);
+    assert.equal(result!.bio, undefined);
   });
 });

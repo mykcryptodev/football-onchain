@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mock, test } from "node:test";
+import { test } from "node:test";
 
 import {
   contestDescription,
@@ -120,21 +120,18 @@ test("no configured identity provider leaves joining available with a wallet lab
 test("provider failures and stalled lookups do not block contest details", async () => {
   const previous = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
   process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = "test-client";
+  const originalFetch = globalThis.fetch;
   let finishLookup: ((response: Response) => void) | undefined;
   try {
-    mock.method(globalThis, "fetch", async () => {
+    globalThis.fetch = (async () => {
       throw new Error("Provider unavailable");
-    });
+    }) as typeof fetch;
     assert.equal((await resolveCreator(address)).source, "wallet");
-    mock.restoreAll();
-    mock.method(
-      globalThis,
-      "fetch",
-      () =>
-        new Promise<Response>(resolve => {
-          finishLookup = resolve;
-        }),
-    );
+    globalThis.fetch = originalFetch;
+    globalThis.fetch = (() =>
+      new Promise<Response>(resolve => {
+        finishLookup = resolve;
+      })) as typeof fetch;
     const start = Date.now();
     assert.equal((await resolveCreator(address)).source, "wallet");
     assert.ok(
@@ -143,7 +140,7 @@ test("provider failures and stalled lookups do not block contest details", async
     );
   } finally {
     finishLookup?.(new Response(JSON.stringify({ data: [] })));
-    mock.restoreAll();
+    globalThis.fetch = originalFetch;
     if (previous === undefined)
       delete process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
     else process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID = previous;
