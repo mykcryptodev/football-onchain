@@ -2,6 +2,7 @@ import { createThirdwebClient } from "thirdweb";
 import { getSocialProfiles } from "thirdweb/social";
 import { resolveScheme } from "thirdweb/storage";
 
+import { getIdentityOverride } from "@/lib/identity-overrides";
 import { resolveNftImageUrl } from "@/lib/resolve-nft-image";
 
 export interface PickemImageProfile {
@@ -14,6 +15,12 @@ export async function resolvePickemImageProfile(
   address: string,
 ): Promise<PickemImageProfile> {
   const fallback = { name: `${address.slice(0, 6)}…${address.slice(-4)}` };
+
+  // Display-only override: bypass social lookup entirely.
+  const override = getIdentityOverride(address);
+  if (override) {
+    return { name: override.name, avatar: override.avatar };
+  }
   const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID;
   if (!clientId) return fallback;
   let timer: ReturnType<typeof setTimeout> | undefined;
