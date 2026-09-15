@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getIdentityOverride } from "@/lib/identity-overrides";
 
 // Create Thirdweb client for AccountProvider
 const client = createThirdwebClient({
@@ -571,6 +572,7 @@ export default function ContestPicksView({
             <TableBody>
               {allPicks.map((pick, index) => {
                 const isUserPick = isCurrentUser(pick.owner);
+                const identity = getIdentityOverride(pick.owner);
                 const displayRank = gamesFinalized ? index + 1 : pick.liveRank;
                 // Check if we have live data from ESPN, regardless of finalized state
                 const hasLiveData = pick.liveCorrectPicks !== undefined;
@@ -602,37 +604,55 @@ export default function ContestPicksView({
                     <TableCell>
                       <AccountProvider address={pick.owner} client={client}>
                         <div className="flex items-center gap-2">
-                          <AccountAvatar
-                            fallbackComponent={
-                              <Blobbie
-                                address={pick.owner}
-                                className="size-8 rounded-full"
-                              />
-                            }
-                            loadingComponent={
-                              <div className="size-8 rounded-full bg-muted animate-pulse" />
-                            }
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "100%",
-                            }}
-                          />
+                          {identity ? (
+                            // Manual display metadata, not a verified on-chain identity.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              alt={identity.name}
+                              className="size-8 shrink-0 rounded-full object-cover"
+                              height={32}
+                              src={identity.avatar}
+                              width={32}
+                            />
+                          ) : (
+                            <AccountAvatar
+                              fallbackComponent={
+                                <Blobbie
+                                  address={pick.owner}
+                                  className="size-8 rounded-full"
+                                />
+                              }
+                              loadingComponent={
+                                <div className="size-8 rounded-full bg-muted animate-pulse" />
+                              }
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "100%",
+                              }}
+                            />
+                          )}
                           <div className="flex flex-col">
                             <div className="flex w-full items-center gap-2">
-                              <AccountName
-                                className="font-medium text-sm truncate"
-                                fallbackComponent={
-                                  <AccountAddress
-                                    formatFn={addr => shortenAddress(addr)}
-                                  />
-                                }
-                                loadingComponent={
-                                  <span className="text-sm text-muted-foreground">
-                                    Loading...
-                                  </span>
-                                }
-                              />
+                              {identity ? (
+                                <span className="truncate text-sm font-medium">
+                                  {identity.name}
+                                </span>
+                              ) : (
+                                <AccountName
+                                  className="font-medium text-sm truncate"
+                                  fallbackComponent={
+                                    <AccountAddress
+                                      formatFn={addr => shortenAddress(addr)}
+                                    />
+                                  }
+                                  loadingComponent={
+                                    <span className="text-sm text-muted-foreground">
+                                      Loading...
+                                    </span>
+                                  }
+                                />
+                              )}
                               {isUserPick && (
                                 <Badge className="text-xs" variant="secondary">
                                   You
