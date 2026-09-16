@@ -993,6 +993,16 @@ export default function PickemContestClient({
                     ? "#review-picks"
                     : `#game-${orderedGames.find(game => picks[game.gameId] !== 0 && picks[game.gameId] !== 1)?.gameId}`
                 }
+                onClick={event => {
+                  // Scroll within this page without relying on a wallet webview's
+                  // fragment navigation. Keep href as the native/no-JS fallback.
+                  const target = document.getElementById(
+                    event.currentTarget.hash.slice(1),
+                  );
+                  if (!target) return;
+                  event.preventDefault();
+                  target.scrollIntoView({ block: "start" });
+                }}
               >
                 {allPicksMade ? "Review & enter" : "Next unpicked game"}
               </a>

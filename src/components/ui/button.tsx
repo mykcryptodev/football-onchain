@@ -52,10 +52,13 @@ function Button({
   const { impactOccurred } = useHaptics();
 
   const handleClick = React.useCallback(
-    async (event: React.MouseEvent<HTMLButtonElement>) => {
-      // Trigger haptic feedback based on button variant
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      // Feedback is optional: an unsupported webview bridge may never reply.
+      // Keep the consumer in the original click event (including preventDefault).
       const hapticType = variant === "destructive" ? "heavy" : "light";
-      await impactOccurred(hapticType);
+      void impactOccurred(hapticType).catch(() => {
+        // Haptic failures must not swallow the button action.
+      });
 
       // Call the original onClick handler if provided
       if (onClick) {
