@@ -6,7 +6,11 @@ const ESPN_BASE_URL =
 export async function GET() {
   try {
     const response = await fetch(`${ESPN_BASE_URL}/scoreboard`, {
-      next: { revalidate: 60 * 60 * 24 }, // revalidate every day
+      // Keep data fresh: serve a cached copy for up to 5 minutes,
+      // revalidate in the background for the next 55 minutes.
+      // This replaces the previous 24-hour cache which left clients
+      // stuck on last week's number until a full day elapsed.
+      next: { revalidate: 5 * 60 },
     });
 
     if (!response.ok) {

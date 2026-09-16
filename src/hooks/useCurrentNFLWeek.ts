@@ -37,7 +37,11 @@ export function useCurrentNFLWeek(): UseCurrentNFLWeekReturn {
         seasonYear: data.seasonYear,
       };
     },
-    staleTime: 10 * 60 * 1000,
+    // Refresh every 5 minutes so the week number tracks ESPN after a rollover
+    // without requiring a page reload. The server route now caches for the same
+    // interval, so the network round-trip is cheap.
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
   return {
