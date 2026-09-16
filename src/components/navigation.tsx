@@ -112,6 +112,7 @@ export function Navigation() {
             appMetadata={{
               name: appName,
               description: appDescription,
+              logoUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://bankrball.com"}/icon.png`,
             }}
             connectButton={{
               label: "Login",
