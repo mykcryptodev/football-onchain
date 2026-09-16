@@ -17,6 +17,14 @@ export interface IdentityOverride {
 
 const OVERRIDES = new Map<string, IdentityOverride>([
   [
+    "0x0a719f84fb1728f9e6fe7f34d9f730c6c46bbebb",
+    {
+      name: "mleejr",
+      avatar:
+        "https://pbs.twimg.com/profile_images/1601094719525855232/aOkAPHtC_400x400.png",
+    },
+  ],
+  [
     "0xce370ebcbc655f845df7dfb8c079e75b5ea17d93",
     {
       name: "0xDeployer",

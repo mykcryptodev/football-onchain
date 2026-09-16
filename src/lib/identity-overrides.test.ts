@@ -88,3 +88,22 @@ describe("getIdentityOverride", () => {
     assert.equal(result!.bio, undefined);
   });
 });
+
+describe("mleejr display-only exception", () => {
+  const address = "0x0A719F84fb1728F9e6Fe7f34D9F730C6c46Bbebb";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "mleejr",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1601094719525855232/aOkAPHtC_400x400.png",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0x0a719f84fb1728f9e6fe7f34d9f730c6c46bbebc"),
+      undefined,
+    );
+  });
+});
