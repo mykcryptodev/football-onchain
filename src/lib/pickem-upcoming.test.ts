@@ -2,349 +2,572 @@ import { describe, expect, test } from "bun:test";
 
 import { selectCurrentWeekContests, type WeekIdentity } from "./pickem-scoring";
 import {
-  isPastTuesdayCutoff,
-  nextWeekRef,
+  etCivilToUTC,
+  fetchFirstKickoffFromApi,
   resolveThisWeekEntries,
+  tuesdayCutoffBeforeKickoff,
 } from "./pickem-upcoming";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const w = (
+type TestContest = WeekIdentity & { id: string };
+
+const c = (
   year: number,
   seasonType: number,
   weekNumber: number,
-): WeekIdentity => ({ year, seasonType, weekNumber });
+  id: string,
+): TestContest => ({ year, seasonType, weekNumber, id });
 
-const current = (seasonYear: number, seasonType: number, week: number) => ({
+const ref = (seasonYear: number, seasonType: number, week: number) => ({
   seasonYear,
   seasonType,
   week,
 });
 
-// ET offset helpers — do NOT assume a fixed offset; test uses known civil times.
-// 2026-09-15 is Tuesday (daylight saving active, ET = UTC-4).
-// 2026-11-03 is Tuesday (standard time, ET = UTC-5), just after DST ends Nov 1.
+function utc(iso: string): Date {
+  return new Date(iso);
+}
 
-function utcDate(isoString: string): Date {
-  return new Date(isoString);
+// Stub builder: map of weekNumber → first kickoff ISO string (or null)
+function stubFetch(
+  kickoffs: Record<number, string | null>,
+): (
+  year: number,
+  seasonType: number,
+  weekNumber: number,
+) => Promise<Date | null> {
+  return async (_year, _seasonType, weekNumber) => {
+    const iso = kickoffs[weekNumber];
+    return iso ? new Date(iso) : null;
+  };
 }
 
 // ---------------------------------------------------------------------------
-// isPastTuesdayCutoff
+// etCivilToUTC — primitive used inside tuesdayCutoffBeforeKickoff
 // ---------------------------------------------------------------------------
 
-describe("isPastTuesdayCutoff", () => {
-  // DST-on Tuesdays (ET = UTC-4 in September)
-  test("Tuesday 7:59 PM ET (DST) is before cutoff", () => {
-    // 7:59 PM ET = 23:59 UTC
-    expect(isPastTuesdayCutoff(utcDate("2026-09-15T23:59:00Z"))).toBe(false);
+describe("etCivilToUTC", () => {
+  test("DST active: Sep 15 2026 8 PM ET = 2026-09-16T00:00Z (EDT = UTC-4)", () => {
+    expect(etCivilToUTC(2026, 9, 15, 20, 0).toISOString()).toBe(
+      "2026-09-16T00:00:00.000Z",
+    );
   });
 
-  test("Tuesday 8:00 PM ET (DST) is at cutoff", () => {
-    // 8:00 PM ET = 00:00 UTC next day (Wednesday)
-    // Actually 8 PM ET DST = UTC-4 => 2026-09-16T00:00:00Z
-    expect(isPastTuesdayCutoff(utcDate("2026-09-16T00:00:00Z"))).toBe(true);
-  });
-
-  test("Tuesday 8:01 PM ET (DST) is past cutoff", () => {
-    expect(isPastTuesdayCutoff(utcDate("2026-09-16T00:01:00Z"))).toBe(true);
-  });
-
-  // Standard time Tuesday (ET = UTC-5, after DST ends)
-  test("Tuesday 7:59 PM ET (standard) is before cutoff", () => {
-    // Standard time: ET = UTC-5. 7:59 PM Tuesday Nov 3 ET = Nov 4 00:59 UTC.
-    expect(isPastTuesdayCutoff(utcDate("2026-11-04T00:59:00Z"))).toBe(false);
-  });
-
-  test("Tuesday 8:00 PM ET (standard) is at cutoff", () => {
-    // 8:00 PM Tuesday Nov 3 ET = Nov 4 01:00 UTC.
-    expect(isPastTuesdayCutoff(utcDate("2026-11-04T01:00:00Z"))).toBe(true);
-  });
-
-  test("Wednesday morning is past cutoff", () => {
-    expect(isPastTuesdayCutoff(utcDate("2026-09-16T12:00:00Z"))).toBe(true);
-  });
-
-  test("Friday afternoon is past cutoff", () => {
-    expect(isPastTuesdayCutoff(utcDate("2026-09-18T18:00:00Z"))).toBe(true);
-  });
-
-  test("Sunday is before cutoff", () => {
-    expect(isPastTuesdayCutoff(utcDate("2026-09-13T20:00:00Z"))).toBe(false);
-  });
-
-  test("Monday is before cutoff", () => {
-    expect(isPastTuesdayCutoff(utcDate("2026-09-14T23:00:00Z"))).toBe(false);
-  });
-
-  test("Tuesday midnight ET is before cutoff", () => {
-    // Midnight ET (DST) = 04:00 UTC
-    expect(isPastTuesdayCutoff(utcDate("2026-09-15T04:00:00Z"))).toBe(false);
+  test("Standard time: Nov 3 2026 8 PM ET = 2026-11-04T01:00Z (EST = UTC-5)", () => {
+    expect(etCivilToUTC(2026, 11, 3, 20, 0).toISOString()).toBe(
+      "2026-11-04T01:00:00.000Z",
+    );
   });
 });
 
 // ---------------------------------------------------------------------------
-// nextWeekRef
+// tuesdayCutoffBeforeKickoff
 // ---------------------------------------------------------------------------
 
-describe("nextWeekRef", () => {
-  test("advances regular season week by one", () => {
-    expect(nextWeekRef(current(2026, 2, 1))).toEqual(current(2026, 2, 2));
-    expect(nextWeekRef(current(2026, 2, 17))).toEqual(current(2026, 2, 18));
+describe("tuesdayCutoffBeforeKickoff", () => {
+  // Week 2 2026: first kickoff Thu Sep 18 00:15 UTC.
+  // Preceding Tuesday: Sep 15. 8 PM EDT = Sep 16 00:00 UTC.
+  test("Week 2 kickoff Thu Sep 18 → cutoff Sep 16 00:00 UTC", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-09-18T00:15Z")).toISOString(),
+    ).toBe("2026-09-16T00:00:00.000Z");
   });
 
-  test("returns null at regular season week 18 (last week)", () => {
-    expect(nextWeekRef(current(2026, 2, 18))).toBeNull();
+  // Week 1 2026: first kickoff Thu Sep 10 00:20 UTC.
+  // Preceding Tuesday: Sep 8. 8 PM EDT = Sep 9 00:00 UTC.
+  test("Week 1 kickoff Thu Sep 10 → cutoff Sep 9 00:00 UTC", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-09-10T00:20Z")).toISOString(),
+    ).toBe("2026-09-09T00:00:00.000Z");
   });
 
-  test("advances preseason week by one up to 4", () => {
-    expect(nextWeekRef(current(2026, 1, 3))).toEqual(current(2026, 1, 4));
+  // Week 3: first kickoff Thu Sep 25. Preceding Tuesday: Sep 22. 8 PM EDT = Sep 23 00:00 UTC.
+  test("Week 3 kickoff Thu Sep 25 → cutoff Sep 23 00:00 UTC", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-09-25T00:15Z")).toISOString(),
+    ).toBe("2026-09-23T00:00:00.000Z");
   });
 
-  test("returns null at preseason week 4", () => {
-    expect(nextWeekRef(current(2026, 1, 4))).toBeNull();
+  // Post-DST (standard time): kickoff Sun Nov 8. Preceding Tuesday: Nov 3. 8 PM EST = Nov 4 01:00 UTC.
+  test("Post-DST kickoff Sun Nov 8 → cutoff Nov 4 01:00 UTC (EST = UTC-5)", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-11-08T18:00Z")).toISOString(),
+    ).toBe("2026-11-04T01:00:00.000Z");
   });
 
-  test("returns null at postseason (conservative, no simple +1)", () => {
-    // Postseason week 5 is the last supported week
-    expect(nextWeekRef(current(2026, 3, 5))).toBeNull();
+  // Kickoff on Sunday: preceding Tuesday is 5 days back.
+  test("Sunday kickoff Sep 13 → cutoff Sep 9 00:00 UTC", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-09-13T17:00Z")).toISOString(),
+    ).toBe("2026-09-09T00:00:00.000Z");
   });
 
-  test("postseason week 1 still advances within the type", () => {
-    expect(nextWeekRef(current(2026, 3, 1))).toEqual(current(2026, 3, 2));
-  });
-
-  test("preserves year and season type", () => {
-    const result = nextWeekRef(current(2026, 2, 5));
-    expect(result?.seasonYear).toBe(2026);
-    expect(result?.seasonType).toBe(2);
+  // Kickoff on Monday: preceding Tuesday is 6 days back.
+  test("Monday kickoff Sep 14 → cutoff Sep 9 00:00 UTC", () => {
+    expect(
+      tuesdayCutoffBeforeKickoff(utc("2026-09-14T23:00Z")).toISOString(),
+    ).toBe("2026-09-09T00:00:00.000Z");
   });
 });
 
 // ---------------------------------------------------------------------------
-// resolveThisWeekEntries
+// resolveThisWeekEntries — schedule-anchored, async
 // ---------------------------------------------------------------------------
 
 describe("resolveThisWeekEntries", () => {
-  const week1 = w(2026, 2, 1);
-  const week2 = w(2026, 2, 2);
-  const week3 = w(2026, 2, 3);
+  // Real dates: Sept 16 13:23 UTC — Wednesday after Week 1 finished.
+  // ESPN stale at Week 1 or fresh at Week 2.
+  // Week 2 first kickoff: 2026-09-18T00:15Z.
+  // Week 2 cutoff:        2026-09-16T00:00Z (Tue Sep 15 8 PM EDT).
+  // Week 3 first kickoff (hypothetical): 2026-09-25T00:15Z.
+  // Week 3 cutoff:        2026-09-23T00:00Z.
 
-  const espnWeek1 = current(2026, 2, 1);
-  const espnWeek2 = current(2026, 2, 2);
+  const sep16 = utc("2026-09-16T13:23Z");
+  const espnWeek1 = ref(2026, 2, 1);
+  const espnWeek2 = ref(2026, 2, 2);
 
-  // Past-cutoff date: Wednesday morning ET
-  const wed = utcDate("2026-09-16T12:00:00Z");
-  // Before-cutoff date: Monday
-  const mon = utcDate("2026-09-14T12:00:00Z");
-  // Tuesday before cutoff
-  const tueBefore = utcDate("2026-09-15T23:30:00Z"); // 7:30 PM ET (DST)
-  // Tuesday exactly at cutoff
-  const tueAt = utcDate("2026-09-16T00:00:00Z"); // 8:00 PM ET (DST)
+  const w1 = c(2026, 2, 1, "w1");
+  const w2 = c(2026, 2, 2, "w2");
+  const w3 = c(2026, 2, 3, "w3");
 
-  // ---- loading states ----
-
-  test("returns [] while isLoading is true, regardless of arguments", () => {
-    const entries = [week1, week2];
-    expect(resolveThisWeekEntries(entries, espnWeek2, wed, true)).toEqual([]);
+  const kickoffsW2 = stubFetch({ 2: "2026-09-18T00:15Z" });
+  const kickoffsW2W3 = stubFetch({
+    2: "2026-09-18T00:15Z",
+    3: "2026-09-25T00:15Z",
   });
 
-  test("returns [] when currentWeek is null", () => {
-    expect(resolveThisWeekEntries([week1, week2], null, wed, false)).toEqual(
-      [],
+  // ---- THE KEY BUG REGRESSIONS ----
+
+  test("Sept16, ESPN=Week1 stale, owns Week1+2 → promotes Week2", async () => {
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
+      espnWeek1,
+      sep16,
+      kickoffsW2,
     );
+    expect(result.map(x => x.id)).toEqual(["w2"]);
   });
 
-  // ---- before-cutoff: always use selectCurrentWeekContests ----
-
-  test("before cutoff: returns current-week entries (ESPN week 1, owns week 1)", () => {
-    const result = resolveThisWeekEntries([week1], espnWeek1, mon, false);
-    expect(result).toEqual([week1]);
+  test("Sept16, ESPN=Week1 stale, owns Week1+2+3 → promotes Week2 NOT Week3", async () => {
+    // This is the exact scenario from the review failure.
+    // minWeek above current(1) is 2; Week2 cutoff passed; Week3 ignored.
+    const result = await resolveThisWeekEntries(
+      [w1, w2, w3],
+      espnWeek1,
+      sep16,
+      kickoffsW2W3,
+    );
+    expect(result.map(x => x.id)).toEqual(["w2"]);
   });
 
-  test("before cutoff: does NOT promote upcoming week even when wallet owns week 2", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week2],
+  test("Sept16, ESPN=Week2 fresh, owns Week2+3 → no promotion (Week3 cutoff not passed)", async () => {
+    // minWeek above current(2) is 3; Week3 cutoff Sep23 > Sep16 → no promotion.
+    // selectCurrentWeekContests: exact match w2.
+    const result = await resolveThisWeekEntries(
+      [w2, w3],
+      espnWeek2,
+      sep16,
+      kickoffsW2W3,
+    );
+    expect(result.map(x => x.id)).toEqual(["w2"]);
+  });
+
+  // ---- FRIDAY (ACTIVE WEEK2 GAMES): must NOT promote Week3 ----
+
+  test("Sept19 (Fri, Week2 active), ESPN=Week2, owns Week2+3 → stays Week2", async () => {
+    const sep19 = utc("2026-09-19T20:00Z");
+    // Week3 cutoff = Sep23 00:00 UTC; Sep19 < Sep23 → no promotion.
+    const result = await resolveThisWeekEntries(
+      [w2, w3],
+      espnWeek2,
+      sep19,
+      kickoffsW2W3,
+    );
+    expect(result.map(x => x.id)).toEqual(["w2"]);
+  });
+
+  // ---- SUNDAY / MONDAY: before cutoff, no promotion ----
+
+  test("Sunday Sep13 (before Week2 cutoff), ESPN=Week1, owns Week1+2 → stays Week1", async () => {
+    const sun = utc("2026-09-13T20:00Z");
+    // Week2 cutoff = Sep16 00:00 UTC; Sep13 < cutoff → no promotion.
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
+      espnWeek1,
+      sun,
+      kickoffsW2,
+    );
+    expect(result.map(x => x.id)).toEqual(["w1"]);
+  });
+
+  test("Monday Sep14, ESPN=Week1, owns Week1+2 → stays Week1", async () => {
+    const mon = utc("2026-09-14T20:00Z");
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
       mon,
-      false,
+      kickoffsW2,
     );
-    // selectCurrentWeekContests finds exact match: week1
-    expect(result).toEqual([week1]);
+    expect(result.map(x => x.id)).toEqual(["w1"]);
   });
 
-  test("before cutoff (Tuesday 7:59 PM ET): still falls back to existing selector", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week2],
+  // ---- TUESDAY BOUNDARY (EDT, DST active) ----
+
+  test("Tue Sep15 23:59 UTC (7:59 PM EDT, 1 min before cutoff) → stays Week1", async () => {
+    const tueBefore = utc("2026-09-15T23:59Z");
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
       tueBefore,
-      false,
+      kickoffsW2,
     );
-    expect(result).toEqual([week1]);
+    expect(result.map(x => x.id)).toEqual(["w1"]);
   });
 
-  // ---- at/after cutoff: promote upcoming if wallet owns it ----
-
-  test("at exact cutoff: promotes upcoming week when wallet owns it", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week2],
+  test("Sep16 00:00 UTC (exactly Tue 8 PM EDT) → promotes Week2", async () => {
+    const tueAt = utc("2026-09-16T00:00Z");
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
       tueAt,
-      false,
+      kickoffsW2,
     );
-    expect(result).toEqual([week2]);
+    expect(result.map(x => x.id)).toEqual(["w2"]);
   });
 
-  test("after cutoff: promotes upcoming week (Week 2) when wallet owns it", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week2],
+  test("Sep16 00:01 UTC (1 min after Tue 8 PM EDT) → promotes Week2", async () => {
+    const tueAfter = utc("2026-09-16T00:01Z");
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
-      wed,
-      false,
+      tueAfter,
+      kickoffsW2,
     );
-    expect(result).toEqual([week2]);
+    expect(result.map(x => x.id)).toEqual(["w2"]);
   });
 
-  test("after cutoff: falls back to existing selector when wallet owns no upcoming entries", () => {
-    // Owns week 1 only; week 2 not owned
-    const result = resolveThisWeekEntries([week1], espnWeek1, wed, false);
-    // selectCurrentWeekContests returns week1 (exact match)
-    expect(result).toEqual([week1]);
-  });
+  // ---- TUESDAY BOUNDARY (EST, standard time) ----
+  // Nov 3 2026 is a Tuesday (standard time, ET = UTC-5).
+  // 8 PM EST = Nov 4 01:00 UTC.
+  // Hypothetical Week 10 kickoff: Nov 8. cutoff = Nov 4 01:00 UTC.
 
-  test("after cutoff: falls back when ESPN is already on the upcoming week", () => {
-    // ESPN already says Week 2; nextWeekRef gives Week 3
-    // Wallet owns week1 and week2, but NOT week3
-    const result = resolveThisWeekEntries(
-      [week1, week2],
-      espnWeek2,
-      wed,
-      false,
+  test("Nov 4 00:59 UTC (7:59 PM EST, Tue Nov3) → stays Week9 (before cutoff)", async () => {
+    const espnWeek9 = ref(2026, 2, 9);
+    const w9 = c(2026, 2, 9, "w9");
+    const w10 = c(2026, 2, 10, "w10");
+    const kickoffsW10 = stubFetch({ 10: "2026-11-08T18:00Z" });
+    const result = await resolveThisWeekEntries(
+      [w9, w10],
+      espnWeek9,
+      utc("2026-11-04T00:59Z"),
+      kickoffsW10,
     );
-    // nextWeekRef(week2) = week3, wallet doesn't own week3 → fallback
-    // selectCurrentWeekContests(espnWeek2) → week2 (exact)
-    expect(result).toEqual([week2]);
+    expect(result.map(x => x.id)).toEqual(["w9"]);
   });
 
-  test("after cutoff: promotes week 3 when ESPN is at week 2 and wallet owns week 3", () => {
-    const result = resolveThisWeekEntries(
-      [week2, week3],
-      espnWeek2,
-      wed,
-      false,
+  test("Nov 4 01:00 UTC (exactly 8 PM EST, Tue Nov3) → promotes Week10", async () => {
+    const espnWeek9 = ref(2026, 2, 9);
+    const w9 = c(2026, 2, 9, "w9");
+    const w10 = c(2026, 2, 10, "w10");
+    const kickoffsW10 = stubFetch({ 10: "2026-11-08T18:00Z" });
+    const result = await resolveThisWeekEntries(
+      [w9, w10],
+      espnWeek9,
+      utc("2026-11-04T01:00Z"),
+      kickoffsW10,
     );
-    expect(result).toEqual([week3]);
+    expect(result.map(x => x.id)).toEqual(["w10"]);
   });
 
-  test("after cutoff: returns only the upcoming week's entries, not all entries", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week2, week3],
+  // ---- CONSERVATIVE FALLBACK on missing / erroring schedule data ----
+
+  test("fetchFirstKickoff returns null → falls back to selectCurrentWeekContests", async () => {
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
-      wed,
-      false,
+      sep16,
+      stubFetch({ 2: null }),
     );
-    // nextWeekRef(week1) = week2; wallet has week2
-    expect(result).toEqual([week2]);
+    // Conservative: no cutoff derivable → exact match w1 (ESPN=Week1)
+    expect(result.map(x => x.id)).toEqual(["w1"]);
   });
 
-  test("after cutoff: ignores far-future weeks (week 3+) when upcoming is week 2", () => {
-    const result = resolveThisWeekEntries(
-      [week1, week3],
+  test("fetchFirstKickoff throws → falls back to selectCurrentWeekContests", async () => {
+    const result = await resolveThisWeekEntries(
+      [w1, w2],
       espnWeek1,
-      wed,
-      false,
+      sep16,
+      async () => {
+        throw new Error("network error");
+      },
     );
-    // nextWeekRef(week1) = week2; wallet doesn't own week2 → fallback
-    expect(result).toEqual([week1]);
+    expect(result.map(x => x.id)).toEqual(["w1"]);
   });
 
-  // ---- empty wallet ----
+  // ---- NO OWNED UPCOMING ENTRIES ----
 
-  test("empty wallet returns empty (isLoading=false, currentWeek set)", () => {
-    const result = resolveThisWeekEntries([], espnWeek1, wed, false);
-    // selectCurrentWeekContests([], week1) = []
+  test("owns only current week → selectCurrentWeekContests (no candidates ahead)", async () => {
+    const result = await resolveThisWeekEntries(
+      [w1],
+      espnWeek1,
+      sep16,
+      kickoffsW2,
+    );
+    // No candidates above week 1 → selectCurrentWeekContests → w1 exact
+    expect(result.map(x => x.id)).toEqual(["w1"]);
+  });
+
+  test("empty wallet → []", async () => {
+    const result = await resolveThisWeekEntries(
+      [],
+      espnWeek1,
+      sep16,
+      kickoffsW2,
+    );
     expect(result).toEqual([]);
   });
 
-  // ---- season boundary: week 18 ----
+  // ---- MULTIPLE TOKENS / CONTESTS IN THE UPCOMING WEEK ----
 
-  test("after cutoff: no promotion at regular season Week 18 (no Week 19 exists)", () => {
-    const week18 = w(2026, 2, 18);
-    const espnWeek18 = current(2026, 2, 18);
-    const result = resolveThisWeekEntries([week18], espnWeek18, wed, false);
-    // nextWeekRef returns null → fallback → week18 exact match
-    expect(result).toEqual([week18]);
-  });
-
-  // ---- preseason season boundary ----
-
-  test("after cutoff: no promotion at preseason Week 4 (no Week 5 in preseason)", () => {
-    const pre4 = w(2026, 1, 4);
-    const espnPre4 = current(2026, 1, 4);
-    const result = resolveThisWeekEntries([pre4], espnPre4, wed, false);
-    expect(result).toEqual([pre4]);
-  });
-
-  // ---- multiple entries in same week ----
-
-  test("after cutoff: returns all upcoming-week entries (multiple tokens/contests)", () => {
-    // Simulate two tokens in week 2 (same year/type/week, same WeekIdentity shape)
-    const w2a = { year: 2026, seasonType: 2, weekNumber: 2, contestId: 10 };
-    const w2b = { year: 2026, seasonType: 2, weekNumber: 2, contestId: 11 };
-    const result = resolveThisWeekEntries(
-      [week1, w2a, w2b],
+  test("multiple contests in upcoming week are all returned", async () => {
+    const w2a = { year: 2026, seasonType: 2, weekNumber: 2, id: "w2a" };
+    const w2b = { year: 2026, seasonType: 2, weekNumber: 2, id: "w2b" };
+    const result = await resolveThisWeekEntries(
+      [w1, w2a, w2b],
       espnWeek1,
-      wed,
-      false,
+      sep16,
+      kickoffsW2,
     );
-    expect(result).toHaveLength(2);
-    expect(result).toContain(w2a);
-    expect(result).toContain(w2b);
+    expect(result.map(x => x.id).sort()).toEqual(["w2a", "w2b"]);
   });
 
-  // ---- regression: existing fallback behaviour preserved ----
+  // ---- SEASON BOUNDARY: cross-type not a candidate ----
 
-  test("before cutoff: previous-week fallback still works when no current-week entry", () => {
-    // ESPN is on week 2 but wallet only has week 1 entries
-    const result = resolveThisWeekEntries([week1], espnWeek2, mon, false);
-    // selectCurrentWeekContests fallback: week2 exact = none, week1 (prev) matches
-    expect(result).toEqual([week1]);
+  test("postseason entry is not a candidate when ESPN is in regular season", async () => {
+    // espnWeek18 = regular season 2. post1 = postseason (type 3).
+    // post1 has different seasonType → not a candidate for promotion.
+    const reg18 = c(2026, 2, 18, "reg18");
+    const post1 = c(2026, 3, 1, "post1");
+    const espnReg18 = ref(2026, 2, 18);
+    const result = await resolveThisWeekEntries(
+      [reg18, post1],
+      espnReg18,
+      sep16,
+      stubFetch({}),
+    );
+    // selectCurrentWeekContests: exact reg18
+    expect(result.map(x => x.id)).toEqual(["reg18"]);
   });
 
-  test("before cutoff: cross-season fallback still works (preseason → regular)", () => {
-    const pre4 = w(2026, 1, 4);
-    const espnReg1 = current(2026, 2, 1);
-    const result = resolveThisWeekEntries([pre4], espnReg1, mon, false);
-    // selectCurrentWeekContests cross-season path
-    expect(result).toEqual([pre4]);
+  test("different-year entry is not a candidate", async () => {
+    const w2026w1 = c(2026, 2, 1, "2026w1");
+    const w2027w2 = c(2027, 2, 2, "2027w2");
+    const result = await resolveThisWeekEntries(
+      [w2026w1, w2027w2],
+      espnWeek1,
+      sep16,
+      stubFetch({}),
+    );
+    // 2027w2 different year → no candidate → fallback → 2026w1 exact
+    expect(result.map(x => x.id)).toEqual(["2026w1"]);
   });
 
-  test("before cutoff: cross-season fallback (regular → postseason)", () => {
-    const reg18 = w(2026, 2, 18);
-    const espnPost1 = current(2026, 3, 1);
-    const result = resolveThisWeekEntries([reg18], espnPost1, mon, false);
-    expect(result).toEqual([reg18]);
+  // ---- REGRESSION: existing selectCurrentWeekContests fallbacks preserved ----
+
+  test("before cutoff: previous-week fallback (ESPN=Week2, owns only Week1)", async () => {
+    const mon = utc("2026-09-14T12:00Z");
+    // minWeek above espnWeek2 = 3; Week3 cutoff Sep23 > Sep14 → no promotion.
+    // selectCurrentWeekContests: no w2 exact, prev-week w1 → w1.
+    const result = await resolveThisWeekEntries(
+      [w1],
+      espnWeek2,
+      mon,
+      stubFetch({ 3: "2026-09-25T00:15Z" }),
+    );
+    expect(result.map(x => x.id)).toEqual(["w1"]);
+  });
+
+  test("cross-season fallback (preseason → regular) preserved when no candidates", async () => {
+    const mon = utc("2026-09-14T12:00Z");
+    const pre4 = c(2026, 1, 4, "pre4");
+    const espnReg1 = ref(2026, 2, 1);
+    // pre4 is seasonType 1, not 2 → no candidate for regular-season promotion.
+    const result = await resolveThisWeekEntries(
+      [pre4],
+      espnReg1,
+      mon,
+      stubFetch({}),
+    );
+    // selectCurrentWeekContests cross-season fallback → pre4
+    expect(result.map(x => x.id)).toEqual(["pre4"]);
+  });
+
+  test("cross-season fallback (regular → postseason) preserved when no candidates", async () => {
+    const mon = utc("2026-09-14T12:00Z");
+    const reg18 = c(2026, 2, 18, "reg18");
+    const espnPost1 = ref(2026, 3, 1);
+    const result = await resolveThisWeekEntries(
+      [reg18],
+      espnPost1,
+      mon,
+      stubFetch({}),
+    );
+    expect(result.map(x => x.id)).toEqual(["reg18"]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Regression: selectCurrentWeekContests unchanged
+// fetchFirstKickoffFromApi — unit tests (no live network)
+// ---------------------------------------------------------------------------
+
+describe("fetchFirstKickoffFromApi", () => {
+  test("exported as a 3-argument function", () => {
+    expect(typeof fetchFirstKickoffFromApi).toBe("function");
+    expect(fetchFirstKickoffFromApi.length).toBe(3);
+  });
+
+  test("returns null when fetch throws (network offline)", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async () => {
+        throw new Error("offline");
+      };
+      expect(await fetchFirstKickoffFromApi(2026, 2, 2)).toBeNull();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  test("returns null when response is not ok (502)", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(JSON.stringify({ error: "bad gateway" }), { status: 502 });
+      expect(await fetchFirstKickoffFromApi(2026, 2, 2)).toBeNull();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  test("returns null for an empty games list", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(JSON.stringify([]), { status: 200 });
+      expect(await fetchFirstKickoffFromApi(2026, 2, 2)).toBeNull();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  test("returns the earliest kickoff as a Date", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify([
+            { kickoff: "2026-09-18T00:15Z" },
+            { kickoff: "2026-09-21T17:00Z" },
+          ]),
+          { status: 200 },
+        );
+      const result = await fetchFirstKickoffFromApi(2026, 2, 2);
+      expect(result).toBeInstanceOf(Date);
+      expect(result!.toISOString()).toBe("2026-09-18T00:15:00.000Z");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  test("games missing kickoff field are skipped; valid games still return a date", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async () =>
+        new Response(
+          JSON.stringify([
+            { homeTeam: "TBD" }, // no kickoff
+            { kickoff: "2026-09-21T17:00Z" },
+          ]),
+          { status: 200 },
+        );
+      const result = await fetchFirstKickoffFromApi(2026, 2, 2);
+      expect(result!.toISOString()).toBe("2026-09-21T17:00:00.000Z");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hook wiring contract: the hook calls resolveThisWeekEntries with
+// fetchFirstKickoffFromApi. This test exercises the exact call path
+// (minus thirdweb/React context) and confirms the correct output for the
+// Sept 16 stale-ESPN scenario.
+// ---------------------------------------------------------------------------
+
+describe("hook wiring contract (orchestration with fetchFirstKickoffFromApi)", () => {
+  test("Sept16 stale-ESPN + Week2 stub → selects Week2 (not Week3)", async () => {
+    // Matches the hook's call: resolveThisWeekEntries(contests, currentWeek, new Date(), fetchFirstKickoffFromApi)
+    const contests = [
+      { year: 2026, seasonType: 2, weekNumber: 1, contestId: 99 },
+      { year: 2026, seasonType: 2, weekNumber: 2, contestId: 100 },
+      { year: 2026, seasonType: 2, weekNumber: 3, contestId: 101 },
+    ];
+    const espnWeek1 = ref(2026, 2, 1);
+    const sep16 = utc("2026-09-16T13:23Z");
+
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = async (input: RequestInfo | URL) => {
+        const url = input.toString();
+        if (url.includes("week=2")) {
+          return new Response(
+            JSON.stringify([{ kickoff: "2026-09-18T00:15Z" }]),
+            { status: 200 },
+          );
+        }
+        if (url.includes("week=3")) {
+          return new Response(
+            JSON.stringify([{ kickoff: "2026-09-25T00:15Z" }]),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify([]), { status: 200 });
+      };
+
+      const result = await resolveThisWeekEntries(
+        contests,
+        espnWeek1,
+        sep16,
+        fetchFirstKickoffFromApi,
+      );
+      // minWeek above 1 = 2; Week2 cutoff Sep16 00:00 UTC < now Sep16 13:23 → promotes Week2
+      // Week3 is never even considered (minWeek logic).
+      expect(result.map(x => x.weekNumber)).toEqual([2]);
+      expect(result.map(x => (x as (typeof contests)[0]).contestId)).toEqual([
+        100,
+      ]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: selectCurrentWeekContests unchanged by this module
 // ---------------------------------------------------------------------------
 
 describe("selectCurrentWeekContests (regression)", () => {
-  test("exact match wins immediately even after cutoff (no upstream change)", () => {
-    const week2 = w(2026, 2, 2);
-    const espnWeek2 = current(2026, 2, 2);
-    const result = selectCurrentWeekContests([week2], espnWeek2);
-    expect(result).toEqual([week2]);
+  test("exact match still works", () => {
+    const w2: WeekIdentity = { year: 2026, seasonType: 2, weekNumber: 2 };
+    expect(selectCurrentWeekContests([w2], ref(2026, 2, 2))).toEqual([w2]);
   });
 
   test("previous-week fallback still works", () => {
-    const week1 = w(2026, 2, 1);
-    const espnWeek2 = current(2026, 2, 2);
-    const result = selectCurrentWeekContests([week1], espnWeek2);
-    expect(result).toEqual([week1]);
+    const w1: WeekIdentity = { year: 2026, seasonType: 2, weekNumber: 1 };
+    expect(selectCurrentWeekContests([w1], ref(2026, 2, 2))).toEqual([w1]);
   });
 });

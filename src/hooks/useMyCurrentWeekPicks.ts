@@ -13,7 +13,10 @@ import {
   type PickResult,
   rankEntries,
 } from "@/lib/pickem-scoring";
-import { resolveThisWeekEntries } from "@/lib/pickem-upcoming";
+import {
+  fetchFirstKickoffFromApi,
+  resolveThisWeekEntries,
+} from "@/lib/pickem-upcoming";
 import { queryKeys } from "@/lib/query-keys";
 
 export interface CurrentWeekGamePick {
@@ -147,14 +150,6 @@ export function useMyCurrentWeekPicks(
           };
         }),
       );
-      const matchingContests =
-        typeof scope === "number"
-          ? contests.filter(c => c.contestId === scope)
-          : scope === "all"
-            ? contests
-            : resolveThisWeekEntries(contests, currentWeek!, new Date(), false);
-      const payoutRules = await getPayoutRules();
-
       const weekGamesCache = new Map<string, Promise<WeekGameApi[]>>();
       const loadWeekGames = (
         year: number,
@@ -168,6 +163,19 @@ export function useMyCurrentWeekPicks(
         weekGamesCache.set(key, request);
         return request;
       };
+
+      const matchingContests =
+        typeof scope === "number"
+          ? contests.filter(c => c.contestId === scope)
+          : scope === "all"
+            ? contests
+            : await resolveThisWeekEntries(
+                contests,
+                currentWeek!,
+                new Date(),
+                fetchFirstKickoffFromApi,
+              );
+      const payoutRules = await getPayoutRules();
 
       const entries = await Promise.all(
         matchingContests.map(async ({ contestId, contest }) => {
