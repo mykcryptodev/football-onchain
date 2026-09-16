@@ -13,10 +13,7 @@ import {
   type PickResult,
   rankEntries,
 } from "@/lib/pickem-scoring";
-import {
-  fetchFirstKickoffFromApi,
-  resolveThisWeekEntries,
-} from "@/lib/pickem-upcoming";
+import { resolveThisWeekEntries } from "@/lib/pickem-upcoming";
 import { queryKeys } from "@/lib/query-keys";
 
 export interface CurrentWeekGamePick {
@@ -173,7 +170,7 @@ export function useMyCurrentWeekPicks(
                 contests,
                 currentWeek!,
                 new Date(),
-                fetchFirstKickoffFromApi,
+                loadWeekGames,
               );
       const payoutRules = await getPayoutRules();
 
