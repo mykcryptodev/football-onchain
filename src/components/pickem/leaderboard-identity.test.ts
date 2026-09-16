@@ -14,6 +14,7 @@ function renderTable(
   component: string,
   address: string,
   activeAddress: string,
+  neighbor: string = other,
 ) {
   const child = spawnSync(
     process.execPath,
@@ -26,7 +27,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 const { createElement: h, createContext, useContext } = React;
 const component = ${JSON.stringify(component)};
 const address = ${JSON.stringify(address)};
-const other = ${JSON.stringify(other)};
+const other = ${JSON.stringify(neighbor)};
 const activeAddress = ${JSON.stringify(activeAddress)};
 const entries = [address, other].map((owner, i) => ({
   tokenId: i + 10, owner, address: owner,
@@ -105,42 +106,67 @@ console.log(JSON.stringify({ html, calls }));
 
 for (const component of ["ContestPicksView", "PickemLeaderboard"]) {
   describe(`${component} rendered identity`, () => {
-    for (const address of [
-      deployer,
-      deployer.toLowerCase(),
-      deployer.toUpperCase(),
+    for (const identity of [
+      {
+        address: deployer,
+        name: "0xDeployer",
+        avatar,
+        neighbor: other,
+        short: "0xCe37",
+      },
+      {
+        address: "0x0A719F84fb1728F9e6Fe7f34D9F730C6c46Bbebb",
+        name: "mleejr",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1601094719525855232/aOkAPHtC_400x400.png",
+        neighbor: "0x0a719f84fb1728f9e6fe7f34d9f730c6c46bbebc",
+        short: "0x0A71",
+      },
     ]) {
-      test(`renders exact manual name/avatar for ${address} without thirdweb identity lookup`, () => {
-        const { html, calls } = renderTable(component, address, other);
-        const rows = [...html.matchAll(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)].map(
-          match => match[0],
-        );
-        const row = rows.find(value => value.includes("0xDeployer"));
-        assert.ok(row, "The actual table row must show the override name");
-        assert.match(
-          row,
-          new RegExp(`src="${avatar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`),
-        );
-        assert.match(row, /alt="0xDeployer"/);
-        assert.doesNotMatch(row, />You<|verified|farcaster|\.eth/i);
-        assert.match(row, /42/); // Tiebreaker is unchanged.
-        if (component === "PickemLeaderboard") {
-          assert.match(row, /NFT #10/);
-          assert.match(row, /Transferred from/);
-          assert.match(row, /100 USDC/);
-        } else {
-          assert.match(row, /0xCe37/); // Secondary wallet address remains visible.
-        }
-        assert.deepEqual(calls.names, [other]);
-        assert.deepEqual(calls.avatars, [other]);
-        assert.deepEqual(calls.providers, [address, other]);
-        const otherRow = rows.find(value =>
-          value.includes("thirdweb:" + other),
-        );
-        assert.ok(otherRow);
-        assert.match(otherRow, />You</);
-        assert.doesNotMatch(otherRow, /0xDeployer|pbs\.twimg/);
-      });
+      for (const address of [
+        identity.address,
+        identity.address.toLowerCase(),
+        identity.address.toUpperCase(),
+      ]) {
+        test(`renders exact manual name/avatar for ${address} without thirdweb identity lookup`, () => {
+          const { html, calls } = renderTable(
+            component,
+            address,
+            identity.neighbor,
+            identity.neighbor,
+          );
+          const rows = [...html.matchAll(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)].map(
+            match => match[0],
+          );
+          const row = rows.find(value => value.includes(identity.name));
+          assert.ok(row, "The actual table row must show the override name");
+          assert.match(
+            row,
+            new RegExp(
+              `src="${identity.avatar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`,
+            ),
+          );
+          assert.ok(row.includes(`alt="${identity.name}"`));
+          assert.doesNotMatch(row, />You<|verified|farcaster|\.eth/i);
+          assert.match(row, /42/); // Tiebreaker is unchanged.
+          if (component === "PickemLeaderboard") {
+            assert.match(row, /NFT #10/);
+            assert.match(row, /Transferred from/);
+            assert.match(row, /100 USDC/);
+          } else {
+            assert.ok(row.includes(identity.short)); // Secondary wallet address remains visible.
+          }
+          assert.deepEqual(calls.names, [identity.neighbor]);
+          assert.deepEqual(calls.avatars, [identity.neighbor]);
+          assert.deepEqual(calls.providers, [address, identity.neighbor]);
+          const otherRow = rows.find(value =>
+            value.includes("thirdweb:" + identity.neighbor),
+          );
+          assert.ok(otherRow);
+          assert.match(otherRow, />You</);
+          assert.doesNotMatch(otherRow, /0xDeployer|mleejr|pbs\.twimg/);
+        });
+      }
     }
 
     test("preserves nonmatching wallet name/avatar fallback and address-based You marker", () => {
@@ -154,7 +180,7 @@ for (const component of ["ContestPicksView", "PickemLeaderboard"]) {
       assert.deepEqual(calls.avatars, [unrelated, other]);
       assert.match(html, /0x1234/);
       assert.match(html, />You</);
-      assert.doesNotMatch(html, /0xDeployer|pbs\.twimg/);
+      assert.doesNotMatch(html, /0xDeployer|mleejr|pbs\.twimg/);
     });
   });
 }
