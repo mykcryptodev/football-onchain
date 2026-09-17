@@ -425,7 +425,13 @@ export default function PickemContestClient({
   const orderedGames = [...games].sort(
     (a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime(),
   );
-  const lastGame = games.find(game => game.gameId === contest.tiebreakerGameId);
+  // The contract leaves tiebreakerGameId at 0 until the oracle reports, so fall
+  // back to the latest kickoff — the same game the oracle picks (lib/oracle/espn.ts).
+  const lastGame =
+    games.find(game => game.gameId === contest.tiebreakerGameId) ??
+    orderedGames[orderedGames.length - 1];
+  const lastGameAway = lastGame?.awayAbbreviation ?? lastGame?.awayTeam;
+  const lastGameHome = lastGame?.homeAbbreviation ?? lastGame?.homeTeam;
 
   const { data: currencyDecimals } = useReadContract({
     contract: getContract({
@@ -797,9 +803,9 @@ export default function PickemContestClient({
                     className="text-sm text-muted-foreground"
                     id="tiebreaker-help"
                   >
-                    Guess the total points scored in the{" "}
-                    {lastGame?.awayAbbreviation} @ {lastGame?.homeAbbreviation}{" "}
-                    game
+                    {lastGameAway && lastGameHome
+                      ? `Guess the total points scored in the ${lastGameAway} @ ${lastGameHome} game`
+                      : "Guess the total points scored in the tiebreaker game"}
                     {lastGame?.odds?.overUnder && (
                       <span className="font-medium text-muted-foreground">
                         {" "}
