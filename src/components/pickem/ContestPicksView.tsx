@@ -61,6 +61,12 @@ interface GameInfo {
   kickoff: string; // ISO 8601 timestamp in UTC
 }
 
+// Rendered inside the contest page's "Leaderboard & submitted picks"
+// collapsible, which already supplies the card chrome. Drop this component's own
+// border, background and padding so it isn't a card within a card.
+const bareCard = "border-0 bg-transparent p-0 shadow-none backdrop-blur-none";
+const bareCardSection = "px-0 sm:px-0";
+
 interface ContestPicksViewProps {
   contestId: number;
   gameIds: string[];
@@ -481,14 +487,14 @@ export default function ContestPicksView({
   // Show loading state before mounting and while loading
   if (!mounted || loading) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className={bareCard}>
+        <CardHeader className={bareCardSection}>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
             All Picks
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={bareCardSection}>
           <div className="space-y-2">
             {[1, 2, 3].map(i => (
               <Skeleton key={i} className="h-16 w-full" />
@@ -501,14 +507,14 @@ export default function ContestPicksView({
 
   if (allPicks.length === 0) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className={bareCard}>
+        <CardHeader className={bareCardSection}>
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
             All Picks
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className={bareCardSection}>
           <div className="text-center py-8">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Picks Yet</h3>
@@ -522,8 +528,8 @@ export default function ContestPicksView({
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={bareCard}>
+      <CardHeader className={bareCardSection}>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Eye className="h-5 w-5" />
@@ -557,7 +563,7 @@ export default function ContestPicksView({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className={bareCardSection}>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

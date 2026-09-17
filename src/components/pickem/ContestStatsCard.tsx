@@ -1,4 +1,5 @@
 import { Calendar, HandCoins, Trophy, Users } from "lucide-react";
+import { ReactNode } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
@@ -13,6 +14,7 @@ interface ContestStatsCardProps {
   showTitle?: boolean;
   showCard?: boolean;
   className?: string;
+  footer?: ReactNode;
 }
 
 export default function ContestStatsCard({
@@ -25,6 +27,7 @@ export default function ContestStatsCard({
   showTitle = true,
   showCard = true,
   className = "",
+  footer,
 }: ContestStatsCardProps) {
   const { formattedValue: formattedEntryFee, isLoading: entryFeeLoading } =
     useFormattedCurrency({
@@ -125,7 +128,12 @@ export default function ContestStatsCard({
           <CardTitle>Contest Details</CardTitle>
         </CardHeader>
       )}
-      <CardContent className={showTitle ? "" : "pt-6"}>{content}</CardContent>
+      <CardContent className={showTitle ? "" : "pt-6"}>
+        {content}
+        {footer && (
+          <div className="mt-4 flex justify-center border-t pt-4">{footer}</div>
+        )}
+      </CardContent>
     </Card>
   );
 }

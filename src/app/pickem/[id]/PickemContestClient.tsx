@@ -150,6 +150,9 @@ export default function PickemContestClient({
     return () => clearInterval(timer);
   }, []);
   const [mounted, setMounted] = useState(false);
+  // Controlled so the "Leaderboard & submitted picks" link can expand it — this
+  // component re-renders every second, which would revert an uncontrolled open.
+  const [picksOpen, setPicksOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
@@ -406,6 +409,10 @@ export default function PickemContestClient({
   };
 
   const isSubmissionClosed = mounted && contest.submissionDeadline <= now;
+  // Expand once entries close, but only once, so it stays collapsible.
+  useEffect(() => {
+    if (isSubmissionClosed) setPicksOpen(true);
+  }, [isSubmissionClosed]);
   const readyToSubmit = allPicksMade && isValidTiebreaker(tiebreakerPoints);
 
   const EntryFeeUsd: FC<{ className?: string }> = ({ className }) => {
@@ -538,6 +545,27 @@ export default function PickemContestClient({
           payoutType={PAYOUT_TYPE_LABELS[contest.payoutType]}
           totalEntries={contest.totalEntries}
           totalPrizePool={contest.totalPrizePool}
+          footer={
+            <Button asChild className="h-auto p-0" variant="link">
+              <a
+                href="#leaderboard-and-picks"
+                onClick={event => {
+                  // Expand synchronously before scrolling, and scroll within this
+                  // page without relying on a wallet webview's fragment
+                  // navigation. Keep href as the native/no-JS fallback.
+                  const target = document.getElementById(
+                    event.currentTarget.hash.slice(1),
+                  );
+                  if (!(target instanceof HTMLDetailsElement)) return;
+                  event.preventDefault();
+                  target.open = true;
+                  target.scrollIntoView({ block: "start" });
+                }}
+              >
+                Leaderboard &amp; submitted picks
+              </a>
+            </Button>
+          }
         />
 
         {account && owned.isLoading && <Skeleton className="h-40 w-full" />}
@@ -969,7 +997,9 @@ export default function PickemContestClient({
         )}
         <details
           className="rounded-xl border bg-card p-4"
-          open={isSubmissionClosed}
+          id="leaderboard-and-picks"
+          open={picksOpen}
+          onToggle={event => setPicksOpen(event.currentTarget.open)}
         >
           <summary className="cursor-pointer font-semibold">
             Leaderboard &amp; submitted picks
