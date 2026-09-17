@@ -56,6 +56,14 @@ const OVERRIDES = new Map<string, IdentityOverride>([
         "https://pbs.twimg.com/profile_images/2031028919751573504/m_4Tu1Hv_400x400.jpg",
     },
   ],
+  [
+    "0xf9da3ecc6ef927474b9f98be35f68a323b175424",
+    {
+      name: "blknoiz06",
+      avatar:
+        "https://pbs.twimg.com/profile_images/2052070109758226438/xlyPdLmn_400x400.jpg",
+    },
+  ],
 ]);
 
 /**
