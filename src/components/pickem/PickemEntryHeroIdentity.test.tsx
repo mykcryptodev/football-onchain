@@ -32,7 +32,9 @@ mock.module("@/components/ui/avatar", () => ({
   AvatarFallback: ({ children }: { children: ReactNode }) => children,
 }));
 
-const { default: PickemEntryOwner } = await import("./PickemEntryOwner");
+const { default: PickemEntryHeroIdentity } = await import(
+  "./PickemEntryHeroIdentity"
+);
 const owner = "0x1234567890123456789012345678901234567890";
 const nextOwner = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 
@@ -41,10 +43,12 @@ beforeEach(() => {
   lookedUpAddress = null;
 });
 
-describe("current entry owner identity", () => {
+describe("entry hero identity", () => {
   test("renders resolved name and avatar for the owner, linking to their profile and the explorer", () => {
     profile = { name: "  myk.eth  ", avatar: "https://example.com/avatar.png" };
-    const html = renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={owner} />,
+    );
     expect(lookedUpAddress).toBe(owner);
     expect(html).toContain("Current owner");
     expect(html).toContain("myk.eth");
@@ -57,7 +61,9 @@ describe("current entry owner identity", () => {
   });
 
   test("unresolved or failed profile lookup retains address and avatar fallback", () => {
-    const html = renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={owner} />,
+    );
     expect(html).toContain("0x1234…7890");
     expect(html).toContain(`data-fallback-address="${owner}"`);
     expect(html).not.toContain("data-avatar-src");
@@ -65,15 +71,19 @@ describe("current entry owner identity", () => {
 
   test("blank names fall back to the address even when an avatar exists", () => {
     profile = { name: "   ", avatar: "https://example.com/avatar.png" };
-    const html = renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={owner} />,
+    );
     expect(html).toContain('data-avatar-alt="0x1234…7890"');
-    expect(html).toMatch(/font-medium[^>]*>0x1234…7890<\/a>/);
+    expect(html).toMatch(/font-semibold[^>]*>0x1234…7890<\/a>/);
   });
 
   test("ownership changes use the new address rather than the original entrant", () => {
-    renderToStaticMarkup(<PickemEntryOwner owner={owner} />);
+    renderToStaticMarkup(<PickemEntryHeroIdentity owner={owner} />);
     profile = { name: "New owner" };
-    const html = renderToStaticMarkup(<PickemEntryOwner owner={nextOwner} />);
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={nextOwner} />,
+    );
     expect(lookedUpAddress).toBe(nextOwner);
     expect(html).toContain("New owner");
     expect(html).toContain(`href="https://basescan.org/address/${nextOwner}"`);

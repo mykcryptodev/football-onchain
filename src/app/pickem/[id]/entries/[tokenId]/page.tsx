@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import EntryLiveGames from "@/components/pickem/EntryLiveGames";
-import PickemEntryOwner from "@/components/pickem/PickemEntryOwner";
+import PickemEntryHeroIdentity from "@/components/pickem/PickemEntryHeroIdentity";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
 import {
   contest,
@@ -78,7 +78,10 @@ export default async function EntryPage({ params }: Props) {
         <p className="text-sm text-[#a8c6b4]">
           PICK’EM · CONTEST #{id} · ENTRY #{tokenId}
         </p>
-        <h1 className="my-3 text-5xl font-semibold">I’m in.</h1>
+        <div className="my-3 flex flex-wrap items-center justify-between gap-4">
+          <PickemEntryHeroIdentity owner={entry.owner} />
+          <h1 className="text-5xl font-semibold">I’m in.</h1>
+        </div>
         <p>My picks are onchain. Think you can beat me?</p>
         <Link
           className="mt-6 inline-block rounded-full bg-[#e5ff4f] px-6 py-3 font-semibold text-[#142018]"
@@ -94,7 +97,6 @@ export default async function EntryPage({ params }: Props) {
         tokenId={token.toString()}
       />
 
-      <PickemEntryOwner owner={entry.owner} />
       <EntryLiveGames
         entries={allEntries}
         gameIds={c.gameIds.map(id => id.toString())}

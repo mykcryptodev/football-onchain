@@ -66,7 +66,7 @@ mock.module("@/components/ui/avatar", () => ({
   AvatarFallback: () => null,
 }));
 mock.module("thirdweb/react", () => ({ AccountProvider: unexpected, AccountAvatar: unexpected, Blobbie: () => null }));
-const { default: Owner } = await import("./src/components/pickem/PickemEntryOwner.tsx");
+const { default: Owner } = await import("./src/components/pickem/PickemEntryHeroIdentity.tsx");
 const html = renderToStaticMarkup(h(Owner, { owner: address }));
 assert.ok(html.includes('src="' + avatar + '"'));
 assert.ok(html.includes('alt="mleejr"'));

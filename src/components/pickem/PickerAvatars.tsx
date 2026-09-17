@@ -13,7 +13,7 @@ export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-// Same resolution order as PickemEntryOwner: profile avatar, then thirdweb's
+// Same resolution order as PickemEntryHeroIdentity: profile avatar, then thirdweb's
 // account avatar, then a Blobbie. `className` sets the size.
 export function PickerAvatar({
   address,
