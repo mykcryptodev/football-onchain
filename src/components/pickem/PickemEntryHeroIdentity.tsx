@@ -40,9 +40,6 @@ export default function PickemEntryHeroIdentity({ owner }: { owner: string }) {
         )}
       </Link>
       <div className="min-w-0">
-        <p className="text-xs uppercase tracking-wider text-[#a8c6b4]">
-          Current owner
-        </p>
         <Link
           className="block truncate text-lg font-semibold text-[#f4f4e9] underline-offset-4 hover:underline"
           href={profileHref}

@@ -50,7 +50,6 @@ describe("entry hero identity", () => {
       <PickemEntryHeroIdentity owner={owner} />,
     );
     expect(lookedUpAddress).toBe(owner);
-    expect(html).toContain("Current owner");
     expect(html).toContain("myk.eth");
     expect(html).toContain('data-avatar-src="https://example.com/avatar.png"');
     expect(html).toContain(`href="https://basescan.org/address/${owner}"`);
