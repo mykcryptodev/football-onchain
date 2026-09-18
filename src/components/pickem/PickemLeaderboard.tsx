@@ -327,6 +327,7 @@ export default function PickemLeaderboard({
                       >
                         <TableCell>
                           <Badge
+                            className="whitespace-nowrap"
                             variant={rankBadgeVariant(
                               entry.rank,
                               entry.tiedCount,

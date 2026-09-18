@@ -598,6 +598,7 @@ export default function ContestPicksView({
                       {displayRank ? (
                         <div className="flex items-center gap-1.5">
                           <Badge
+                            className="whitespace-nowrap"
                             variant={
                               tiedCount > 1
                                 ? "outline"
