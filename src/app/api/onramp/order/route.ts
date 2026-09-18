@@ -155,8 +155,10 @@ export async function POST(request: Request) {
         partnerUserRef: sandbox ? `sandbox-${userRef}` : userRef,
         phoneNumber,
         email,
-        smsVerificationId,
-        emailVerificationId,
+        // Sandbox verification records (onramp_verification_00000000-…) are
+        // not persisted by Coinbase, so sandbox orders rely on
+        // phoneNumberVerifiedAt instead of the server-side record lookup.
+        ...(sandbox ? {} : { smsVerificationId, emailVerificationId }),
         phoneNumberVerifiedAt,
         agreementAcceptedAt,
         domain,
