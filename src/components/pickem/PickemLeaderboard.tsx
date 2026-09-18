@@ -55,6 +55,8 @@ interface LeaderboardEntry {
   tiebreakerPoints: number;
   submissionTime: number;
   rank: number;
+  tiedCount: number;
+  scoredGames: number;
   prize: bigint;
 }
 
@@ -97,10 +99,22 @@ function PrizeDisplay({
   );
 }
 
-function rankBadgeVariant(rank: number): "default" | "secondary" | "outline" {
+function rankBadgeVariant(
+  rank: number,
+  tiedCount: number,
+  scoredGames: number,
+): "default" | "secondary" | "outline" {
+  // Nothing has been played, or the position is shared — don't dress it up
+  // as a podium place.
+  if (scoredGames === 0 || tiedCount > 1) return "outline";
   if (rank === 1) return "default";
   if (rank <= 3) return "secondary";
   return "outline";
+}
+
+function rankBadgeLabel(entry: LeaderboardEntry): string {
+  if (entry.scoredGames === 0) return "—";
+  return entry.tiedCount > 1 ? `T-${entry.rank}` : `#${entry.rank}`;
 }
 
 export default function PickemLeaderboard({
@@ -217,10 +231,12 @@ export default function PickemLeaderboard({
             tiebreakerPoints: entry.tiebreakerPoints,
             submissionTime: entry.submissionTime,
             rank: rankedEntry?.rank ?? 0,
+            tiedCount: rankedEntry?.tiedCount ?? 1,
+            scoredGames: rankedEntry?.scoredGames ?? 0,
             prize,
           };
         })
-        .sort((a, b) => a.rank - b.rank);
+        .sort((a, b) => a.rank - b.rank || a.tokenId - b.tokenId);
 
       setEntries(processedEntries);
     } catch (error) {
@@ -310,8 +326,14 @@ export default function PickemLeaderboard({
                         className={isYou(entry.address) ? "bg-accent/50" : ""}
                       >
                         <TableCell>
-                          <Badge variant={rankBadgeVariant(entry.rank)}>
-                            #{entry.rank}
+                          <Badge
+                            variant={rankBadgeVariant(
+                              entry.rank,
+                              entry.tiedCount,
+                              entry.scoredGames,
+                            )}
+                          >
+                            {rankBadgeLabel(entry)}
                           </Badge>
                         </TableCell>
                         <TableCell>

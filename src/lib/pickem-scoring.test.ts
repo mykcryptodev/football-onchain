@@ -185,6 +185,91 @@ describe("pickem scoring", () => {
     });
   });
 
+  test("shares a rank between entries nothing can separate yet", () => {
+    // No game has started, so every entry is genuinely tied. Token ID
+    // orders the rows but must not hand out distinct places.
+    const ranked = rankEntries(
+      [
+        { tokenId: 10, picks: [1, 0], tiebreakerPoints: 40 },
+        { tokenId: 11, picks: [0, 1], tiebreakerPoints: 44 },
+        { tokenId: 12, picks: [1, 1], tiebreakerPoints: 45 },
+      ],
+      ["1", "2"],
+      [
+        { gameId: "1", status: "STATUS_SCHEDULED" },
+        { gameId: "2", status: "STATUS_SCHEDULED" },
+      ],
+      "2",
+    );
+
+    expect(ranked.map(entry => entry.rank)).toEqual([1, 1, 1]);
+    expect(ranked.map(entry => entry.tiedCount)).toEqual([3, 3, 3]);
+    expect(ranked.every(entry => entry.scoredGames === 0)).toBe(true);
+  });
+
+  test("skips ranks after a tie group", () => {
+    // Tiebreaker game is unplayed, so equal correct picks are a real tie.
+    const ranked = rankEntries(
+      [
+        { tokenId: 10, picks: [1, 0], tiebreakerPoints: 40 },
+        { tokenId: 11, picks: [1, 0], tiebreakerPoints: 44 },
+        { tokenId: 12, picks: [0, 0], tiebreakerPoints: 45 },
+      ],
+      ["1", "2"],
+      [
+        { gameId: "1", homeScore: 24, awayScore: 17, status: "STATUS_FINAL" },
+        { gameId: "2", status: "STATUS_SCHEDULED" },
+      ],
+      "2",
+    );
+
+    expect(ranked.map(entry => [entry.tokenId, entry.rank])).toEqual([
+      [10, 1],
+      [11, 1],
+      [12, 3],
+    ]);
+    expect(ranked.map(entry => entry.tiedCount)).toEqual([2, 2, 1]);
+  });
+
+  test("a played tiebreaker separates entries on equal correct picks", () => {
+    const ranked = rankEntries(
+      [
+        { tokenId: 10, picks: [1, 0], tiebreakerPoints: 40 },
+        { tokenId: 11, picks: [1, 0], tiebreakerPoints: 44 },
+      ],
+      ["1", "2"],
+      [
+        { gameId: "1", homeScore: 24, awayScore: 17, status: "STATUS_FINAL" },
+        { gameId: "2", homeScore: 20, awayScore: 23, status: "STATUS_FINAL" },
+      ],
+      "2",
+    );
+
+    expect(ranked.map(entry => [entry.tokenId, entry.rank])).toEqual([
+      [11, 1],
+      [10, 2],
+    ]);
+    expect(ranked.map(entry => entry.tiedCount)).toEqual([1, 1]);
+  });
+
+  test("identical tiebreakers stay tied even once that game is played", () => {
+    const ranked = rankEntries(
+      [
+        { tokenId: 10, picks: [1, 0], tiebreakerPoints: 44 },
+        { tokenId: 11, picks: [1, 0], tiebreakerPoints: 44 },
+      ],
+      ["1", "2"],
+      [
+        { gameId: "1", homeScore: 24, awayScore: 17, status: "STATUS_FINAL" },
+        { gameId: "2", homeScore: 20, awayScore: 23, status: "STATUS_FINAL" },
+      ],
+      "2",
+    );
+
+    expect(ranked.map(entry => entry.rank)).toEqual([1, 1]);
+    expect(ranked.map(entry => entry.tiedCount)).toEqual([2, 2]);
+  });
+
   test("formats place ordinals", () => {
     expect(formatPlace(1)).toBe("1st");
     expect(formatPlace(2)).toBe("2nd");
@@ -194,6 +279,13 @@ describe("pickem scoring", () => {
     expect(formatPlace(12)).toBe("12th");
     expect(formatPlace(13)).toBe("13th");
     expect(formatPlace(21)).toBe("21st");
+  });
+
+  test("marks shared places rather than presenting them as outright", () => {
+    expect(formatPlace(1, 1)).toBe("1st");
+    expect(formatPlace(1, 3)).toBe("T-1st");
+    expect(formatPlace(3, 2)).toBe("T-3rd");
+    expect(formatPlace(12, 4)).toBe("T-12th");
   });
 });
 

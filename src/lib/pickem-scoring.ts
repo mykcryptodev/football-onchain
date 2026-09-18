@@ -27,7 +27,14 @@ export interface RankedEntry {
   tokenId: number;
   correctPicks: number;
   scoredGames: number;
+  /**
+   * Standard competition rank. Entries that cannot be separated by the
+   * criteria available so far share a rank, and the next distinct entry
+   * skips ahead (1, 1, 1, 4).
+   */
   rank: number;
+  /** Entries sharing this rank, including this one. 1 means uncontested. */
+  tiedCount: number;
 }
 
 export function isGameComplete(status?: string, completed?: boolean): boolean {
@@ -197,6 +204,16 @@ export function rankEntries(
     };
   });
 
+  // Two entries are genuinely tied when no criterion that has actually
+  // resolved yet can separate them. Token ID orders them for a stable
+  // render, but it is not a tiebreaker — the contract only falls back to
+  // submission order once scoring is final, so using it to hand out
+  // distinct places mid-contest invents standings that do not exist.
+  const separationKey = (entry: (typeof scored)[number]): string =>
+    actualTiebreakerTotal > 0
+      ? `${entry.correctPicks}:${Math.abs(entry.tiebreakerPoints - actualTiebreakerTotal)}`
+      : `${entry.correctPicks}`;
+
   scored.sort((a, b) => {
     if (b.correctPicks !== a.correctPicks) {
       return b.correctPicks - a.correctPicks;
@@ -209,27 +226,52 @@ export function rankEntries(
     return a.tokenId - b.tokenId;
   });
 
+  const ranks: number[] = [];
+  const tiedCounts: number[] = [];
+  for (let index = 0; index < scored.length; index++) {
+    if (
+      index > 0 &&
+      separationKey(scored[index]) === separationKey(scored[index - 1])
+    ) {
+      ranks[index] = ranks[index - 1];
+    } else {
+      ranks[index] = index + 1;
+    }
+  }
+  for (let index = 0; index < scored.length; index++) {
+    tiedCounts[index] = ranks.filter(rank => rank === ranks[index]).length;
+  }
+
   return scored.map((entry, index) => ({
     tokenId: entry.tokenId,
     correctPicks: entry.correctPicks,
     scoredGames: entry.scoredGames,
-    rank: index + 1,
+    rank: ranks[index],
+    tiedCount: tiedCounts[index],
   }));
 }
 
-export function formatPlace(rank: number): string {
+/**
+ * Render an ordinal place. Pass `tiedCount` so shared ranks are marked
+ * rather than presented as an outright position.
+ */
+export function formatPlace(rank: number, tiedCount = 1): string {
   const mod100 = rank % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
-  switch (rank % 10) {
-    case 1:
-      return `${rank}st`;
-    case 2:
-      return `${rank}nd`;
-    case 3:
-      return `${rank}rd`;
-    default:
-      return `${rank}th`;
-  }
+  const suffixed = (() => {
+    if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+    switch (rank % 10) {
+      case 1:
+        return `${rank}st`;
+      case 2:
+        return `${rank}nd`;
+      case 3:
+        return `${rank}rd`;
+      default:
+        return `${rank}th`;
+    }
+  })();
+
+  return tiedCount > 1 ? `T-${suffixed}` : suffixed;
 }
 
 export const SEASON_TYPE_LABELS: Record<number, string> = {

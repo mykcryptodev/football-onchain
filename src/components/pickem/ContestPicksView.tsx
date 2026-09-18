@@ -48,6 +48,7 @@ interface ContestPick {
   liveCorrectPicks?: number;
   liveTotalScoredGames?: number;
   liveRank?: number;
+  liveTiedCount?: number;
 }
 
 interface GameInfo {
@@ -576,10 +577,15 @@ export default function ContestPicksView({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allPicks.map((pick, index) => {
+              {allPicks.map(pick => {
                 const isUserPick = isCurrentUser(pick.owner);
                 const identity = getIdentityOverride(pick.owner);
-                const displayRank = gamesFinalized ? index + 1 : pick.liveRank;
+                // Always use the shared rank from live-rankings, finalized or
+                // not. Row position is not a place: tied entries hold the same
+                // rank, and only the contract's winners list separates an exact
+                // tie once scoring is final.
+                const displayRank = pick.liveRank;
+                const tiedCount = pick.liveTiedCount ?? 1;
                 // Check if we have live data from ESPN, regardless of finalized state
                 const hasLiveData = pick.liveCorrectPicks !== undefined;
 
@@ -593,14 +599,18 @@ export default function ContestPicksView({
                         <div className="flex items-center gap-1.5">
                           <Badge
                             variant={
-                              displayRank === 1
-                                ? "default"
-                                : displayRank < 4
-                                  ? "secondary"
-                                  : "outline"
+                              tiedCount > 1
+                                ? "outline"
+                                : displayRank === 1
+                                  ? "default"
+                                  : displayRank < 4
+                                    ? "secondary"
+                                    : "outline"
                             }
                           >
-                            #{displayRank}
+                            {tiedCount > 1
+                              ? `T-${displayRank}`
+                              : `#${displayRank}`}
                           </Badge>
                         </div>
                       ) : (

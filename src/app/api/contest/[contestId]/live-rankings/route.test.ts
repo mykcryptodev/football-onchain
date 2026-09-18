@@ -83,4 +83,66 @@ describe("live rankings", () => {
     expect(byToken[2].liveTotalScoredGames).toBe(2);
     expect(byToken[2].liveCorrectPicks).toBe(0);
   });
+
+  test("entries nothing can separate yet share a rank", async () => {
+    globalThis.fetch = (async () =>
+      Response.json({
+        events: [
+          {
+            id: "1",
+            competitions: [competition("STATUS_SCHEDULED", false, "0", "0")],
+          },
+          {
+            id: "2",
+            competitions: [competition("STATUS_SCHEDULED", false, "0", "0")],
+          },
+        ],
+      })) as unknown as typeof fetch;
+
+    const response = await POST(
+      new NextRequest("http://localhost/api/contest/15/live-rankings", {
+        method: "POST",
+        body: JSON.stringify({
+          gameIds: ["1", "2"],
+          tiebreakerGameId: "2",
+          year: 2026,
+          seasonType: 2,
+          weekNumber: 1,
+          picks: [
+            {
+              tokenId: 7,
+              owner: "0xa",
+              picks: [1, 0],
+              correctPicks: 0,
+              tiebreakerPoints: 40,
+            },
+            {
+              tokenId: 8,
+              owner: "0xb",
+              picks: [0, 1],
+              correctPicks: 0,
+              tiebreakerPoints: 55,
+            },
+            {
+              tokenId: 9,
+              owner: "0xc",
+              picks: [1, 1],
+              correctPicks: 0,
+              tiebreakerPoints: 61,
+            },
+          ],
+        }),
+      }),
+    );
+
+    const { picks } = await response.json();
+    // Nothing has kicked off, so no entry outranks another — mint order
+    // must not be dressed up as 1st/2nd/3rd.
+    expect(picks.map((p: { liveRank: number }) => p.liveRank)).toEqual([
+      1, 1, 1,
+    ]);
+    expect(
+      picks.map((p: { liveTiedCount: number }) => p.liveTiedCount),
+    ).toEqual([3, 3, 3]);
+  });
 });

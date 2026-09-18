@@ -79,7 +79,7 @@ export default function EntryLiveGames({
           <p className="text-sm text-muted-foreground">Leaderboard</p>
           <p className="text-2xl font-black tracking-[-0.04em]">
             {ranked && ranked.scoredGames > 0
-              ? `${formatPlace(ranked.rank)} of ${entries.length}`
+              ? `${formatPlace(ranked.rank, ranked.tiedCount)} of ${entries.length}`
               : "Awaiting kickoff"}
           </p>
           <p className="text-xs text-muted-foreground">{entryCount}</p>

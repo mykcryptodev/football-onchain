@@ -258,7 +258,7 @@ export function useMyCurrentWeekPicks(
               rank: scoredGames > 0 ? (rankedEntry?.rank ?? null) : null,
               placeLabel:
                 scoredGames > 0 && rankedEntry
-                  ? `${formatPlace(rankedEntry.rank)} of ${contest.totalEntries}`
+                  ? `${formatPlace(rankedEntry.rank, rankedEntry.tiedCount)} of ${contest.totalEntries}`
                   : `${contest.totalEntries} ${Number(contest.totalEntries) === 1 ? "entry" : "entries"}`,
               correctPicks: rankedEntry?.correctPicks ?? 0,
               scoredGames,

@@ -54,6 +54,7 @@ type ContestSummary = Omit<
     string,
     {
       rank: number | null;
+      tiedCount: number;
       correctPicks: number;
       scoredGames: number;
       prizeWon: string;
@@ -162,6 +163,7 @@ function pickemContestSummary(contestId: bigint) {
         const scoredGames = r?.scoredGames ?? 0;
         entries[tokenId.toString()] = {
           rank: scoredGames > 0 ? (r?.rank ?? null) : null,
+          tiedCount: r?.tiedCount ?? 1,
           correctPicks: r?.correctPicks ?? 0,
           scoredGames,
           prizeWon: calculateEntryPrize(
@@ -243,7 +245,7 @@ export function playerProfile(owner: Address) {
             scoredGames: e?.scoredGames ?? 0,
             prizeWon: e?.prizeWon ?? "0",
             placeLabel: e?.rank
-              ? `${formatPlace(e.rank)} of ${totalEntries}`
+              ? `${formatPlace(e.rank, e.tiedCount)} of ${totalEntries}`
               : `${totalEntries} ${totalEntries === 1 ? "entry" : "entries"}`,
           } satisfies ProfilePickemEntry;
         })

@@ -50,7 +50,13 @@ interface ContestPick {
 interface RankedPick extends ContestPick {
   liveCorrectPicks: number;
   liveTotalScoredGames: number;
+  /**
+   * Standard competition rank. Entries nothing can separate yet share a
+   * rank and the next distinct entry skips ahead (1, 1, 1, 4).
+   */
   liveRank?: number;
+  /** Entries sharing this rank, including this one. 1 means uncontested. */
+  liveTiedCount?: number;
 }
 
 export async function POST(request: NextRequest) {
@@ -175,14 +181,34 @@ export async function POST(request: NextRequest) {
         const bDiff = Math.abs(b.tiebreakerPoints - actualTiebreakerTotal);
         return aDiff - bDiff; // Lower difference = better rank
       }
-      // If tiebreaker game not played, keep current order (will be resolved later)
-      return 0;
+      // If tiebreaker game not played, order is arbitrary — these entries
+      // are genuinely tied and will share a rank below.
+      return a.tokenId - b.tokenId;
     });
 
-    // Add ranks
+    // Entries are only separated by criteria that have actually resolved.
+    // Handing out distinct places before that invents standings: with no
+    // games played every entry is tied, and ranking them 1..N just reports
+    // mint order as if it were a position.
+    const separationKey = (pick: RankedPick): string =>
+      actualTiebreakerTotal > 0
+        ? `${pick.liveCorrectPicks}:${Math.abs(pick.tiebreakerPoints - actualTiebreakerTotal)}`
+        : `${pick.liveCorrectPicks}`;
+
+    const liveRanks: number[] = [];
+    for (let index = 0; index < rankedPicks.length; index++) {
+      liveRanks[index] =
+        index > 0 &&
+        separationKey(rankedPicks[index]) ===
+          separationKey(rankedPicks[index - 1])
+          ? liveRanks[index - 1]
+          : index + 1;
+    }
+
     const rankedPicksWithRank = rankedPicks.map((pick, index) => ({
       ...pick,
-      liveRank: index + 1,
+      liveRank: liveRanks[index],
+      liveTiedCount: liveRanks.filter(rank => rank === liveRanks[index]).length,
     }));
 
     return NextResponse.json({
