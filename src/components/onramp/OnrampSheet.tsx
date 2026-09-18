@@ -58,6 +58,8 @@ interface OnrampSheetProps {
   /** Display label for what the user is funding, e.g. "1 USDC entry". */
   purpose: string;
   sandbox?: boolean;
+  /** Payment method chosen by the user; defaults to device autodetect. */
+  paymentMethod?: OnrampPaymentMethod;
   /** Called once Coinbase confirms funds landed in the wallet. */
   onFunded: () => void;
 }
@@ -103,6 +105,7 @@ export function OnrampSheet({
   purchaseCurrency,
   purpose,
   sandbox = false,
+  paymentMethod: paymentMethodProp,
   onFunded,
 }: OnrampSheetProps) {
   const {
@@ -137,12 +140,13 @@ export function OnrampSheet({
   const orderRequestRef = useRef(0);
 
   const paymentMethod: OnrampPaymentMethod = useMemo(() => {
+    if (paymentMethodProp) return paymentMethodProp;
     if (typeof window === "undefined") return "GUEST_CHECKOUT_APPLE_PAY";
     return pickPaymentMethod({
       userAgent: navigator.userAgent,
       hasApplePaySession: "ApplePaySession" in window,
     });
-  }, []);
+  }, [paymentMethodProp]);
   const payLabel = paymentMethodLabel(paymentMethod);
 
   const resetFlow = useCallback(() => {

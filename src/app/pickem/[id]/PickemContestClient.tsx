@@ -54,6 +54,7 @@ import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
 import { formatKickoffTime } from "@/lib/date";
 import { onrampTickerFor, purchaseAmountFor } from "@/lib/onramp/helpers";
+import type { OnrampPaymentMethod } from "@/lib/onramp/types";
 import { isValidTiebreaker } from "@/lib/pickem-entry";
 import { buildPickemShareUrl } from "@/lib/pickem-share";
 import { toCaip19 } from "@/lib/utils";
@@ -148,6 +149,9 @@ export default function PickemContestClient({
   const { isInMiniApp } = useFarcasterContext();
   const { enabled: onrampEnabled, sandbox: onrampSandbox } = useOnrampStatus();
   const [onrampOpen, setOnrampOpen] = useState(false);
+  const [onrampMethod, setOnrampMethod] = useState<OnrampPaymentMethod>(
+    "GUEST_CHECKOUT_APPLE_PAY",
+  );
   const [showSwapFallback, setShowSwapFallback] = useState(false);
 
   const [now, setNow] = useState(Date.now);
@@ -976,31 +980,83 @@ export default function PickemContestClient({
                       </div>
                     ) : canOnramp && !showSwapFallback ? (
                       <div className="flex flex-col gap-2 items-center w-full">
+                        <div className="text-xs text-muted-foreground text-center">
+                          You do not have enough balance to submit picks. Buy{" "}
+                          {formattedEntryFee} with:
+                        </div>
+                        <Button
+                          className="w-full bg-black text-white hover:bg-black/85 border border-white/15"
+                          size="lg"
+                          onClick={() => {
+                            setOnrampMethod("GUEST_CHECKOUT_APPLE_PAY");
+                            setOnrampOpen(true);
+                          }}
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <svg
+                              aria-hidden="true"
+                              className="size-4"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M16.37 12.68c-.03-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.15-2.76.83-3.47.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.93 1.16 9.2.77 1.11 1.68 2.36 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.01.72c1.25-.02 2.04-1.13 2.8-2.25.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.42-.93-2.49-3.71ZM14.09 5.94c.64-.78 1.07-1.86.95-2.94-.92.04-2.04.61-2.7 1.39-.59.69-1.11 1.79-.97 2.85 1.03.08 2.08-.52 2.72-1.3Z" />
+                            </svg>
+                            Apple Pay
+                          </span>
+                        </Button>
+                        <Button
+                          className="w-full bg-white text-black hover:bg-white/90 border border-black/10"
+                          size="lg"
+                          onClick={() => {
+                            setOnrampMethod("GUEST_CHECKOUT_GOOGLE_PAY");
+                            setOnrampOpen(true);
+                          }}
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <svg
+                              aria-hidden="true"
+                              className="size-4"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                d="M21.6 12.23c0-.68-.06-1.33-.17-1.96H12v3.71h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.32 2.98-7.27Z"
+                                fill="#4285F4"
+                              />
+                              <path
+                                d="M12 22c2.7 0 4.96-.9 6.62-2.42l-3.24-2.5c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.75-5.58-4.1H3.07v2.58A10 10 0 0 0 12 22Z"
+                                fill="#34A853"
+                              />
+                              <path
+                                d="M6.42 13.93A6 6 0 0 1 6.1 12c0-.67.12-1.32.32-1.93V7.49H3.07A10 10 0 0 0 2 12c0 1.61.39 3.14 1.07 4.51l3.35-2.58Z"
+                                fill="#FBBC04"
+                              />
+                              <path
+                                d="M12 5.98c1.47 0 2.78.5 3.82 1.5l2.86-2.87A9.98 9.98 0 0 0 12 2a10 10 0 0 0-8.93 5.49l3.35 2.58C7.2 7.72 9.4 5.98 12 5.98Z"
+                                fill="#EA4335"
+                              />
+                            </svg>
+                            Google Pay
+                          </span>
+                        </Button>
                         <Button
                           className="w-full"
                           size="lg"
-                          onClick={() => setOnrampOpen(true)}
+                          variant="outline"
+                          onClick={() => setShowSwapFallback(true)}
                         >
                           <span className="flex items-center gap-2">
                             <Wallet className="size-4" />
-                            Buy {formattedEntryFee} with Apple Pay or Google Pay
+                            Pay with crypto
                           </span>
                         </Button>
                         <div className="text-xs text-muted-foreground text-center">
-                          You do not have enough balance to submit picks. No
-                          crypto needed — pay with your card and it lands in
-                          your wallet in seconds.
+                          No crypto needed for Apple Pay or Google Pay — it
+                          lands in your wallet in seconds.
                         </div>
-                        <button
-                          className="text-xs text-muted-foreground underline underline-offset-2"
-                          type="button"
-                          onClick={() => setShowSwapFallback(true)}
-                        >
-                          Already have crypto? Swap instead
-                        </button>
                         {account && onrampTicker && (
                           <OnrampSheet
                             open={onrampOpen}
+                            paymentMethod={onrampMethod}
                             purchaseAmount={onrampPurchaseAmount}
                             purchaseCurrency={onrampTicker}
                             purpose={`${formattedEntryFee} entry`}
