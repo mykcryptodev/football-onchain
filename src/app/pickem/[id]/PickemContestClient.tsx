@@ -2,7 +2,7 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, Shuffle } from "lucide-react";
+import { ArrowLeft, Clock, Shuffle, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -20,6 +20,7 @@ import {
 } from "thirdweb/react";
 import { erc20Abi } from "viem";
 
+import OnrampSheet from "@/components/onramp/OnrampSheet";
 import ContestPicksView from "@/components/pickem/ContestPicksView";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import MyPickems from "@/components/pickem/MyPickems";
@@ -46,11 +47,13 @@ import { useBalanceRefresh } from "@/hooks/useBalanceRefresh";
 import { useFarcasterContext } from "@/hooks/useFarcasterContext";
 import { useFormattedCurrency } from "@/hooks/useFormattedCurrency";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useOnrampStatus } from "@/hooks/useOnrampStatus";
 import { useOwnedPickemEntries } from "@/hooks/useOwnedPickemEntries";
 import { usePickemContract } from "@/hooks/usePickemContract";
 import { usePickemPicks } from "@/hooks/usePickemPicks";
 import { useWeekGames } from "@/hooks/useWeekGames";
 import { formatKickoffTime } from "@/lib/date";
+import { onrampTickerFor, purchaseAmountFor } from "@/lib/onramp/helpers";
 import { isValidTiebreaker } from "@/lib/pickem-entry";
 import { buildPickemShareUrl } from "@/lib/pickem-share";
 import { toCaip19 } from "@/lib/utils";
@@ -143,6 +146,9 @@ export default function PickemContestClient({
   const { setTokenAddress } = useDisplayToken();
   const { resolvedTheme } = useTheme();
   const { isInMiniApp } = useFarcasterContext();
+  const { enabled: onrampEnabled, sandbox: onrampSandbox } = useOnrampStatus();
+  const [onrampOpen, setOnrampOpen] = useState(false);
+  const [showSwapFallback, setShowSwapFallback] = useState(false);
 
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -458,6 +464,25 @@ export default function PickemContestClient({
       !isLoadingWalletBalance
     );
   }, [walletBalance, contest.entryFee, isLoadingWalletBalance]);
+
+  // Apple Pay / Google Pay onramp: only for tokens Coinbase can deliver directly.
+  const onrampTicker = onrampTickerFor(contest.currency, usdc[chain.id]);
+  const onrampPurchaseAmount = useMemo(
+    () =>
+      purchaseAmountFor({
+        required: contest.entryFee,
+        balance: walletBalance?.value ?? BigInt(0),
+        decimals: currencyDecimals ?? 18,
+      }),
+    [contest.entryFee, walletBalance?.value, currencyDecimals],
+  );
+  const canOnramp =
+    onrampEnabled && onrampTicker !== null && Number(onrampPurchaseAmount) > 0;
+
+  const handleOnrampFunded = () => {
+    startBalanceRefresh();
+    void refetchWalletBalance();
+  };
 
   const handleMiniAppSwap = async () => {
     if (isInMiniApp) {
@@ -949,11 +974,57 @@ export default function PickemContestClient({
                           You do not have enough balance to submit picks.
                         </div>
                       </div>
+                    ) : canOnramp && !showSwapFallback ? (
+                      <div className="flex flex-col gap-2 items-center w-full">
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          onClick={() => setOnrampOpen(true)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <Wallet className="size-4" />
+                            Buy {formattedEntryFee} with Apple Pay or Google Pay
+                          </span>
+                        </Button>
+                        <div className="text-xs text-muted-foreground text-center">
+                          You do not have enough balance to submit picks. No
+                          crypto needed — pay with your card and it lands in
+                          your wallet in seconds.
+                        </div>
+                        <button
+                          className="text-xs text-muted-foreground underline underline-offset-2"
+                          type="button"
+                          onClick={() => setShowSwapFallback(true)}
+                        >
+                          Already have crypto? Swap instead
+                        </button>
+                        {account && onrampTicker && (
+                          <OnrampSheet
+                            open={onrampOpen}
+                            purchaseAmount={onrampPurchaseAmount}
+                            purchaseCurrency={onrampTicker}
+                            purpose={`${formattedEntryFee} entry`}
+                            sandbox={onrampSandbox}
+                            walletAddress={account.address}
+                            onFunded={handleOnrampFunded}
+                            onOpenChange={setOnrampOpen}
+                          />
+                        )}
+                      </div>
                     ) : (
                       <div className="flex flex-col gap-2 items-center w-full">
                         <div className="text-xs text-muted-foreground">
                           You do not have enough balance to submit picks.
                         </div>
+                        {canOnramp && (
+                          <button
+                            className="text-xs text-muted-foreground underline underline-offset-2"
+                            type="button"
+                            onClick={() => setShowSwapFallback(false)}
+                          >
+                            Pay with Apple Pay or Google Pay instead
+                          </button>
+                        )}
                         <BuyWidget
                           chain={chain}
                           client={client}
