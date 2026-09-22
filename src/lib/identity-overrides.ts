@@ -80,6 +80,14 @@ const OVERRIDES = new Map<string, IdentityOverride>([
         "https://pbs.twimg.com/profile_images/2079300026929389568/JcQpqOIQ_400x400.jpg",
     },
   ],
+  [
+    "0x36fc1f624f999464c179c06a34591bbe34cc7169",
+    {
+      name: "frankdegods",
+      avatar:
+        "https://pbs.twimg.com/profile_images/2060043584204689410/Sh83nkwV_400x400.jpg",
+    },
+  ],
 ]);
 
 /**
