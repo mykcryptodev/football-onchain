@@ -136,3 +136,17 @@ describe("mleejr display-only exception", () => {
     );
   });
 });
+
+describe("bobdole contest 21 entrant override", () => {
+  const address = "0xB326320916F52d0Bd5F191E324ED63da1cEaCA81";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "bobdole",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1905660094047559681/LRd1OsbA_400x400.jpg",
+        xUsername: "bobdole08923509",
+      });
+    });
+  }
+});
