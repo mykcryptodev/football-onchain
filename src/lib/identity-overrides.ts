@@ -1,3 +1,5 @@
+import identityOverrideEntries from "./identity-overrides.json";
+
 /**
  * Narrow, application-wide display-only identity overrides.
  *
@@ -5,7 +7,14 @@
  * ownership, payout, authentication, or wallet-linking semantics.
  * They affect only the name and avatar shown in UI surfaces.
  *
- * Keys are lowercase hex addresses (0x…). Lookup is case-insensitive.
+ * `identity-overrides.json` is the single source of truth; this module
+ * derives the map from it, so code and data cannot drift. Addresses are
+ * lowercase hex (0x…). Lookup is case-insensitive.
+ *
+ * `xUsername` is the entrant's X handle without the leading @, curated by
+ * us. Like the other fields it is display-only, but it gives automation
+ * (e.g. the weekly winner announcement) an explicit handle instead of
+ * guessing one from the display name.
  */
 
 export interface IdentityOverride {
@@ -13,82 +22,24 @@ export interface IdentityOverride {
   name: string;
   /** HTTPS avatar URL shown instead of the resolved social avatar. */
   avatar: string;
+  /** X username (no leading @) for this entrant, curated by us. */
+  xUsername: string;
 }
 
-const OVERRIDES = new Map<string, IdentityOverride>([
-  [
-    "0x0a719f84fb1728f9e6fe7f34d9f730c6c46bbebb",
-    {
-      name: "mleejr",
-      avatar:
-        "https://pbs.twimg.com/profile_images/1601094719525855232/aOkAPHtC_400x400.png",
-    },
-  ],
-  [
-    "0xce370ebcbc655f845df7dfb8c079e75b5ea17d93",
-    {
-      name: "0xDeployer",
-      avatar:
-        "https://pbs.twimg.com/profile_images/2080340429426565120/NSSkGo98_400x400.jpg",
-    },
-  ],
-  [
-    "0x10cfd989637f004278db27f9f627239879a18019",
-    {
-      name: "garyvee",
-      avatar:
-        "https://pbs.twimg.com/profile_images/1658127153450328068/G4GOSuZB_400x400.jpg",
-    },
-  ],
-  [
-    "0xf68d7c8ff22f765e93e4441f1a66e5d3a9ac6318",
-    {
-      name: "jason",
-      avatar:
-        "https://pbs.twimg.com/profile_images/1828870492633104384/o37xorx4_400x400.jpg",
-    },
-  ],
-  [
-    "0x7ba77939f699936d2fcb970cb9f6c62b34222dda",
-    {
-      name: "stoolpresidente",
-      avatar:
-        "https://pbs.twimg.com/profile_images/2031028919751573504/m_4Tu1Hv_400x400.jpg",
-    },
-  ],
-  [
-    "0xf9da3ecc6ef927474b9f98be35f68a323b175424",
-    {
-      name: "blknoiz06",
-      avatar:
-        "https://pbs.twimg.com/profile_images/2052070109758226438/xlyPdLmn_400x400.jpg",
-    },
-  ],
-  [
-    "0x8651a6da9f6d5f9c1334ce28ee1ada82a3c9dc63",
-    {
-      name: "Dylan_Steck",
-      avatar:
-        "https://pbs.twimg.com/profile_images/1701427533995204608/QaqoVW2r_400x400.jpg",
-    },
-  ],
-  [
-    "0xbeb4001a910760b4ca22edc50060758d058da544",
-    {
-      name: "DeeZe",
-      avatar:
-        "https://pbs.twimg.com/profile_images/2079300026929389568/JcQpqOIQ_400x400.jpg",
-    },
-  ],
-  [
-    "0x36fc1f624f999464c179c06a34591bbe34cc7169",
-    {
-      name: "frankdegods",
-      avatar:
-        "https://pbs.twimg.com/profile_images/2060043584204689410/Sh83nkwV_400x400.jpg",
-    },
-  ],
-]);
+export interface IdentityOverrideEntry extends IdentityOverride {
+  /** Lowercase hex wallet address this override applies to. */
+  address: string;
+}
+
+export const IDENTITY_OVERRIDES: readonly IdentityOverrideEntry[] =
+  identityOverrideEntries;
+
+const OVERRIDES = new Map<string, IdentityOverride>(
+  IDENTITY_OVERRIDES.map(({ address, name, avatar, xUsername }) => [
+    address,
+    { name, avatar, xUsername },
+  ]),
+);
 
 /**
  * Returns the override for `address`, or `undefined` if none exists.
