@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import {
   getIdentityOverride,
+  IDENTITY_OVERRIDES,
   type IdentityOverride,
 } from "./identity-overrides";
 
@@ -12,6 +13,7 @@ const DEPLOYER_UPPER = DEPLOYER_ADDRESS.toUpperCase();
 const DEPLOYER_MIXED = "0xce370EBCBC655f845DF7DFb8C079E75B5EA17D93";
 
 const EXPECTED_NAME = "0xDeployer";
+const EXPECTED_X_USERNAME = "0xDeployer";
 const EXPECTED_AVATAR =
   "https://pbs.twimg.com/profile_images/2080340429426565120/NSSkGo98_400x400.jpg";
 
@@ -21,6 +23,7 @@ describe("getIdentityOverride", () => {
     assert.notEqual(result, undefined);
     assert.equal(result!.name, EXPECTED_NAME);
     assert.equal(result!.avatar, EXPECTED_AVATAR);
+    assert.equal(result!.xUsername, EXPECTED_X_USERNAME);
   });
 
   test("returns override for a fully-lowercased address (case-insensitive)", () => {
@@ -28,6 +31,7 @@ describe("getIdentityOverride", () => {
     assert.notEqual(result, undefined);
     assert.equal(result!.name, EXPECTED_NAME);
     assert.equal(result!.avatar, EXPECTED_AVATAR);
+    assert.equal(result!.xUsername, EXPECTED_X_USERNAME);
   });
 
   test("returns override for a fully-uppercased address (case-insensitive)", () => {
@@ -35,6 +39,7 @@ describe("getIdentityOverride", () => {
     assert.notEqual(result, undefined);
     assert.equal(result!.name, EXPECTED_NAME);
     assert.equal(result!.avatar, EXPECTED_AVATAR);
+    assert.equal(result!.xUsername, EXPECTED_X_USERNAME);
   });
 
   test("returns override for a mixed-case address (case-insensitive)", () => {
@@ -42,6 +47,7 @@ describe("getIdentityOverride", () => {
     assert.notEqual(result, undefined);
     assert.equal(result!.name, EXPECTED_NAME);
     assert.equal(result!.avatar, EXPECTED_AVATAR);
+    assert.equal(result!.xUsername, EXPECTED_X_USERNAME);
   });
 
   test("exact name value is '0xDeployer' (no trimming needed, no ENS/Farcaster suffix)", () => {
@@ -89,6 +95,28 @@ describe("getIdentityOverride", () => {
   });
 });
 
+describe("xUsername field", () => {
+  test("every entry carries an X username with no leading @", () => {
+    assert.notEqual(IDENTITY_OVERRIDES.length, 0);
+    for (const entry of IDENTITY_OVERRIDES) {
+      assert.match(
+        entry.xUsername,
+        /^[A-Za-z0-9_]{1,15}$/,
+        `${entry.address} has an invalid xUsername`,
+      );
+      assert.equal(entry.xUsername.startsWith("@"), false);
+    }
+  });
+
+  test("week 2 winner wallet maps to @jason", () => {
+    const result = getIdentityOverride(
+      "0xF68d7c8Ff22f765e93e4441F1A66e5d3A9Ac6318",
+    );
+    assert.notEqual(result, undefined);
+    assert.equal(result!.xUsername, "jason");
+  });
+});
+
 describe("mleejr display-only exception", () => {
   const address = "0x0A719F84fb1728F9e6Fe7f34D9F730C6c46Bbebb";
   for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
@@ -97,6 +125,7 @@ describe("mleejr display-only exception", () => {
         name: "mleejr",
         avatar:
           "https://pbs.twimg.com/profile_images/1601094719525855232/aOkAPHtC_400x400.png",
+        xUsername: "mleejr",
       });
     });
   }
