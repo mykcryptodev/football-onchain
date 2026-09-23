@@ -150,3 +150,17 @@ describe("bobdole contest 21 entrant override", () => {
     });
   }
 });
+
+describe("tldr_x contest 21 entrant override", () => {
+  const address = "0x63C1A944b81604470C083979e40536D0fa02880E";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "tldr_x",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1859688803717230592/5LG27ZQn_400x400.jpg",
+        xUsername: "tldr_x",
+      });
+    });
+  }
+});
