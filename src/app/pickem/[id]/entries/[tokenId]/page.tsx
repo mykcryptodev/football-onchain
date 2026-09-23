@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import EntryLiveGames from "@/components/pickem/EntryLiveGames";
 import PickemEntryHeroIdentity from "@/components/pickem/PickemEntryHeroIdentity";
+import PickemEntryShareButton from "@/components/pickem/PickemEntryShareButton";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
 import {
   contest,
@@ -90,12 +91,15 @@ export default async function EntryPage({ params }: Props) {
           View contest &amp; join
         </Link>
       </header>
-      <PickemShareImage
-        key={`${id}:${tokenId}`}
-        compact
-        contestId={Number(contestId)}
-        tokenId={token.toString()}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <PickemEntryShareButton contestId={id} tokenId={tokenId} />
+        <PickemShareImage
+          key={`${id}:${tokenId}`}
+          compact
+          contestId={Number(contestId)}
+          tokenId={token.toString()}
+        />
+      </div>
 
       <EntryLiveGames
         entries={allEntries}

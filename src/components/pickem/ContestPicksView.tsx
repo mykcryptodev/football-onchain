@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createThirdwebClient } from "thirdweb";
 import {
@@ -620,7 +621,10 @@ export default function ContestPicksView({
                     </TableCell>
                     <TableCell>
                       <AccountProvider address={pick.owner} client={client}>
-                        <div className="flex items-center gap-2">
+                        <Link
+                          className="flex items-center gap-2 rounded-md hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          href={`/pickem/${contestId}/entries/${pick.tokenId}`}
+                        >
                           {identity ? (
                             // Manual display metadata, not a verified on-chain identity.
                             // eslint-disable-next-line @next/next/no-img-element
@@ -683,7 +687,7 @@ export default function ContestPicksView({
                               />
                             )}
                           </div>
-                        </div>
+                        </Link>
                       </AccountProvider>
                     </TableCell>
                     <TableCell className="w-32">

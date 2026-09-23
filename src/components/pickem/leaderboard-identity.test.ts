@@ -72,6 +72,10 @@ mock.module("thirdweb/react", () => ({
   AccountAddress: ({ className, formatFn }) => h("span", { className }, formatFn(useContext(Address).toLowerCase())),
   Blobbie: ({ address }) => h("span", { "data-blobbie": address }),
 }));
+// next/link has its own state hooks, which would consume the fixture above.
+mock.module("next/link", () => ({
+  default: ({ href, className, children }) => h("a", { href, className }, children),
+}));
 mock.module("@/providers/Thirdweb", () => ({ client: {} }));
 mock.module("@/hooks/usePickemContract", () => ({ usePickemContract: () => ({}) }));
 mock.module("@/hooks/usePickemNFT", () => ({ usePickemNFT: () => ({}) }));
@@ -149,6 +153,8 @@ for (const component of ["ContestPicksView", "PickemLeaderboard"]) {
           assert.ok(row.includes(`alt="${identity.name}"`));
           assert.doesNotMatch(row, />You<|verified|farcaster|\.eth/i);
           assert.match(row, /42/); // Tiebreaker is unchanged.
+          // Name/avatar link to the entrant's entry page for this contest.
+          assert.ok(row.includes('href="/pickem/42/entries/10"'));
           if (component === "PickemLeaderboard") {
             assert.match(row, /NFT #10/);
             assert.match(row, /Transferred from/);

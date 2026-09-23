@@ -1,6 +1,7 @@
 "use client";
 
 import { Trophy } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   AccountAddress,
@@ -342,7 +343,10 @@ export default function PickemLeaderboard({
                             address={entry.address}
                             client={client}
                           >
-                            <div className="flex min-w-0 items-center gap-2">
+                            <Link
+                              className="flex min-w-0 items-center gap-2 rounded-md hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              href={`/pickem/${contestId}/entries/${entry.tokenId}`}
+                            >
                               {identity ? (
                                 // Manual display metadata, not a verified on-chain identity.
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -416,7 +420,7 @@ export default function PickemLeaderboard({
                                   </p>
                                 )}
                               </div>
-                            </div>
+                            </Link>
                           </AccountProvider>
                         </TableCell>
                         <TableCell className="text-right">

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useActiveAccount } from "thirdweb/react";
 
+import PickemEntryShareButton from "@/components/pickem/PickemEntryShareButton";
 import PickemGameDialog from "@/components/pickem/PickemGameDialog";
 import PickemLeaderboard from "@/components/pickem/PickemLeaderboard";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
@@ -349,6 +350,10 @@ export function PickemEntryCard({ entry }: { entry: CurrentWeekPickemEntry }) {
             >
               View standings
             </Button>
+            <PickemEntryShareButton
+              contestId={entry.contestId}
+              tokenId={entry.tokenId}
+            />
             <PickemShareImage
               key={`${entry.contestId}:${entry.tokenId}`}
               compact
