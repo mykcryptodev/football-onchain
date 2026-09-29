@@ -164,3 +164,17 @@ describe("tldr_x contest 21 entrant override", () => {
     });
   }
 });
+
+describe("michaeleric contest 21 winner override", () => {
+  const address = "0x4ACF34ef9A01a433B93F59DE8aF638d27d5e1be2";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "_michaeleric_",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2042558094169739264/KYSVyrWL_400x400.jpg",
+        xUsername: "_michaeleric_",
+      });
+    });
+  }
+});
