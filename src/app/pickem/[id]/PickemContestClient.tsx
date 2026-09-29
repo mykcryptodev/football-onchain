@@ -109,10 +109,12 @@ function FarcasterIcon(props: SVGProps<SVGSVGElement>) {
 
 interface PickemContestClientProps {
   contest: ContestData;
+  previousWeekContest?: { id: number; weekNumber: number } | null;
 }
 
 export default function PickemContestClient({
   contest,
+  previousWeekContest,
 }: PickemContestClientProps) {
   const router = useRouter();
   const account = useActiveAccount();
@@ -563,6 +565,17 @@ export default function PickemContestClient({
               {contest.year} Season • Contest #{contest.id}
             </p>
           </div>
+          {previousWeekContest && (
+            <Link
+              className="ml-auto"
+              href={`/pickem/${previousWeekContest.id}`}
+            >
+              <Button size="sm" variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Week {previousWeekContest.weekNumber}
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Contest Info */}

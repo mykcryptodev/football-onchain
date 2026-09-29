@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getContract, readContract } from "thirdweb";
+import { getContract, readContract, type ThirdwebContract } from "thirdweb";
 
 import type { TokensResponse } from "@/app/api/tokens/route";
 import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
+import {
+  type ContestWeekRef,
+  findPreviousWeekContest,
+  PREVIOUS_WEEK_SCAN,
+} from "@/lib/pickem-previous-week";
 import {
   buildPickemContestUrl,
   buildPickemOgImageUrl,
@@ -39,6 +44,39 @@ interface ContestData {
   gameIds: string[];
   tiebreakerGameId: string;
   entryFeeUsd?: number;
+}
+
+/** Best-effort: unreadable contests are skipped and just hide the link. */
+async function getPreviousWeekContest(
+  contract: ThirdwebContract<typeof pickemAbi>,
+  current: ContestWeekRef,
+): Promise<ContestWeekRef | null> {
+  const ids: number[] = [];
+  for (
+    let id = current.id - 1;
+    id >= 1 && id >= current.id - PREVIOUS_WEEK_SCAN;
+    id--
+  ) {
+    ids.push(id);
+  }
+  const reads = await Promise.allSettled(
+    ids.map(id =>
+      readContract({ contract, method: "getContest", params: [BigInt(id)] }),
+    ),
+  );
+  const candidates: ContestWeekRef[] = [];
+  for (const read of reads) {
+    if (read.status !== "fulfilled" || !read.value) continue;
+    const c = read.value;
+    candidates.push({
+      id: Number(c.id),
+      creator: c.creator,
+      year: Number(c.year),
+      seasonType: c.seasonType,
+      weekNumber: c.weekNumber,
+    });
+  }
+  return findPreviousWeekContest(current, candidates);
 }
 
 function getSeasonTypeName(seasonType: number): string {
@@ -295,7 +333,17 @@ export default async function PickemContestPage({
       entryFeeUsd,
     };
 
-    return <PickemContestClient contest={contest} />;
+    const previousWeekContest = await getPreviousWeekContest(
+      pickemContract,
+      contest,
+    );
+
+    return (
+      <PickemContestClient
+        contest={contest}
+        previousWeekContest={previousWeekContest}
+      />
+    );
   } catch (error) {
     console.error("Error fetching contest:", error);
     return <ContestReadPending />;
