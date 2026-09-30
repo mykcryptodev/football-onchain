@@ -7,10 +7,10 @@ import { chain, pickem } from "@/constants";
 import { abi as pickemAbi } from "@/constants/abis/pickem";
 import { getBaseUrl } from "@/lib/farcaster-metadata";
 import {
+  ADJACENT_WEEK_SCAN,
   type ContestWeekRef,
-  findPreviousWeekContest,
-  PREVIOUS_WEEK_SCAN,
-} from "@/lib/pickem-previous-week";
+  findAdjacentWeekContests,
+} from "@/lib/pickem-adjacent-weeks";
 import {
   buildPickemContestUrl,
   buildPickemOgImageUrl,
@@ -46,18 +46,21 @@ interface ContestData {
   entryFeeUsd?: number;
 }
 
-/** Best-effort: unreadable contests are skipped and just hide the link. */
-async function getPreviousWeekContest(
+/**
+ * Best-effort: unreadable or not-yet-created contests are skipped and just
+ * hide the link.
+ */
+async function getAdjacentWeekContests(
   contract: ThirdwebContract<typeof pickemAbi>,
   current: ContestWeekRef,
-): Promise<ContestWeekRef | null> {
+) {
   const ids: number[] = [];
   for (
-    let id = current.id - 1;
-    id >= 1 && id >= current.id - PREVIOUS_WEEK_SCAN;
-    id--
+    let id = Math.max(1, current.id - ADJACENT_WEEK_SCAN);
+    id <= current.id + ADJACENT_WEEK_SCAN;
+    id++
   ) {
-    ids.push(id);
+    if (id !== current.id) ids.push(id);
   }
   const reads = await Promise.allSettled(
     ids.map(id =>
@@ -76,7 +79,7 @@ async function getPreviousWeekContest(
       weekNumber: c.weekNumber,
     });
   }
-  return findPreviousWeekContest(current, candidates);
+  return findAdjacentWeekContests(current, candidates);
 }
 
 function getSeasonTypeName(seasonType: number): string {
@@ -333,7 +336,7 @@ export default async function PickemContestPage({
       entryFeeUsd,
     };
 
-    const previousWeekContest = await getPreviousWeekContest(
+    const adjacentWeeks = await getAdjacentWeekContests(
       pickemContract,
       contest,
     );
@@ -341,7 +344,8 @@ export default async function PickemContestPage({
     return (
       <PickemContestClient
         contest={contest}
-        previousWeekContest={previousWeekContest}
+        nextWeekContest={adjacentWeeks.next}
+        previousWeekContest={adjacentWeeks.previous}
       />
     );
   } catch (error) {

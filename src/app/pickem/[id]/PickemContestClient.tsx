@@ -2,7 +2,7 @@
 
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, Shuffle, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Shuffle, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -110,11 +110,13 @@ function FarcasterIcon(props: SVGProps<SVGSVGElement>) {
 interface PickemContestClientProps {
   contest: ContestData;
   previousWeekContest?: { id: number; weekNumber: number } | null;
+  nextWeekContest?: { id: number; weekNumber: number } | null;
 }
 
 export default function PickemContestClient({
   contest,
   previousWeekContest,
+  nextWeekContest,
 }: PickemContestClientProps) {
   const router = useRouter();
   const account = useActiveAccount();
@@ -555,6 +557,26 @@ export default function PickemContestClient({
             {getTimeRemaining(contest.submissionDeadline)}
           </Badge>
         </div>
+        {(previousWeekContest || nextWeekContest) && (
+          <div className="flex items-center justify-between gap-4 px-2">
+            {previousWeekContest && (
+              <Link href={`/pickem/${previousWeekContest.id}`}>
+                <Button size="sm" variant="outline">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Week {previousWeekContest.weekNumber}
+                </Button>
+              </Link>
+            )}
+            {nextWeekContest && (
+              <Link className="ml-auto" href={`/pickem/${nextWeekContest.id}`}>
+                <Button size="sm" variant="outline">
+                  Week {nextWeekContest.weekNumber}
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center gap-4 px-2">
           <div>
@@ -565,17 +587,6 @@ export default function PickemContestClient({
               {contest.year} Season • Contest #{contest.id}
             </p>
           </div>
-          {previousWeekContest && (
-            <Link
-              className="ml-auto"
-              href={`/pickem/${previousWeekContest.id}`}
-            >
-              <Button size="sm" variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Week {previousWeekContest.weekNumber}
-              </Button>
-            </Link>
-          )}
         </div>
 
         {/* Contest Info */}
