@@ -178,3 +178,17 @@ describe("michaeleric contest 21 winner override", () => {
     });
   }
 });
+
+describe("adambro.eth avatar override", () => {
+  const address = "0x3C29D4b663b0DA3616405973457A8e18e1A0A691";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "adambro.eth",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1760357136213716992/OCoumypZ_400x400.jpg",
+        xUsername: "A_Browman",
+      });
+    });
+  }
+});
