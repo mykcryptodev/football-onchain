@@ -212,3 +212,23 @@ describe("lightsnack89 display-only exception", () => {
     );
   });
 });
+
+describe("starl3xx display-only exception", () => {
+  const address = "0x0568af10694f0af63302675e3c0d5d50237b1c5d";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "starl3xx",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1983584918476103680/9RdD8AQ__400x400.jpg",
+        xUsername: "starl3xx",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0x0568af10694f0af63302675e3c0d5d50237b1c5e"),
+      undefined,
+    );
+  });
+});
