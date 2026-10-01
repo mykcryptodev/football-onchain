@@ -192,3 +192,23 @@ describe("adambro.eth avatar override", () => {
     });
   }
 });
+
+describe("lightsnack89 display-only exception", () => {
+  const address = "0xaAfC34e0BCeA1FA5Ae36172464bD14400C4de7bB";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "lightsnack89",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2090638665710239744/jmJ9DbeD_400x400.jpg",
+        xUsername: "lightsnack89",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0xaafc34e0bcea1fa5ae36172464bd14400c4de7bc"),
+      undefined,
+    );
+  });
+});
