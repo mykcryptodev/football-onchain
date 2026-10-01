@@ -232,3 +232,23 @@ describe("starl3xx display-only exception", () => {
     );
   });
 });
+
+describe("0xQuit display-only exception", () => {
+  const address = "0x0fd4b6dc23b29f5768f636d0b65dd05ecc0d7f3b";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "0xQuit",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2056824577393922048/E5Yh_548_400x400.png",
+        xUsername: "0xQuit",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0x0fd4b6dc23b29f5768f636d0b65dd05ecc0d7f3c"),
+      undefined,
+    );
+  });
+});
