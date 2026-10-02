@@ -13,6 +13,9 @@ interface GameInfo {
   awayLogo?: string;
   homeAbbreviation?: string;
   awayAbbreviation?: string;
+  /** ESPN primary team color, hex without the leading #. */
+  homeColor?: string;
+  awayColor?: string;
   homeScore?: number;
   awayScore?: number;
   status?: string;
