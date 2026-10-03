@@ -25,6 +25,8 @@ export const games = gameIds.map((gameId, index) => ({
   awayAbbreviation: `A${gameId}`,
   homeRecord: "1-0",
   awayRecord: "0-1",
+  homeColor: ["0076b6", "203731", "a71930", "002244"][index],
+  awayColor: ["e31837", "4f2683", "fb4f14", "00338d"][index],
 }));
 export const useActiveAccount = () =>
   params.has("guest")
@@ -56,6 +58,7 @@ export const useDisplayToken = () => ({
 export const useFormattedCurrency = () => ({ formattedValue: "1 USDC" });
 export const useBalanceRefresh = () => ({ start() {} });
 export const useFarcasterContext = () => ({ isInMiniApp: false });
+export const useOnrampStatus = () => ({ enabled: false, sandbox: false });
 export const client = {};
 export const getContract = () => ({});
 export const toTokens = () => "1";

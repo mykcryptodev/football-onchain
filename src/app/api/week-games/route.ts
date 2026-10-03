@@ -272,6 +272,8 @@ export async function GET(request: NextRequest) {
         kickoff,
         homeLogo: homeTeam.team.logo,
         awayLogo: awayTeam.team.logo,
+        homeColor: homeTeam.team.color || undefined,
+        awayColor: awayTeam.team.color || undefined,
         homeScore: homeTeam.score ? parseInt(homeTeam.score) : undefined,
         awayScore: awayTeam.score ? parseInt(awayTeam.score) : undefined,
         status: competition.status.type.name,

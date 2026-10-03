@@ -25,6 +25,7 @@ import ContestPicksView from "@/components/pickem/ContestPicksView";
 import ContestStatsCard from "@/components/pickem/ContestStatsCard";
 import MyPickems from "@/components/pickem/MyPickems";
 import PickemShareImage from "@/components/pickem/PickemShareImage";
+import SwipePicks from "@/components/pickem/SwipePicks";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,8 @@ interface ContestData {
   tiebreakerGameId: string;
   entryFeeUsd?: number;
 }
+
+const PICK_MODE_KEY = "bankrball:pick-mode";
 
 const SEASON_TYPE_LABELS: Record<number, string> = {
   1: "Preseason",
@@ -167,6 +170,30 @@ export default function PickemContestClient({
   // Controlled so the "Leaderboard & submitted picks" link can expand it — this
   // component re-renders every second, which would revert an uncontrolled open.
   const [picksOpen, setPicksOpen] = useState(false);
+  // Experimental swipe mode; the list stays the default.
+  const [pickMode, setPickMode] = useState<"list" | "swipe">("list");
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(PICK_MODE_KEY) === "swipe") setPickMode("swipe");
+    } catch {
+      // Storage unavailable: stay on the list.
+    }
+  }, []);
+  const changePickMode = (mode: "list" | "swipe") => {
+    setPickMode(mode);
+    // Bring the card deck on screen; on phones it renders below the fold.
+    if (mode === "swipe")
+      requestAnimationFrame(() =>
+        document
+          .getElementById("swipe-deck")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+      );
+    try {
+      localStorage.setItem(PICK_MODE_KEY, mode);
+    } catch {
+      // Storage unavailable: the choice lasts for this page view.
+    }
+  };
   const [submitting, setSubmitting] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
@@ -681,8 +708,28 @@ export default function PickemContestClient({
                     {getPickedCount()} / {contest.gameIds.length}
                   </Badge>
                 </div>
+                <div
+                  aria-label="Pick mode"
+                  className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1"
+                  role="radiogroup"
+                >
+                  {(["list", "swipe"] as const).map(mode => (
+                    <button
+                      key={mode}
+                      aria-checked={pickMode === mode}
+                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${pickMode === mode ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      role="radio"
+                      type="button"
+                      onClick={() => changePickMode(mode)}
+                    >
+                      {mode === "list" ? "List" : "🔥 Swipe (beta)"}
+                    </button>
+                  ))}
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  Tap one team in every matchup.
+                  {pickMode === "swipe"
+                    ? "Swipe left or right to pick a winner, or roll the dice."
+                    : "Tap one team in every matchup."}
                 </p>
                 <p aria-live="polite" className="text-xs text-muted-foreground">
                   {!draftReady
@@ -691,26 +738,33 @@ export default function PickemContestClient({
                       ? `${getPickedCount() > 0 ? "Draft saved on this device" : "Start a new draft"} · Not entered yet`
                       : "Picks are only saved while this page stays open."}
                 </p>
-                <Progress
-                  aria-label="Picks completed"
-                  value={
-                    contest.gameIds.length
-                      ? (getPickedCount() / contest.gameIds.length) * 100
-                      : 0
-                  }
-                />
-                <Button
-                  className="self-start"
-                  size="sm"
-                  variant="ghost"
-                  disabled={
-                    submitting || !draftReady || gamesLoading || !!gamesError
-                  }
-                  onClick={pickAtRandom}
-                >
-                  <Shuffle className="mr-2 size-4" />
-                  Fill remaining picks randomly
-                </Button>
+                {pickMode === "list" && (
+                  <>
+                    <Progress
+                      aria-label="Picks completed"
+                      value={
+                        contest.gameIds.length
+                          ? (getPickedCount() / contest.gameIds.length) * 100
+                          : 0
+                      }
+                    />
+                    <Button
+                      className="self-start"
+                      size="sm"
+                      variant="ghost"
+                      disabled={
+                        submitting ||
+                        !draftReady ||
+                        gamesLoading ||
+                        !!gamesError
+                      }
+                      onClick={pickAtRandom}
+                    >
+                      <Shuffle className="mr-2 size-4" />
+                      Fill remaining picks randomly
+                    </Button>
+                  </>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 {gamesLoading && (
@@ -729,88 +783,106 @@ export default function PickemContestClient({
                     </AlertDescription>
                   </Alert>
                 )}
-                {orderedGames.map((game, index) => (
-                  <div key={game.gameId}>
-                    {(index === 0 ||
-                      new Date(
-                        orderedGames[index - 1].kickoff,
-                      ).toDateString() !==
-                        new Date(game.kickoff).toDateString()) && (
-                      <h3 className="mb-3 pt-2 text-sm font-semibold">
-                        {new Date(game.kickoff).toLocaleDateString([], {
-                          weekday: "long",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </h3>
-                    )}
-                    <fieldset
-                      key={game.gameId}
-                      className="scroll-mt-40 rounded-xl border p-3 sm:p-4"
-                      disabled={submitting || !draftReady}
-                      id={`game-${game.gameId}`}
-                    >
-                      <legend className="px-2 text-xs text-muted-foreground">
-                        {formatKickoffTime(game.kickoff)}
-                      </legend>
-                      <div className="grid grid-cols-2 gap-3">
-                        {([0, 1] as const).map(side => {
-                          const home = side === 1;
-                          const team = home ? game.homeTeam : game.awayTeam;
-                          const teamLabel = home
-                            ? game.homeAbbreviation
-                            : game.awayAbbreviation;
-                          const logo = home ? game.homeLogo : game.awayLogo;
-                          return (
-                            <label
-                              key={side}
-                              className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
-                            >
-                              <input
-                                aria-label={`Pick ${team}`}
-                                checked={picks[game.gameId] === side}
-                                className="size-4 shrink-0 accent-primary"
-                                name={`winner-${game.gameId}`}
-                                type="radio"
-                                value={side}
-                                onChange={() => {
-                                  selectionChanged();
-                                  setPick(game.gameId, side);
-                                }}
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  {logo && (
-                                    <img
-                                      alt=""
-                                      className="size-7 shrink-0 object-contain"
-                                      src={logo}
-                                    />
-                                  )}
-                                  <span
-                                    className="min-w-0 truncate text-sm font-semibold"
-                                    title={team}
-                                  >
-                                    {teamLabel || team}
-                                  </span>
+                {pickMode === "swipe" &&
+                  draftReady &&
+                  !gamesLoading &&
+                  orderedGames.length > 0 && (
+                    <SwipePicks
+                      disabled={submitting}
+                      games={orderedGames}
+                      picks={picks}
+                      onPick={setPick}
+                      onRandomizeRest={pickAtRandom}
+                      onDone={() =>
+                        document
+                          .getElementById("review-picks")
+                          ?.scrollIntoView({ behavior: "smooth" })
+                      }
+                    />
+                  )}
+                {pickMode === "list" &&
+                  orderedGames.map((game, index) => (
+                    <div key={game.gameId}>
+                      {(index === 0 ||
+                        new Date(
+                          orderedGames[index - 1].kickoff,
+                        ).toDateString() !==
+                          new Date(game.kickoff).toDateString()) && (
+                        <h3 className="mb-3 pt-2 text-sm font-semibold">
+                          {new Date(game.kickoff).toLocaleDateString([], {
+                            weekday: "long",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </h3>
+                      )}
+                      <fieldset
+                        key={game.gameId}
+                        className="scroll-mt-40 rounded-xl border p-3 sm:p-4"
+                        disabled={submitting || !draftReady}
+                        id={`game-${game.gameId}`}
+                      >
+                        <legend className="px-2 text-xs text-muted-foreground">
+                          {formatKickoffTime(game.kickoff)}
+                        </legend>
+                        <div className="grid grid-cols-2 gap-3">
+                          {([0, 1] as const).map(side => {
+                            const home = side === 1;
+                            const team = home ? game.homeTeam : game.awayTeam;
+                            const teamLabel = home
+                              ? game.homeAbbreviation
+                              : game.awayAbbreviation;
+                            const logo = home ? game.homeLogo : game.awayLogo;
+                            return (
+                              <label
+                                key={side}
+                                className={`relative flex min-w-0 min-h-24 cursor-pointer items-center gap-2 rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${picks[game.gameId] === side ? "border-primary bg-primary/10" : "hover:bg-accent/30"}`}
+                              >
+                                <input
+                                  aria-label={`Pick ${team}`}
+                                  checked={picks[game.gameId] === side}
+                                  className="size-4 shrink-0 accent-primary"
+                                  name={`winner-${game.gameId}`}
+                                  type="radio"
+                                  value={side}
+                                  onChange={() => {
+                                    selectionChanged();
+                                    setPick(game.gameId, side);
+                                  }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {logo && (
+                                      <img
+                                        alt=""
+                                        className="size-7 shrink-0 object-contain"
+                                        src={logo}
+                                      />
+                                    )}
+                                    <span
+                                      className="min-w-0 truncate text-sm font-semibold"
+                                      title={team}
+                                    >
+                                      {teamLabel || team}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {home ? "Home" : "Away"} ·{" "}
+                                    {home ? game.homeRecord : game.awayRecord}
+                                  </p>
+                                  <p className="mt-1 text-xs font-medium">
+                                    {picks[game.gameId] === side
+                                      ? "Your pick"
+                                      : "Select team"}
+                                  </p>
                                 </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {home ? "Home" : "Away"} ·{" "}
-                                  {home ? game.homeRecord : game.awayRecord}
-                                </p>
-                                <p className="mt-1 text-xs font-medium">
-                                  {picks[game.gameId] === side
-                                    ? "Your pick"
-                                    : "Select team"}
-                                </p>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </fieldset>
-                  </div>
-                ))}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </fieldset>
+                    </div>
+                  ))}
               </CardContent>
             </Card>
           )}

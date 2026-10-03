@@ -14,7 +14,7 @@ const pageErrors = [];
 const root = resolve(process.env.PICKEM_SOURCE_ROOT || ".");
 const fixture = resolve("tests/browser/pickem-fixture.jsx");
 const stubbed =
-  /^(thirdweb\/react|thirdweb$|next\/navigation|next\/link|next-themes|@tanstack\/react-query|@\/hooks\/(useWeekGames|useOwnedPickemEntries|useFormattedCurrency|useBalanceRefresh|usePickemContract|useFarcasterContext)|@\/providers\/(Thirdweb|DisplayTokenProvider)|@\/components\/pickem\/)/;
+  /^(thirdweb\/react|thirdweb$|next\/navigation|next\/link|next-themes|@tanstack\/react-query|@\/hooks\/(useWeekGames|useOwnedPickemEntries|useFormattedCurrency|useBalanceRefresh|usePickemContract|useFarcasterContext|useOnrampStatus)|@\/providers\/(Thirdweb|DisplayTokenProvider)|@\/components\/(pickem|onramp)\/)/;
 
 beforeAll(async () => {
   if (!process.env.PICKEM_BROWSER_TEST) return;
@@ -41,6 +41,13 @@ beforeAll(async () => {
           b.onResolve({ filter: /^\.\.\/\.\.\/src\// }, args => ({
             path: resolve(root, args.path.replace("../../", "")) + ".tsx",
           }));
+          // The swipe pick mode is part of the entry UI under test.
+          b.onResolve(
+            { filter: /^@\/components\/pickem\/SwipePicks$/ },
+            () => ({
+              path: resolve(root, "src/components/pickem/SwipePicks.tsx"),
+            }),
+          );
           b.onResolve({ filter: stubbed }, () => ({ path: fixture }));
           b.onResolve({ filter: /^@\/lib\/utils$/ }, () => ({
             path: "utils",
@@ -439,6 +446,103 @@ browserTest(
         .getByText("This contest is now closed. Your draft was not entered.")
         .waitFor();
       expect(await page.evaluate(() => window.submitAttempts || 0)).toBe(0);
+    } finally {
+      await context.close();
+    }
+  },
+);
+
+async function reviewPicks(page) {
+  return page.locator("#review-picks li span.font-semibold").allTextContents();
+}
+
+browserTest(
+  "Swipe mode: a long drag picks, a short drag snaps back",
+  async () => {
+    const { page, context } = await open({ desktop: true });
+    try {
+      await page.getByRole("radio", { name: "🔥 Swipe (beta)" }).click();
+      const card = page.getByRole("group", { name: /Away 101 at Home 101/ });
+      const box = await card.boundingBox();
+      const y = box.y + box.height / 2;
+      const x = box.x + box.width / 2;
+      // Short, slow drag: no pick.
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x - 40, y, { steps: 20 });
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      await page.getByText("4 to go", { exact: true }).waitFor();
+      // Long drag left: away team.
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x - 220, y, { steps: 12 });
+      await page.mouse.up();
+      await page.getByText("A101 locked in").waitFor();
+      await page.getByText("3 to go", { exact: true }).waitFor();
+      await page.getByText("Game 2 of 4").waitFor();
+      expect((await reviewPicks(page))[0]).toBe("A101");
+    } finally {
+      await context.close();
+    }
+  },
+);
+
+browserTest(
+  "Swipe mode: buttons, back, dice, randomize the rest, and remembered mode",
+  async () => {
+    const { page, context } = await open();
+    try {
+      await page.getByRole("radio", { name: "🔥 Swipe (beta)" }).tap();
+      if (process.env.PICKEM_SWIPE_SCREENSHOT) {
+        await page.waitForTimeout(900);
+        await page.screenshot({
+          path: process.env.PICKEM_SWIPE_SCREENSHOT.replace(
+            ".png",
+            "-start.png",
+          ),
+        });
+      }
+      await page.getByRole("button", { name: "H101 →" }).tap();
+      await page.getByText("H101 locked in").waitFor();
+      await page.getByText("Game 2 of 4").waitFor();
+      await page
+        .getByRole("button", { name: "Go back to the previous game" })
+        .tap();
+      await page.getByText("Game 1 of 4").waitFor();
+      await page.getByText("Current pick").waitFor();
+      await page.getByRole("button", { name: "A101" }).first().tap();
+      await page.getByText("A101 locked in").waitFor();
+      await page.getByRole("button", { name: "Randomize this pick" }).tap();
+      await page.getByText(/^[AH]102 locked in$/).waitFor();
+      await page.getByText("Game 3 of 4").waitFor();
+      if (process.env.PICKEM_SWIPE_SCREENSHOT)
+        await page.screenshot({
+          path: process.env.PICKEM_SWIPE_SCREENSHOT,
+          fullPage: false,
+        });
+      await page.getByRole("button", { name: /Randomize the rest/ }).tap();
+      await page.getByText("2 picks randomized").waitFor();
+      await page.getByText("All 4 picks locked in").waitFor();
+      if (process.env.PICKEM_SWIPE_SCREENSHOT) {
+        await page.waitForTimeout(1200);
+        await page.screenshot({
+          path: process.env.PICKEM_SWIPE_SCREENSHOT.replace(
+            ".png",
+            "-done.png",
+          ),
+        });
+      }
+      const picks = await reviewPicks(page);
+      expect(picks[0]).toBe("A101");
+      expect(picks.every(pick => /^[AH]10[1-4]$/.test(pick))).toBe(true);
+      await page.reload();
+      await page.getByText("All 4 picks locked in").waitFor();
+      expect(
+        await page
+          .getByRole("radio", { name: "🔥 Swipe (beta)" })
+          .getAttribute("aria-checked"),
+      ).toBe("true");
     } finally {
       await context.close();
     }
