@@ -118,5 +118,53 @@
     "name": "0xQuit",
     "avatar": "https://pbs.twimg.com/profile_images/2056824577393922048/E5Yh_548_400x400.png",
     "xUsername": "0xQuit"
+  },
+  {
+    "address": "0x60b0fc38a54e194d0c21fb4472d769f8eb725fd2",
+    "name": "CoinbaseDuck",
+    "avatar": "https://pbs.twimg.com/profile_images/2097706054343675904/WpInWQfO_400x400.jpg",
+    "xUsername": "CoinbaseDuck"
+  },
+  {
+    "address": "0x076009229e1c964ca6c15892ba088d0b9c2dea5f",
+    "name": "kennyistyping",
+    "avatar": "https://pbs.twimg.com/profile_images/1769523490967982080/FDrYb1C8_400x400.jpg",
+    "xUsername": "kennyistyping"
+  },
+  {
+    "address": "0xfbcd26fd4989a8779fab95c33ceccc2ccfbf7990",
+    "name": "chintanturakhia",
+    "avatar": "https://pbs.twimg.com/profile_images/1883614781556568064/p2OenYCH_400x400.jpg",
+    "xUsername": "chintanturakhia"
+  },
+  {
+    "address": "0xa8bfe76a3f67c207f5f7170f7166e49b39b916e1",
+    "name": "SHAQ",
+    "avatar": "https://pbs.twimg.com/profile_images/1579949436527988737/RDqn1udJ_400x400.jpg",
+    "xUsername": "SHAQ"
+  },
+  {
+    "address": "0x140e11615623bacf108e23a3f5308aae62683cb4",
+    "name": "dhh",
+    "avatar": "https://pbs.twimg.com/profile_images/2093715898204884992/goERjC9G_400x400.jpg",
+    "xUsername": "dhh"
+  },
+  {
+    "address": "0x0f1f7b965cb1fd03ea0f0af55811c0dec0844bef",
+    "name": "toady_hawk",
+    "avatar": "https://pbs.twimg.com/profile_images/2092955812704518144/NV0RDjaL_400x400.jpg",
+    "xUsername": "toady_hawk"
+  },
+  {
+    "address": "0x7bf3870db45528fb68c4e8dfbcbba6e073c95f2c",
+    "name": "backseats_eth",
+    "avatar": "https://pbs.twimg.com/profile_images/1944109857247723520/vC-FMgTl_400x400.jpg",
+    "xUsername": "backseats_eth"
+  },
+  {
+    "address": "0x141203443a564749321faa627f3619c0797448dc",
+    "name": "JordanLyall",
+    "avatar": "https://pbs.twimg.com/profile_images/1741888211734126592/G3B97WcF_400x400.jpg",
+    "xUsername": "JordanLyall"
   }
 ]
