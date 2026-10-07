@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 interface UserProfile {
   fid?: number;
   farcasterUsername?: string;
+  xUsername?: string;
   name?: string;
   avatar?: string;
   bio?: string;
@@ -38,8 +39,7 @@ export function useUserProfile(address: string | null): UseUserProfileResult {
     staleTime: 5 * 60 * 1000,
   });
 
-  const profile =
-    query.data ?? (query.isError && address ? { address } : null);
+  const profile = query.data ?? (query.isError && address ? { address } : null);
   const error = query.error ?? null;
 
   return { profile, isLoading: query.isLoading, error };

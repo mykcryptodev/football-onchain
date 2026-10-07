@@ -6,6 +6,7 @@ import { AccountAvatar, AccountProvider, Blobbie } from "thirdweb/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { resolveAvatarUrl } from "@/lib/utils";
+import { xProfileUrl } from "@/lib/x-profile";
 import { client } from "@/providers/Thirdweb";
 
 export default function PickemEntryHeroIdentity({ owner }: { owner: string }) {
@@ -15,6 +16,7 @@ export default function PickemEntryHeroIdentity({ owner }: { owner: string }) {
   const shortAddress = `${owner.slice(0, 6)}…${owner.slice(-4)}`;
   const fallback = <Blobbie address={owner} className="size-12 rounded-full" />;
   const profileHref = `/profile/${owner}`;
+  const xUrl = xProfileUrl(profile?.xUsername);
 
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -55,6 +57,16 @@ export default function PickemEntryHeroIdentity({ owner }: { owner: string }) {
         >
           {name ? shortAddress : "Basescan"}
         </a>
+        {xUrl ? (
+          <a
+            className="ml-2 text-xs text-[#a8c6b4] underline-offset-4 hover:underline"
+            href={xUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            @{profile?.xUsername} on X
+          </a>
+        ) : null}
       </div>
     </div>
   );
