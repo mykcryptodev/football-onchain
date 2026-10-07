@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
 import {
+  fallbackPayoutDue,
   firstKickoff,
   nextFeaturedWeek,
+  PAYOUT_GRACE_SECONDS,
   sameGameOrder,
 } from "./featured-pickem";
 
@@ -53,5 +55,23 @@ describe("sameGameOrder", () => {
     expect(sameGameOrder([1n, 2n, 3n], [1n, 2n, 3n])).toBe(true);
     expect(sameGameOrder([1n, 2n, 3n], [1n, 3n, 2n])).toBe(false);
     expect(sameGameOrder([1n, 2n], [1n, 2n, 3n])).toBe(false);
+  });
+});
+
+describe("fallbackPayoutDue", () => {
+  const deadline = 1_791_344_131n;
+
+  it("leaves the payout to the social @bankrbot settle during the grace window", () => {
+    expect(fallbackPayoutDue(deadline, deadline)).toBe(false);
+    expect(
+      fallbackPayoutDue(deadline, deadline + PAYOUT_GRACE_SECONDS - 1n),
+    ).toBe(false);
+  });
+
+  it("pays as a fallback once the grace window has passed", () => {
+    expect(PAYOUT_GRACE_SECONDS).toBe(43_200n);
+    expect(fallbackPayoutDue(deadline, deadline + PAYOUT_GRACE_SECONDS)).toBe(
+      true,
+    );
   });
 });
