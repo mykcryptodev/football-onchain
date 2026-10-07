@@ -6,7 +6,7 @@
  * a no-op once done, so running every 5 minutes is safe:
  *   1. week results finalized          → updateContestResults
  *   2. entries without a score         → calculateScoresBatch
- *   3. payout period started           → claimAllPrizes
+ *   3. payout period + grace passed    → claimAllPrizes (fallback; see below)
  *   4. next week has no featured contest → write its slate, then createContest
  *
  * Step 4 only ever targets the featured contest's week + 1. Moving on to the
@@ -53,6 +53,16 @@ const SCORE_BATCH_SIZE = 100;
 const MIN_ENTRY_WINDOW_SECONDS = 60 * 60;
 // How far back from the newest contest to look for one we already created.
 const EXISTING_CONTEST_SCAN = 50n;
+/**
+ * Payouts are settled socially: once the payout period opens, @myk_clawd tweets
+ * "@bankrbot settle ..." and congratulates the winner. claimAllPrizes is
+ * permissionless and pays only once, so the cron stays as a fallback that pays
+ * if nobody has settled within this grace window.
+ */
+export const PAYOUT_GRACE_SECONDS = 12n * 60n * 60n;
+
+export const fallbackPayoutDue = (payoutDeadline: bigint, now: bigint) =>
+  now >= payoutDeadline + PAYOUT_GRACE_SECONDS;
 
 interface Contest {
   id: bigint;
@@ -208,8 +218,10 @@ async function payout(c: Contest, result: SyncResult): Promise<void> {
     return;
   }
   const now = BigInt(Math.floor(Date.now() / 1000));
-  if (now < c.payoutDeadline) {
-    result.skips.push(`featured:${c.id}:payout-at-${c.payoutDeadline}`);
+  if (!fallbackPayoutDue(c.payoutDeadline, now)) {
+    result.skips.push(
+      `featured:${c.id}:fallback-payout-at-${c.payoutDeadline + PAYOUT_GRACE_SECONDS}`,
+    );
     return;
   }
   const leaderboard = (await publicClient.readContract({
