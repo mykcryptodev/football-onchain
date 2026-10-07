@@ -252,3 +252,23 @@ describe("0xQuit display-only exception", () => {
     );
   });
 });
+
+describe("enctmintmickogo contest 22 winner override", () => {
+  const address = "0xfafe70b60908162956a5c1c6a16a1261dd183d30";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "enctmintmickogo",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2100381154251612160/o8byKMAZ_400x400.jpg",
+        xUsername: "enctmintmickogo",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0xfafe70b60908162956a5c1c6a16a1261dd183d31"),
+      undefined,
+    );
+  });
+});
