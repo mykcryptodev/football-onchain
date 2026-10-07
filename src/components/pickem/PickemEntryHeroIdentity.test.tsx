@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
-let profile: { name?: string; avatar?: string } | null = null;
+let profile: { name?: string; avatar?: string; xUsername?: string } | null =
+  null;
 let lookedUpAddress: string | null = null;
 
 mock.module("@/hooks/useUserProfile", () => ({
@@ -44,6 +45,23 @@ beforeEach(() => {
 });
 
 describe("entry hero identity", () => {
+  test("links the curated X account when the profile has one", () => {
+    profile = { name: "enctmintmickogo", xUsername: "enctmintmickogo" };
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={owner} />,
+    );
+    expect(html).toContain('href="https://x.com/enctmintmickogo"');
+    expect(html).toContain("@enctmintmickogo on X");
+  });
+
+  test("omits the X link without a curated handle", () => {
+    profile = { name: "myk.eth" };
+    const html = renderToStaticMarkup(
+      <PickemEntryHeroIdentity owner={owner} />,
+    );
+    expect(html).not.toContain("x.com/");
+  });
+
   test("renders resolved name and avatar for the owner, linking to their profile and the explorer", () => {
     profile = { name: "  myk.eth  ", avatar: "https://example.com/avatar.png" };
     const html = renderToStaticMarkup(

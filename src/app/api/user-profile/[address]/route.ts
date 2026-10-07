@@ -16,6 +16,8 @@ import { client } from "@/providers/Thirdweb";
 interface UserProfileResponse {
   fid?: number;
   farcasterUsername?: string;
+  /** Curated X handle (no @) from identity overrides, when known. */
+  xUsername?: string;
   name?: string;
   avatar?: string;
   bio?: string;
@@ -39,6 +41,7 @@ export async function GET(
       address,
       name: override.name,
       avatar: override.avatar,
+      xUsername: override.xUsername,
     };
     const response = NextResponse.json(responseBody);
     response.headers.set(

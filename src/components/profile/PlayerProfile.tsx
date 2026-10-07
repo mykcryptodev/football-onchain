@@ -14,6 +14,7 @@ import type {
   ProfilePickemEntry,
 } from "@/lib/player-profile";
 import { cn } from "@/lib/utils";
+import { xProfileUrl } from "@/lib/x-profile";
 
 function Amount({
   amount,
@@ -184,6 +185,7 @@ export default function PlayerProfile({ address }: { address: string }) {
   const isYou = account?.address.toLowerCase() === address;
   const { profile } = useUserProfile(address);
   const name = profile?.name?.trim();
+  const xUrl = xProfileUrl(profile?.xUsername);
   // Built and cached server-side (see lib/player-profile).
   const { data, isLoading, error } = useQuery({
     queryKey: ["playerProfile", address],
@@ -217,6 +219,16 @@ export default function PlayerProfile({ address }: { address: string }) {
           >
             {name ? shortAddress(address) : "View on Basescan"}
           </a>
+          {xUrl ? (
+            <a
+              className="block truncate text-sm text-muted-foreground underline-offset-4 hover:underline"
+              href={xUrl}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              @{profile?.xUsername} on X
+            </a>
+          ) : null}
         </div>
       </header>
 
