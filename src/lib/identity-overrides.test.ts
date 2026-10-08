@@ -292,3 +292,23 @@ describe("Daqs_Pickem week 5 promo override", () => {
     );
   });
 });
+
+describe("alecglovett week 5 promo override", () => {
+  const address = "0x817db4cce654e03aa6683f076c293dc3a57258d7";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "alecglovett",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1978990221678067712/BqJAZ7QF_400x400.jpg",
+        xUsername: "alecglovett",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0x817db4cce654e03aa6683f076c293dc3a57258d8"),
+      undefined,
+    );
+  });
+});
