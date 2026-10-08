@@ -272,3 +272,23 @@ describe("enctmintmickogo contest 22 winner override", () => {
     );
   });
 });
+
+describe("Daqs_Pickem week 5 promo override", () => {
+  const address = "0x623478df8e06f419b5b0890abdee598d020cd51d";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "Daqs_Pickem",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1987851108534951936/83YowbSt_400x400.jpg",
+        xUsername: "Daqs_Pickem",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(
+      getIdentityOverride("0x623478df8e06f419b5b0890abdee598d020cd51e"),
+      undefined,
+    );
+  });
+});
