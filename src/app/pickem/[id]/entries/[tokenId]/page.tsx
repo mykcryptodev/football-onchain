@@ -65,7 +65,7 @@ export default async function EntryPage({ params }: Props) {
   await ensureEntryImage(contestId, token, {
     contestId: Number(contestId),
     tokenId: token.toString(),
-    walletAddress: entry.predictor,
+    walletAddress: entry.owner,
     weekNumber: c.weekNumber,
     seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
     year: Number(c.year),

@@ -8,9 +8,13 @@
 import { after } from "next/server";
 
 import type { PickemPicksOgCardProps } from "@/lib/og/pickem-picks-card";
-import { attemptImmediateRender } from "@/lib/pickem-image-render";
+import {
+  attemptHolderRerender,
+  attemptImmediateRender,
+} from "@/lib/pickem-image-render";
 import {
   claimImageJob,
+  claimImageRerender,
   getImageStatus,
   type PickemImageRecord,
 } from "@/lib/pickem-image-status";
@@ -21,7 +25,20 @@ export async function ensureEntryImage(
   cardProps: PickemPicksOgCardProps,
 ): Promise<PickemImageRecord> {
   const existing = await getImageStatus(contestId, tokenId);
-  if (existing) return existing;
+  if (existing) {
+    // The card shows the current holder. After a transfer, keep serving the
+    // old card while one caller redraws it for the new holder.
+    const owner = cardProps.walletAddress?.toLowerCase();
+    if (
+      existing.status === "ready" &&
+      owner &&
+      existing.owner !== owner &&
+      (await claimImageRerender(contestId, tokenId, owner))
+    ) {
+      after(() => attemptHolderRerender(contestId, tokenId, cardProps));
+    }
+    return existing;
+  }
 
   // Not tracked yet: try to become the one caller that renders it. A losing
   // claim means another concurrent request just started the same render.

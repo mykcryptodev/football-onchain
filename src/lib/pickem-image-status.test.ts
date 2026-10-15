@@ -109,6 +109,7 @@ const {
   claimDueRetries,
   claimExpiredRetention,
   claimImageJob,
+  claimImageRerender,
   deleteImageRecord,
   getImageStatus,
   hasReachedMaxAttempts,
@@ -198,9 +199,9 @@ describe("orphaned claim recovery", () => {
     });
 
     const due = await claimDueRetries(10);
-    expect(
-      due.map(item => `${item.contestId}:${item.tokenId}`),
-    ).toContain(`${contestId}:${tokenId}`);
+    expect(due.map(item => `${item.contestId}:${item.tokenId}`)).toContain(
+      `${contestId}:${tokenId}`,
+    );
 
     // Still "pending" with zero attempts recorded — the cron treats it like
     // any other due retry rather than requiring a special-cased status.
@@ -214,7 +215,10 @@ describe("cron sweeps", () => {
   test("claimDueRetries only returns and pops items due now", async () => {
     const past = Date.now() - 1_000;
     const future = Date.now() + 1_000_000;
-    await fakeRedis.zadd(PICKEM_IMAGE_QUEUE_KEY, { score: past, member: "2001:1" });
+    await fakeRedis.zadd(PICKEM_IMAGE_QUEUE_KEY, {
+      score: past,
+      member: "2001:1",
+    });
     await fakeRedis.zadd(PICKEM_IMAGE_QUEUE_KEY, {
       score: future,
       member: "2001:2",
@@ -251,7 +255,7 @@ describe("cron sweeps", () => {
 });
 
 describe("deleteImageRecord", () => {
-  test("deletes the blob by its deterministic pathname and clears the status record", async () => {
+  test("deletes the recorded blob and clears the status record", async () => {
     const contestId = 1004n,
       tokenId = 4n;
     await claimImageJob(contestId, tokenId);
@@ -259,7 +263,62 @@ describe("deleteImageRecord", () => {
 
     await deleteImageRecord(contestId, tokenId);
 
-    expect(blobDel).toHaveBeenCalledWith(imagePathname(contestId, tokenId));
+    expect(blobDel).toHaveBeenCalledWith("https://blob.example/y.png");
     expect(await getImageStatus(contestId, tokenId)).toBeNull();
+  });
+
+  test("falls back to the deterministic pathname when no blob was recorded", async () => {
+    const contestId = 1005n,
+      tokenId = 5n;
+    await claimImageJob(contestId, tokenId);
+
+    await deleteImageRecord(contestId, tokenId);
+
+    expect(blobDel).toHaveBeenCalledWith(imagePathname(contestId, tokenId));
+  });
+});
+
+describe("holder-aware cards", () => {
+  const holder = "0xCEA5239fdd392e40c2b766375c4de8c991941d87";
+
+  test("imagePathname is unique per holder and case-insensitive", () => {
+    expect(imagePathname(25n, 102n)).toBe("pickem/25/102-v2.png");
+    expect(imagePathname(25n, 102n, holder)).toBe(
+      "pickem/25/102-v2-0xcea5239fdd392e40c2b766375c4de8c991941d87.png",
+    );
+    expect(imagePathname(25n, 102n, holder.toLowerCase())).toBe(
+      imagePathname(25n, 102n, holder),
+    );
+  });
+
+  test("markImageReady records the lowercase holder", async () => {
+    const contestId = 1006n,
+      tokenId = 6n;
+    await markImageReady(
+      contestId,
+      tokenId,
+      "https://blob.example/z.png",
+      1,
+      holder,
+    );
+    expect((await getImageStatus(contestId, tokenId))?.owner).toBe(
+      holder.toLowerCase(),
+    );
+  });
+
+  test("claimImageRerender lets one caller redraw per holder", async () => {
+    const contestId = 1007n,
+      tokenId = 7n;
+    expect(await claimImageRerender(contestId, tokenId, holder)).toBe(true);
+    expect(
+      await claimImageRerender(contestId, tokenId, holder.toLowerCase()),
+    ).toBe(false);
+    expect(
+      await claimImageRerender(
+        contestId,
+        tokenId,
+        "0x8e2ff9fa070e6ac179fb395fc85bb76206b6261f",
+      ),
+    ).toBe(true);
   });
 });

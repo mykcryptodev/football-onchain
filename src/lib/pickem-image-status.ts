@@ -21,6 +21,11 @@ export interface PickemImageRecord {
   updatedAt: number;
   blobUrl?: string;
   error?: string;
+  /**
+   * Lowercase address of the NFT holder the card was drawn for. Missing on
+   * records written before holder-aware rendering; those count as stale.
+   */
+  owner?: string;
 }
 
 const MAX_ATTEMPTS = 5;
@@ -64,8 +69,19 @@ function member(contestId: bigint, tokenId: bigint): string {
  */
 export const PICKEM_IMAGE_VERSION = "v2";
 
-export function imagePathname(contestId: bigint, tokenId: bigint): string {
-  return `pickem/${contestId}/${tokenId}-${PICKEM_IMAGE_VERSION}.png`;
+/**
+ * With an `owner`, the pathname is unique per holder, so a card redrawn after
+ * the NFT changes hands lands at a URL no CDN or X image cache has seen (the
+ * same one-year-cache reasoning as `PICKEM_IMAGE_VERSION`). Without one it is
+ * the legacy holder-agnostic path.
+ */
+export function imagePathname(
+  contestId: bigint,
+  tokenId: bigint,
+  owner?: string,
+): string {
+  const holder = owner ? `-${owner.toLowerCase()}` : "";
+  return `pickem/${contestId}/${tokenId}-${PICKEM_IMAGE_VERSION}${holder}.png`;
 }
 
 function statusKey(contestId: bigint, tokenId: bigint): string {
@@ -75,8 +91,7 @@ function statusKey(contestId: bigint, tokenId: bigint): string {
 function parseRecord(raw: unknown): PickemImageRecord | null {
   if (!raw) return null;
   const value = typeof raw === "string" ? JSON.parse(raw) : raw;
-  if (!value || typeof value !== "object" || !("status" in value))
-    return null;
+  if (!value || typeof value !== "object" || !("status" in value)) return null;
   return value as PickemImageRecord;
 }
 
@@ -137,17 +152,42 @@ export async function claimImageJob(
   return true;
 }
 
+// A holder-change redraw gets the same five minutes as a first render before
+// another viewer may try again.
+const RERENDER_LOCK_SECONDS = 5 * 60;
+
+/**
+ * Claims the redraw of an already-rendered card for a new holder. Only the
+ * caller that gets `true` redraws; the ready record keeps serving the old
+ * card until the new one is stored.
+ */
+export async function claimImageRerender(
+  contestId: bigint,
+  tokenId: bigint,
+  owner: string,
+): Promise<boolean> {
+  if (!redis) return false;
+  const key = `pickem:image:rerender:${PICKEM_IMAGE_VERSION}:${member(contestId, tokenId)}:${owner.toLowerCase()}`;
+  const claimed = await safeRedisOperation(
+    () => redis!.set(key, "1", { nx: true, ex: RERENDER_LOCK_SECONDS }),
+    null,
+  );
+  return claimed === "OK";
+}
+
 export async function markImageReady(
   contestId: bigint,
   tokenId: bigint,
   blobUrl: string,
   attempts: number,
+  owner?: string,
 ): Promise<void> {
   const record: PickemImageRecord = {
     status: "ready",
     attempts,
     updatedAt: Date.now(),
     blobUrl,
+    ...(owner ? { owner: owner.toLowerCase() } : {}),
   };
   await safeRedisOperation(async () => {
     await redis!.set(statusKey(contestId, tokenId), JSON.stringify(record));
@@ -248,7 +288,8 @@ export async function deleteImageRecord(
   contestId: bigint,
   tokenId: bigint,
 ): Promise<void> {
-  await del(imagePathname(contestId, tokenId)).catch(() => {
+  const record = await getImageStatus(contestId, tokenId);
+  await del(record?.blobUrl ?? imagePathname(contestId, tokenId)).catch(() => {
     // Already gone, or never rendered (a permanently-failed job) — fine.
   });
   await safeRedisOperation(

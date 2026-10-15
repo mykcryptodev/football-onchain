@@ -67,8 +67,9 @@ async function uploadEntryImage(
   contestId: bigint,
   tokenId: bigint,
   png: Buffer,
+  owner?: string,
 ): Promise<string> {
-  const blob = await put(imagePathname(contestId, tokenId), png, {
+  const blob = await put(imagePathname(contestId, tokenId, owner), png, {
     access: "public",
     contentType: "image/png",
     addRandomSuffix: false,
@@ -90,11 +91,35 @@ export async function attemptImmediateRender(
   cardProps: PickemPicksOgCardProps,
 ): Promise<void> {
   try {
+    const owner = cardProps.walletAddress;
     const png = await renderPickemEntryImagePng(cardProps);
-    const blobUrl = await uploadEntryImage(contestId, tokenId, png);
-    await markImageReady(contestId, tokenId, blobUrl, 1);
+    const blobUrl = await uploadEntryImage(contestId, tokenId, png, owner);
+    await markImageReady(contestId, tokenId, blobUrl, 1, owner);
   } catch (error) {
     await scheduleRetry(contestId, tokenId, 1, errorMessage(error));
+  }
+}
+
+/**
+ * Redraws an already-ready card for the entry's new holder. A failure leaves
+ * the existing ready record (and its old card) untouched instead of
+ * downgrading it to a retry; the next view after the lock expires tries again.
+ */
+export async function attemptHolderRerender(
+  contestId: bigint,
+  tokenId: bigint,
+  cardProps: PickemPicksOgCardProps,
+): Promise<void> {
+  try {
+    const owner = cardProps.walletAddress;
+    const png = await renderPickemEntryImagePng(cardProps);
+    const blobUrl = await uploadEntryImage(contestId, tokenId, png, owner);
+    await markImageReady(contestId, tokenId, blobUrl, 1, owner);
+  } catch (error) {
+    console.error(
+      `pickem image holder redraw failed for ${contestId}:${tokenId}`,
+      errorMessage(error),
+    );
   }
 }
 
@@ -114,7 +139,7 @@ export async function renderAndStoreFromScratch(
     const cardProps: PickemPicksOgCardProps = {
       contestId: Number(contestId),
       tokenId: tokenId.toString(),
-      walletAddress: entry.predictor,
+      walletAddress: entry.owner,
       weekNumber: c.weekNumber,
       seasonTypeName: SEASON_TYPE_LABELS[c.seasonType] || "Season",
       year: Number(c.year),
@@ -123,8 +148,13 @@ export async function renderAndStoreFromScratch(
       picks,
     };
     const png = await renderPickemEntryImagePng(cardProps);
-    const blobUrl = await uploadEntryImage(contestId, tokenId, png);
-    await markImageReady(contestId, tokenId, blobUrl, attempts);
+    const blobUrl = await uploadEntryImage(
+      contestId,
+      tokenId,
+      png,
+      entry.owner,
+    );
+    await markImageReady(contestId, tokenId, blobUrl, attempts, entry.owner);
   } catch (error) {
     await scheduleRetry(contestId, tokenId, attempts, errorMessage(error));
   }
