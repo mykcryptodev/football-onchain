@@ -312,3 +312,139 @@ describe("alecglovett week 5 promo override", () => {
     );
   });
 });
+
+describe("goyabean_eth week 6 promo override", () => {
+  const address = "0xcea5239fdd392e40c2b766375c4de8c991941d87";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "goyabean_eth",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2108689453019480064/TlhdX-pQ_400x400.jpg",
+        xUsername: "goyabean_eth",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xcea5239fdd392e40c2b766375c4de8c991941d80"), undefined);
+  });
+});
+
+describe("AtownBrown week 6 promo override", () => {
+  const address = "0x8e2ff9fa070e6ac179fb395fc85bb76206b6261f";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "AtownBrown",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2078480827243991040/nU1hT4ex_400x400.jpg",
+        xUsername: "AtownBrown",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0x8e2ff9fa070e6ac179fb395fc85bb76206b62610"), undefined);
+  });
+});
+
+describe("alexfacelesslbs week 6 promo override", () => {
+  const address = "0x2083dafa75ac5c6e9b3b0a0109caa1161834fcf3";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "alexfacelesslbs",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2086475775532822528/sIL6RYpW_400x400.jpg",
+        xUsername: "alexfacelesslbs",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0x2083dafa75ac5c6e9b3b0a0109caa1161834fcf0"), undefined);
+  });
+});
+
+describe("beeple week 6 promo override", () => {
+  const address = "0x5ffc9f91be129a910c1e2e321c1e2f49431c8261";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "beeple",
+        avatar:
+          "https://pbs.twimg.com/profile_images/264316321/beeple_headshot_beat_up_400x400.jpg",
+        xUsername: "beeple",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0x5ffc9f91be129a910c1e2e321c1e2f49431c8260"), undefined);
+  });
+});
+
+describe("nikitabier week 6 promo override", () => {
+  const address = "0xc1860d00273984ffba4acf1f7a5828144036ac71";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "nikitabier",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1755448801957945344/Fh2HNw5Y_400x400.jpg",
+        xUsername: "nikitabier",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xc1860d00273984ffba4acf1f7a5828144036ac70"), undefined);
+  });
+});
+
+describe("atifkhan31 week 6 promo override", () => {
+  const address = "0xde0fd7fb78a06fdd877bcf787efc3eb4cef1ae4f";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "atifkhan31",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1753149138370498560/tQwr9PAk_400x400.jpg",
+        xUsername: "atifkhan31",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xde0fd7fb78a06fdd877bcf787efc3eb4cef1ae40"), undefined);
+  });
+});
+
+describe("yugacohler week 6 promo override", () => {
+  const address = "0xc95cc9387a427c318dea88acc311221cb2c3b670";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "yugacohler",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2070835810891370496/rcRi5DOU_400x400.jpg",
+        xUsername: "yugacohler",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xc95cc9387a427c318dea88acc311221cb2c3b671"), undefined);
+  });
+});
+
+describe("1CrypticPoet week 6 promo override", () => {
+  const address = "0x4e3830610efdc8cd559faf95dcfd46f07f4b0a08";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "1CrypticPoet",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2080300918705131521/Ga_w3p8c_400x400.jpg",
+        xUsername: "1CrypticPoet",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0x4e3830610efdc8cd559faf95dcfd46f07f4b0a00"), undefined);
+  });
+});
