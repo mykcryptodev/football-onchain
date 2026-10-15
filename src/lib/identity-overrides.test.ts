@@ -448,3 +448,37 @@ describe("1CrypticPoet week 6 promo override", () => {
     assert.equal(getIdentityOverride("0x4e3830610efdc8cd559faf95dcfd46f07f4b0a00"), undefined);
   });
 });
+
+describe("Bankrball promo transit wallet override", () => {
+  const address = "0xceb30cb69998d39ab004ebc7f3e9b9e0b31b0dc0";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "Bankrball",
+        avatar:
+          "https://bankrball.com/icon.png",
+        xUsername: "myk_clawd",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xceb30cb69998d39ab004ebc7f3e9b9e0b31b0dc1"), undefined);
+  });
+});
+
+describe("myk clawd promo entry wallet override", () => {
+  const address = "0xcef6e6639e0c60d5c0805670f4363a6698081fab";
+  for (const input of [address, address.toLowerCase(), address.toUpperCase()]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "myk clawd",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2022302337315098624/58mcsWU2_400x400.jpg",
+        xUsername: "myk_clawd",
+      });
+    });
+  }
+  test("near-neighbor remains unresolved", () => {
+    assert.equal(getIdentityOverride("0xcef6e6639e0c60d5c0805670f4363a6698081fa0"), undefined);
+  });
+});
