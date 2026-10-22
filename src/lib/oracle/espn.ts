@@ -8,10 +8,10 @@ import { encodeAbiParameters, parseAbiParameters } from "viem";
 
 import { fetchJsonWithRetry as fetchJson } from "./espn-retry";
 
-export const ESPN_SUMMARY =
-  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary";
-export const ESPN_SCOREBOARD =
-  "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+// Override (ESPN_API_BASE) to route ESPN traffic through a proxy later.
+const ESPN_API_BASE = (process.env.ESPN_API_BASE ?? "https://site.api.espn.com").replace(/\/+$/, "");
+export const ESPN_SUMMARY = `${ESPN_API_BASE}/apis/site/v2/sports/football/nfl/summary`;
+export const ESPN_SCOREBOARD = `${ESPN_API_BASE}/apis/site/v2/sports/football/nfl/scoreboard`;
 
 export const GAME_SCORES_PARAMS = parseAbiParameters(
   "uint8 reportType, uint256 gameId, uint8 qComplete, bool gameCompleted, uint8 totalScoreChanges, uint256 packedQuarterScores, uint256 packedQuarterDigits",

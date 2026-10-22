@@ -1,6 +1,8 @@
 const MAX_ATTEMPTS = 3;
 const REQUEST_TIMEOUT_MS = 15_000;
 const BACKOFF_MS = [250, 500] as const;
+// ESPN IP-blocks on Vercel egress rotate per request; give 403 real spacing.
+const BLOCKED_BACKOFF_MS = [4_000, 10_000] as const;
 const MAX_RETRY_AFTER_MS = 2_000;
 
 export interface FetchRetryOptions {
@@ -12,7 +14,7 @@ const defaultSleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 const isTransientStatus = (status: number) =>
-  status === 408 || status === 429 || status >= 500;
+  status === 408 || status === 429 || status === 403 || status >= 500;
 
 const retryAfterMilliseconds = (response: Response): number | undefined => {
   if (response.status !== 429 && response.status !== 503) return undefined;
@@ -64,7 +66,10 @@ export const fetchJsonWithRetry = async <T = unknown>(
 
       if (attempt < MAX_ATTEMPTS) {
         await sleep(
-          retryAfterMilliseconds(response) ?? BACKOFF_MS[attempt - 1],
+          retryAfterMilliseconds(response) ??
+            (response.status === 403
+              ? BLOCKED_BACKOFF_MS[attempt - 1]
+              : BACKOFF_MS[attempt - 1]),
         );
       }
     } catch (error) {
