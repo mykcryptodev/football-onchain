@@ -698,3 +698,17 @@ describe("itscrunklez week 7 promo override", () => {
     });
   }
 });
+
+describe("KQpewpew week 7 promo override", () => {
+  const address = "0x32bd679a84a8c9ceca29069d0de7667a4482101c";
+  for (const input of [address, address.toUpperCase().replace("0X", "0x")]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "KQpewpew",
+        avatar:
+          "https://pbs.twimg.com/profile_images/1689513236675362817/ILSy9DNz_400x400.jpg",
+        xUsername: "KQpewpew",
+      });
+    });
+  }
+});
