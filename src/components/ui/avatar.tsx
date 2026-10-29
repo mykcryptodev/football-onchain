@@ -27,6 +27,8 @@ const AvatarImage = React.forwardRef<
   <AvatarPrimitive.Image
     ref={ref}
     className={cn("aspect-square h-full w-full", className)}
+    // X's image CDN (pbs.twimg.com) rejects requests that carry a bankrball.com referrer.
+    referrerPolicy="no-referrer"
     {...props}
   />
 ));
