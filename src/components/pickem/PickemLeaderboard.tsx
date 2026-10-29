@@ -354,6 +354,7 @@ export default function PickemLeaderboard({
                                   alt={identity.name}
                                   className="size-8 shrink-0 rounded-full object-cover"
                                   height={32}
+                                  referrerPolicy="no-referrer"
                                   src={identity.avatar}
                                   width={32}
                                 />
