@@ -880,3 +880,17 @@ describe("ttyl5h week 8 promo override", () => {
     });
   }
 });
+
+describe("710_eth week 8 self-funded wallet override", () => {
+  const address = "0x6decfb0e44ae75d9fce24d2aeefcef8b336d9913";
+  for (const input of [address, address.toUpperCase().replace("0X", "0x")]) {
+    test(`exact metadata for ${input}`, () => {
+      assert.deepEqual(getIdentityOverride(input), {
+        name: "710_eth",
+        avatar:
+          "https://pbs.twimg.com/profile_images/2066617053977640960/CfWymoTM_400x400.jpg",
+        xUsername: "710_eth",
+      });
+    });
+  }
+});
