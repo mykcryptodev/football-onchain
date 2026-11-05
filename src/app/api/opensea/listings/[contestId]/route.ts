@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createThirdwebClient, getContract, readContract } from "thirdweb";
-import { base, baseSepolia } from "thirdweb/chains";
 
 import { OpenSeaListing } from "@/components/contest/types";
 import { boxes, chain } from "@/constants";
@@ -27,7 +26,7 @@ const thirdwebClient = createThirdwebClient({
   secretKey: process.env.THIRDWEB_SECRET_KEY!,
 });
 
-const thirdwebChain = chain.id === 84532 ? baseSepolia : base;
+const thirdwebChain = chain;
 
 const seaportContract = getContract({
   client: thirdwebClient,

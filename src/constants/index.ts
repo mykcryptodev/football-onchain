@@ -1,5 +1,5 @@
 import { Hex } from "thirdweb";
-import { base, baseSepolia } from "thirdweb/chains";
+import { base, baseSepolia, defineChain } from "thirdweb/chains";
 
 // APP INFO
 export const appName = "BankrBall";
@@ -7,7 +7,12 @@ export const appDescription =
   "Play Super Bowl Square and Pick em with your friends for any NFL game!";
 
 // CHAINS
-export const chain = base;
+// Use a public RPC directly; Thirdweb client-ID authorization must not block
+// contract reads across the website and its API routes.
+export const chain = defineChain({
+  ...base,
+  rpc: "https://base-rpc.publicnode.com",
+});
 
 // ADDRESSES
 export const contests = {

@@ -46,10 +46,7 @@ export const address = pickem[chain.id] as Address;
 export const rpc = createPublicClient({
   chain: base,
   transport: http(
-    process.env.ORACLE_RPC_URL ||
-      (process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
-        ? `https://8453.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
-        : undefined),
+    process.env.ORACLE_RPC_URL || "https://base-rpc.publicnode.com",
     { timeout: 15000, retryCount: 1 },
   ),
 });

@@ -1,9 +1,9 @@
 import { COMMENT_MANAGER_ADDRESS } from "@ecp.eth/sdk";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getContract, sendTransaction } from "thirdweb";
-import { base } from "thirdweb/chains";
 import { useActiveAccount } from "thirdweb/react";
 
+import { chain } from "@/constants";
 import { postComment } from "@/constants/abis/comments";
 import { client } from "@/providers/Thirdweb";
 
@@ -33,7 +33,7 @@ export function usePostEthComment() {
       // Get contract instance
       const contract = getContract({
         address: COMMENT_MANAGER_ADDRESS,
-        chain: base,
+        chain,
         client,
       });
 
