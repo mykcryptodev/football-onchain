@@ -7,6 +7,7 @@ import {
   type Address,
   createPublicClient,
   createWalletClient,
+  fallback,
   formatGwei,
   type Hex,
   http,
@@ -26,31 +27,24 @@ export const oracleAddress = gameScoreOracle[
   appChain.id as keyof typeof gameScoreOracle
 ] as Address;
 
-// Default to the thirdweb RPC keyed by our client ID — the public Base RPC
-// rate-limits aggressively. ORACLE_RPC_URL overrides (e.g. a dedicated
-// Alchemy/QuickNode endpoint) when set.
-const thirdwebRpcUrl = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID
-  ? `https://${base.id}.rpc.thirdweb.com/${process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID}`
-  : undefined;
-const rpcUrl = process.env.ORACLE_RPC_URL || thirdwebRpcUrl;
+// Keep server-side oracle traffic independent of thirdweb client-ID auth.
+// A dedicated provider can still be selected with ORACLE_RPC_URL.
+const rpcUrl = process.env.ORACLE_RPC_URL || "https://base-rpc.publicnode.com";
+const fallbackRpcUrl = "https://mainnet.base.org";
 
-// Back off instead of failing the sync on transient RPC errors.
 const transport = (url = rpcUrl) =>
   http(url, { retryCount: 5, retryDelay: 2000, timeout: 30_000 });
 
 export const publicClient = createPublicClient({
   chain: base,
-  transport: transport(),
+  transport: fallback([transport(), transport(fallbackRpcUrl)]),
 });
 
-// If writes use a dedicated endpoint, thirdweb provides an independent view
-// for receipt reconciliation. Otherwise Base's public RPC is the fallback.
+// Receipt reconciliation needs a provider independent of the write endpoint.
 const receiptFallbackClient = createPublicClient({
   chain: base,
   transport: transport(
-    rpcUrl !== thirdwebRpcUrl && thirdwebRpcUrl
-      ? thirdwebRpcUrl
-      : "https://mainnet.base.org",
+    rpcUrl === fallbackRpcUrl ? "https://base-rpc.publicnode.com" : fallbackRpcUrl,
   ),
 });
 
